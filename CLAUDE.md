@@ -251,38 +251,96 @@ CirclePost {
 
 ## 开发环境设置
 
+### 环境要求
+- Rust 1.75+ (2024 edition)
+- MySQL 8.0+
+- Docker & Docker Compose
+- Git
+
 ### 后端开发 (Rust)
 ```bash
-# 运行后端服务
+# 克隆项目
+git clone https://github.com/yourusername/taces.git
+cd taces
+
+# 启动数据库
+docker-compose up -d
+
+# 设置环境变量
 cd backend
+cp .env.example .env
+# 编辑 .env 文件配置数据库连接
+
+# 运行数据库迁移
+cargo install sqlx-cli --no-default-features --features rustls,mysql
+sqlx migrate run
+
+# 导入测试数据
+cargo run --bin seed
+
+# 运行后端服务
 cargo run
 
 # 构建后端
-cargo build
+cargo build --release
 
-# 运行测试
-cargo test
+# 运行所有测试
+cargo test -- --test-threads=1
+
+# 运行单元测试
+cargo test --test unit_tests
+
+# 运行集成测试
+cargo test --test integration_tests -- --test-threads=1
 
 # 代码格式化
 cargo fmt
 
 # 代码检查
-cargo clippy
+cargo clippy -- -D warnings
+
+# 本地运行CI检查
+../test-ci-locally.sh
+```
+
+### 数据库管理
+```bash
+# 访问MySQL
+docker exec -it tcm_mysql mysql -utcm_user -ptcm_pass123 tcm_telemedicine
+
+# 访问Adminer (Web数据库管理)
+# 打开浏览器访问: http://localhost:8080
+# 服务器: mysql
+# 用户名: tcm_user
+# 密码: tcm_pass123
+# 数据库: tcm_telemedicine
 ```
 
 ### 前端开发
 ```bash
-# 开发环境尚未设置，预计使用现代前端框架
-# 前端目录结构待实现
+# 开发环境尚未设置，预计使用以下技术栈：
+# - 管理端: React + Ant Design Pro
+# - 患者端Web: Next.js + Tailwind CSS
+# - 微信小程序: 原生小程序 / Taro
+# - 支付宝小程序: 原生小程序 / Taro
+# - iOS: Swift / React Native
+# - Android: Kotlin / React Native
 ```
 
 ## 当前技术栈
 
-### 后端
-- **语言**: Rust
-- **版本**: 2024 edition
-- **构建工具**: Cargo
-- **入口文件**: `backend/src/main.rs`
+### 后端（已实现）
+- **语言**: Rust (2024 edition)
+- **Web框架**: Axum 0.7
+- **数据库**: MySQL 8.0 + SQLx
+- **认证**: JWT (jsonwebtoken)
+- **密码加密**: bcrypt
+- **验证**: validator
+- **序列化**: serde + serde_json
+- **异步运行时**: Tokio
+- **日志**: tracing
+- **测试**: 单元测试 + 集成测试
+- **CI/CD**: GitHub Actions
 
 ### 前端
 - **状态**: 未实现
@@ -292,25 +350,89 @@ cargo clippy
 
 ### 1. 代码组织
 ```
-project-root/
-├── backend/              # 后端服务 (Rust)
-│   ├── Cargo.toml       # Rust项目配置
+taces/
+├── .github/
+│   └── workflows/       # GitHub Actions CI/CD
+│       ├── rust.yml     # 主分支CI
+│       └── backend-ci.yml # 后端完整CI
+├── backend/             # 后端服务 (Rust) ✅
+│   ├── Cargo.toml      # Rust项目配置
+│   ├── Cargo.lock      # 依赖锁定文件
+│   ├── .env            # 环境变量配置
+│   ├── .env.example    # 环境变量示例
+│   ├── migrations/     # 数据库迁移文件
+│   │   └── *.sql
+│   ├── sql/            # SQL脚本
 │   ├── src/
-│   │   ├── main.rs      # 程序入口
-│   │   ├── controllers/ # 控制器 (待实现)
-│   │   ├── services/    # 业务逻辑 (待实现)
-│   │   ├── models/      # 数据模型 (待实现)
-│   │   ├── routes/      # 路由定义 (待实现)
-│   │   └── utils/       # 工具函数 (待实现)
-│   └── tests/          # 测试文件 (待实现)
-├── frontend/            # 前端目录 (待实现)
-├── web-admin/           # 管理端Web (待实现)
-├── web-portal/          # 门户网站 (待实现)
-├── mini-program-wx/     # 微信小程序 (待实现)
-├── mini-program-alipay/ # 支付宝小程序 (待实现)
-├── mobile-ios/          # iOS应用 (待实现)
-├── mobile-android/      # Android应用 (待实现)
-└── shared/             # 共享组件和工具 (待实现)
+│   │   ├── main.rs     # 程序入口
+│   │   ├── lib.rs      # 库入口
+│   │   ├── bin/        # 可执行文件
+│   │   │   └── seed.rs # 数据库种子
+│   │   ├── config/     # 配置模块
+│   │   │   ├── mod.rs
+│   │   │   └── database.rs
+│   │   ├── controllers/ # 控制器层 ✅
+│   │   │   ├── mod.rs
+│   │   │   ├── auth_controller.rs
+│   │   │   ├── user_controller.rs
+│   │   │   ├── doctor_controller.rs
+│   │   │   ├── appointment_controller.rs
+│   │   │   └── prescription_controller.rs
+│   │   ├── services/   # 业务逻辑层 ✅
+│   │   │   ├── mod.rs
+│   │   │   ├── auth_service.rs
+│   │   │   ├── user_service.rs
+│   │   │   ├── doctor_service.rs
+│   │   │   ├── appointment_service.rs
+│   │   │   └── prescription_service.rs
+│   │   ├── models/     # 数据模型 ✅
+│   │   │   ├── mod.rs
+│   │   │   ├── user.rs
+│   │   │   ├── doctor.rs
+│   │   │   ├── appointment.rs
+│   │   │   ├── prescription.rs
+│   │   │   ├── live_stream.rs
+│   │   │   └── circle_post.rs
+│   │   ├── routes/     # 路由定义 ✅
+│   │   │   ├── mod.rs
+│   │   │   ├── auth.rs
+│   │   │   ├── user.rs
+│   │   │   ├── doctor.rs
+│   │   │   ├── appointment.rs
+│   │   │   └── prescription.rs
+│   │   ├── middleware/ # 中间件 ✅
+│   │   │   ├── mod.rs
+│   │   │   ├── auth.rs
+│   │   │   └── jwt_config.rs
+│   │   └── utils/      # 工具函数 ✅
+│   │       ├── mod.rs
+│   │       ├── jwt.rs
+│   │       ├── password.rs
+│   │       └── test_helpers.rs
+│   └── tests/          # 测试文件 ✅
+│       ├── common/
+│       │   └── mod.rs
+│       ├── integration/
+│       │   ├── mod.rs
+│       │   ├── test_auth.rs
+│       │   ├── test_user.rs
+│       │   └── test_doctor.rs
+│       └── unit/
+│           ├── mod.rs
+│           ├── test_jwt.rs
+│           └── test_password.rs
+├── docker-compose.yml   # Docker配置
+├── test-ci-locally.sh  # 本地CI测试脚本
+├── README.md           # 项目说明
+├── CLAUDE.md           # Claude AI开发指南
+├── frontend/           # 前端目录 (待实现)
+├── web-admin/          # 管理端Web (待实现)
+├── web-portal/         # 门户网站 (待实现)
+├── mini-program-wx/    # 微信小程序 (待实现)
+├── mini-program-alipay/# 支付宝小程序 (待实现)
+├── mobile-ios/         # iOS应用 (待实现)
+├── mobile-android/     # Android应用 (待实现)
+└── shared/            # 共享组件和工具 (待实现)
 ```
 
 ### 2. API设计原则
@@ -320,13 +442,54 @@ project-root/
 - JWT认证
 - 请求限流
 
-### 3. 安全要求
+### 3. API端点列表
+
+#### 认证相关
+- `POST /api/v1/auth/register` - 用户注册
+- `POST /api/v1/auth/login` - 用户登录
+
+#### 用户管理
+- `GET /api/v1/users` - 获取用户列表（管理员）
+- `GET /api/v1/users/:id` - 获取用户详情
+- `PUT /api/v1/users/:id` - 更新用户信息
+- `DELETE /api/v1/users/:id` - 删除用户（管理员）
+- `DELETE /api/v1/users/batch/delete` - 批量删除用户（管理员）
+- `GET /api/v1/users/batch/export` - 导出用户（管理员）
+
+#### 医生管理
+- `GET /api/v1/doctors` - 获取医生列表（公开）
+- `GET /api/v1/doctors/:id` - 获取医生详情（公开）
+- `POST /api/v1/doctors` - 创建医生档案（管理员）
+- `PUT /api/v1/doctors/:id` - 更新医生信息
+- `PUT /api/v1/doctors/:id/photos` - 更新医生照片
+- `GET /api/v1/doctors/by-user/:user_id` - 根据用户ID获取医生信息
+
+#### 预约管理
+- `GET /api/v1/appointments` - 获取预约列表
+- `GET /api/v1/appointments/:id` - 获取预约详情
+- `POST /api/v1/appointments` - 创建预约
+- `PUT /api/v1/appointments/:id` - 更新预约
+- `PUT /api/v1/appointments/:id/cancel` - 取消预约
+- `GET /api/v1/appointments/doctor/:doctor_id` - 获取医生的预约
+- `GET /api/v1/appointments/patient/:patient_id` - 获取患者的预约
+- `GET /api/v1/appointments/available-slots` - 获取可用时间段
+
+#### 处方管理
+- `GET /api/v1/prescriptions` - 获取处方列表
+- `GET /api/v1/prescriptions/:id` - 获取处方详情
+- `POST /api/v1/prescriptions` - 创建处方（医生）
+- `GET /api/v1/prescriptions/patient/:patient_id` - 获取患者处方
+- `GET /api/v1/prescriptions/doctor/:doctor_id` - 获取医生开具的处方
+
+### 4. 安全要求
 - HTTPS传输
-- 敏感数据加密
-- SQL注入防护
+- 敏感数据加密（bcrypt密码加密）
+- SQL注入防护（使用参数化查询）
 - XSS/CSRF防护
 - 文件上传校验
-- 权限细粒度控制
+- 权限细粒度控制（基于角色的访问控制）
+- JWT令牌认证
+- 环境变量管理敏感配置
 
 ## 部署方案
 
@@ -350,12 +513,12 @@ project-root/
 
 ## 开发里程碑
 
-### Phase 1: MVP版本（2个月）
-- [ ] 基础架构搭建
-- [ ] 用户认证系统
-- [ ] 管理端核心功能
-- [ ] 医生端基础功能
-- [ ] 患者端预约功能
+### Phase 1: MVP版本（2个月）✅ 已完成
+- [x] 基础架构搭建
+- [x] 用户认证系统（JWT）
+- [x] 管理端核心功能（用户管理）
+- [x] 医生端基础功能（医生档案管理）
+- [x] 患者端预约功能（预约、处方管理）
 
 ### Phase 2: 功能完善（1个月）
 - [ ] 视频问诊功能
@@ -424,3 +587,47 @@ project-root/
 ---
 
 *本指南将随项目进展持续更新，确保开发团队始终拥有最新的技术规范和业务需求。*
+
+## 常见问题
+
+### Q: 如何运行测试时避免数据库连接错误？
+A: 确保Docker容器正在运行，并且已经执行了数据库迁移。测试使用端口3307的测试数据库。
+
+### Q: JWT认证失败怎么办？
+A: 确保在测试和运行时设置了正确的JWT_SECRET环境变量。
+
+### Q: 如何添加新的API端点？
+A: 
+1. 在 `models/` 中定义数据模型
+2. 在 `services/` 中实现业务逻辑
+3. 在 `controllers/` 中创建控制器
+4. 在 `routes/` 中注册路由
+5. 添加相应的测试
+
+### Q: 如何处理数据库迁移？
+A: 使用SQLx CLI工具：
+```bash
+# 创建新迁移
+sqlx migrate add <migration_name>
+
+# 运行迁移
+sqlx migrate run
+
+# 回滚迁移
+sqlx migrate revert
+```
+
+## 测试账号
+
+开发环境默认测试账号（通过 `cargo run --bin seed` 创建）：
+
+- **管理员**: admin / admin123
+- **医生**: doctor_dong / doctor123
+- **医生**: doctor_wang / doctor123  
+- **患者**: patient1-10 / patient123
+
+## 联系方式
+
+- 项目负责人: [待定]
+- 技术支持: [待定]
+- 问题反馈: 请在GitHub Issues中提交
