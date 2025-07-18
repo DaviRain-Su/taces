@@ -74,7 +74,7 @@ async fn test_get_doctor_by_id() {
     
     // Create doctor
     let (doctor_user_id, _, _) = create_test_user(&app.pool, "doctor").await;
-    let doctor_id = create_test_doctor(&app.pool, doctor_user_id).await;
+    let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
     
     // Get doctor by ID
     let (status, body) = app.get(&format!("/api/v1/doctors/{}", doctor_id)).await;
@@ -90,7 +90,7 @@ async fn test_update_doctor_profile() {
     
     // Create doctor
     let (doctor_user_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
-    let doctor_id = create_test_doctor(&app.pool, doctor_user_id).await;
+    let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
     
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
     
@@ -122,7 +122,7 @@ async fn test_update_doctor_photos() {
     
     // Create doctor
     let (doctor_user_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
-    let doctor_id = create_test_doctor(&app.pool, doctor_user_id).await;
+    let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
     
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
     
@@ -152,7 +152,7 @@ async fn test_get_doctor_by_user_id() {
     
     // Create doctor
     let (doctor_user_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
-    let doctor_id = create_test_doctor(&app.pool, doctor_user_id).await;
+    let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
     
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
     

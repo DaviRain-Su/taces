@@ -29,6 +29,14 @@ pub async fn setup_test_db(pool: &Pool<MySql>) {
         .execute(pool)
         .await
         .unwrap();
+    sqlx::query("DELETE FROM patient_group_members")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM patient_groups")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
     sqlx::query("DELETE FROM doctors")
         .execute(pool)
         .await
@@ -68,8 +76,9 @@ pub async fn create_test_user(pool: &Pool<MySql>, role: &str) -> (Uuid, String, 
     (user_id, account, password.to_string())
 }
 
-pub async fn create_test_doctor(pool: &Pool<MySql>, user_id: Uuid) -> Uuid {
+pub async fn create_test_doctor(pool: &Pool<MySql>, user_id: Uuid) -> (Uuid, String) {
     let doctor_id = Uuid::new_v4();
+    let department = "中医科";
     
     sqlx::query(r#"
         INSERT INTO doctors (id, user_id, certificate_type, id_number, hospital, department, 
@@ -81,7 +90,7 @@ pub async fn create_test_doctor(pool: &Pool<MySql>, user_id: Uuid) -> Uuid {
         .bind("医师资格证")
         .bind("110101199001011234")
         .bind("测试医院")
-        .bind("中医科")
+        .bind(department)
         .bind("主治医师")
         .bind("测试医生简介")
         .bind(r#"["中医内科", "针灸"]"#)
@@ -89,5 +98,5 @@ pub async fn create_test_doctor(pool: &Pool<MySql>, user_id: Uuid) -> Uuid {
         .await
         .unwrap();
     
-    doctor_id
+    (doctor_id, department.to_string())
 }
