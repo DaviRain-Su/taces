@@ -475,9 +475,10 @@ taces/
 - `GET /api/v1/appointments/available-slots` - 获取可用时间段
 
 #### 处方管理
-- `GET /api/v1/prescriptions` - 获取处方列表
+- `GET /api/v1/prescriptions` - 获取处方列表（管理员）
 - `GET /api/v1/prescriptions/:id` - 获取处方详情
 - `POST /api/v1/prescriptions` - 创建处方（医生）
+- `GET /api/v1/prescriptions/code/:code` - 根据处方编号获取处方
 - `GET /api/v1/prescriptions/patient/:patient_id` - 获取患者处方
 - `GET /api/v1/prescriptions/doctor/:doctor_id` - 获取医生开具的处方
 
