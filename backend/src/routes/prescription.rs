@@ -1,0 +1,20 @@
+use axum::{
+    routing::{get, post},
+    Router,
+    middleware,
+};
+use crate::{
+    controllers::prescription_controller,
+    middleware::auth::auth_middleware,
+};
+
+pub fn routes() -> Router {
+    Router::new()
+        .route("/", get(prescription_controller::list_prescriptions))
+        .route("/:id", get(prescription_controller::get_prescription))
+        .route("/", post(prescription_controller::create_prescription))
+        .route("/code/:code", get(prescription_controller::get_prescription_by_code))
+        .route("/doctor/:doctor_id", get(prescription_controller::get_doctor_prescriptions))
+        .route("/patient/:patient_id", get(prescription_controller::get_patient_prescriptions))
+        .layer(middleware::from_fn(auth_middleware))
+}

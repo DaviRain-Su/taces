@@ -1,0 +1,123 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root123456
+          MYSQL_DATABASE: tcm_telemedicine_test
+          MYSQL_USER: tcm_user
+          MYSQL_PASSWORD: tcm_pass123
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        components: rustfmt, clippy
+    
+    - name: Cache cargo dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          backend/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Wait for MySQL
+      run: |
+        until mysqladmin ping -h 127.0.0.1 -P 3306 -u root -proot123456 --silent; do
+          echo 'waiting for mysql...'
+          sleep 2
+        done
+    
+    - name: Setup test database
+      run: |
+        mysql -h 127.0.0.1 -P 3306 -u root -proot123456 -e "CREATE DATABASE IF NOT EXISTS tcm_telemedicine_test;"
+        mysql -h 127.0.0.1 -P 3306 -u root -proot123456 tcm_telemedicine_test < backend/migrations/20240101000001_create_initial_tables.sql
+      env:
+        MYSQL_PWD: root123456
+    
+    - name: Run tests
+      working-directory: ./backend
+      run: |
+        cargo test --all-features -- --test-threads=1
+      env:
+        DATABASE_URL: mysql://root:root123456@127.0.0.1:3306/tcm_telemedicine_test
+        TEST_DATABASE_URL: mysql://root:root123456@127.0.0.1:3306/tcm_telemedicine_test
+        JWT_SECRET: test_jwt_secret_key
+        JWT_EXPIRATION: 3600
+    
+    - name: Run cargo fmt
+      working-directory: ./backend
+      run: cargo fmt -- --check
+    
+    - name: Run cargo clippy
+      working-directory: ./backend
+      run: cargo clippy -- -D warnings
+
+  build:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+    
+    - name: Cache cargo dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          backend/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Build release
+      working-directory: ./backend
+      run: cargo build --release
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: backend-binary
+        path: backend/target/release/backend
