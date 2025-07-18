@@ -6,6 +6,7 @@ pub mod appointment;
 pub mod prescription;
 pub mod live_stream;
 pub mod circle_post;
+pub mod department;
 
 pub use user::*;
 pub use doctor::*;
@@ -13,6 +14,7 @@ pub use appointment::*;
 pub use prescription::*;
 pub use live_stream::*;
 pub use circle_post::*;
+pub use department::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse<T> {
