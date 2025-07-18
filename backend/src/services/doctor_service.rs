@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
 use serde_json;
+use sqlx::types::Json;
 use crate::{
     config::database::DbPool,
     models::doctor::*,
@@ -51,7 +52,10 @@ pub async fn list_doctors(
             department: sqlx::Row::get(&row, "department"),
             title: sqlx::Row::get(&row, "title"),
             introduction: sqlx::Row::get(&row, "introduction"),
-            specialties: serde_json::from_str(sqlx::Row::get(&row, "specialties")).unwrap_or_default(),
+            specialties: {
+            let json_value: Json<Vec<String>> = sqlx::Row::get(&row, "specialties");
+            json_value.0
+        },
             experience: sqlx::Row::get(&row, "experience"),
             avatar: sqlx::Row::get(&row, "avatar"),
             license_photo: sqlx::Row::get(&row, "license_photo"),
@@ -91,7 +95,10 @@ pub async fn get_doctor_by_id(pool: &DbPool, id: Uuid) -> Result<Doctor> {
         department: sqlx::Row::get(&row, "department"),
         title: sqlx::Row::get(&row, "title"),
         introduction: sqlx::Row::get(&row, "introduction"),
-        specialties: serde_json::from_str(sqlx::Row::get(&row, "specialties")).unwrap_or_default(),
+        specialties: {
+            let json_value: Json<Vec<String>> = sqlx::Row::get(&row, "specialties");
+            json_value.0
+        },
         experience: sqlx::Row::get(&row, "experience"),
         avatar: sqlx::Row::get(&row, "avatar"),
         license_photo: sqlx::Row::get(&row, "license_photo"),
@@ -127,7 +134,10 @@ pub async fn get_doctor_by_user_id(pool: &DbPool, user_id: Uuid) -> Result<Docto
         department: sqlx::Row::get(&row, "department"),
         title: sqlx::Row::get(&row, "title"),
         introduction: sqlx::Row::get(&row, "introduction"),
-        specialties: serde_json::from_str(sqlx::Row::get(&row, "specialties")).unwrap_or_default(),
+        specialties: {
+            let json_value: Json<Vec<String>> = sqlx::Row::get(&row, "specialties");
+            json_value.0
+        },
         experience: sqlx::Row::get(&row, "experience"),
         avatar: sqlx::Row::get(&row, "avatar"),
         license_photo: sqlx::Row::get(&row, "license_photo"),

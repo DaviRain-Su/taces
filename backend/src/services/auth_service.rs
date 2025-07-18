@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
 use chrono::Utc;
-use sqlx::MySqlPool;
 use crate::{
     config::{Config, database::DbPool},
     models::user::*,
@@ -74,13 +73,35 @@ async fn get_user_by_id(pool: &DbPool, id: Uuid) -> Result<User> {
         WHERE id = ?
     "#;
     
-    let user = sqlx::query_as::<_, User>(query)
+    let row = sqlx::query(query)
         .bind(id.to_string())
         .fetch_one(pool)
         .await
         .map_err(|e| anyhow!("User not found: {}", e))?;
     
-    Ok(user)
+    Ok(User {
+        id: Uuid::parse_str(sqlx::Row::get(&row, "id")).unwrap(),
+        account: sqlx::Row::get(&row, "account"),
+        name: sqlx::Row::get(&row, "name"),
+        password: sqlx::Row::get(&row, "password"),
+        gender: sqlx::Row::get(&row, "gender"),
+        phone: sqlx::Row::get(&row, "phone"),
+        email: sqlx::Row::get(&row, "email"),
+        birthday: sqlx::Row::get(&row, "birthday"),
+        role: match sqlx::Row::get::<String, _>(&row, "role").as_str() {
+            "admin" => UserRole::Admin,
+            "doctor" => UserRole::Doctor,
+            "patient" => UserRole::Patient,
+            _ => return Err(anyhow!("Invalid user role")),
+        },
+        status: match sqlx::Row::get::<String, _>(&row, "status").as_str() {
+            "active" => UserStatus::Active,
+            "inactive" => UserStatus::Inactive,
+            _ => return Err(anyhow!("Invalid user status")),
+        },
+        created_at: sqlx::Row::get(&row, "created_at"),
+        updated_at: sqlx::Row::get(&row, "updated_at"),
+    })
 }
 
 async fn get_user_by_account(pool: &DbPool, account: &str) -> Result<User> {
@@ -90,11 +111,33 @@ async fn get_user_by_account(pool: &DbPool, account: &str) -> Result<User> {
         WHERE account = ?
     "#;
     
-    let user = sqlx::query_as::<_, User>(query)
+    let row = sqlx::query(query)
         .bind(account)
         .fetch_one(pool)
         .await
         .map_err(|e| anyhow!("User not found: {}", e))?;
     
-    Ok(user)
+    Ok(User {
+        id: Uuid::parse_str(sqlx::Row::get(&row, "id")).unwrap(),
+        account: sqlx::Row::get(&row, "account"),
+        name: sqlx::Row::get(&row, "name"),
+        password: sqlx::Row::get(&row, "password"),
+        gender: sqlx::Row::get(&row, "gender"),
+        phone: sqlx::Row::get(&row, "phone"),
+        email: sqlx::Row::get(&row, "email"),
+        birthday: sqlx::Row::get(&row, "birthday"),
+        role: match sqlx::Row::get::<String, _>(&row, "role").as_str() {
+            "admin" => UserRole::Admin,
+            "doctor" => UserRole::Doctor,
+            "patient" => UserRole::Patient,
+            _ => return Err(anyhow!("Invalid user role")),
+        },
+        status: match sqlx::Row::get::<String, _>(&row, "status").as_str() {
+            "active" => UserStatus::Active,
+            "inactive" => UserStatus::Inactive,
+            _ => return Err(anyhow!("Invalid user status")),
+        },
+        created_at: sqlx::Row::get(&row, "created_at"),
+        updated_at: sqlx::Row::get(&row, "updated_at"),
+    })
 }

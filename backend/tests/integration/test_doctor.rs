@@ -3,7 +3,7 @@ use backend::{
     models::{doctor::*, user::LoginDto},
     utils::test_helpers::{create_test_user, create_test_doctor},
 };
-use http::StatusCode;
+use axum::http::StatusCode;
 use serde_json::json;
 use uuid::Uuid;
 

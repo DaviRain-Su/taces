@@ -18,12 +18,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Clear existing data
     println!("Clearing existing data...");
-    sqlx::query("SET FOREIGN_KEY_CHECKS = 0").execute(&pool).await?;
-    sqlx::query("TRUNCATE TABLE prescriptions").execute(&pool).await?;
-    sqlx::query("TRUNCATE TABLE appointments").execute(&pool).await?;
-    sqlx::query("TRUNCATE TABLE doctors").execute(&pool).await?;
-    sqlx::query("TRUNCATE TABLE users").execute(&pool).await?;
-    sqlx::query("SET FOREIGN_KEY_CHECKS = 1").execute(&pool).await?;
+    sqlx::query("DELETE FROM prescriptions").execute(&pool).await?;
+    sqlx::query("DELETE FROM appointments").execute(&pool).await?;
+    sqlx::query("DELETE FROM circle_posts").execute(&pool).await?;
+    sqlx::query("DELETE FROM live_streams").execute(&pool).await?;
+    sqlx::query("DELETE FROM doctors").execute(&pool).await?;
+    sqlx::query("DELETE FROM users").execute(&pool).await?;
     
     // Create admin user
     let admin_id = Uuid::new_v4();

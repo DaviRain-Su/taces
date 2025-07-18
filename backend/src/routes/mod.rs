@@ -1,4 +1,5 @@
 use axum::Router;
+use crate::AppState;
 
 pub mod auth;
 pub mod user;
@@ -6,11 +7,11 @@ pub mod doctor;
 pub mod appointment;
 pub mod prescription;
 
-pub fn create_routes() -> Router {
+pub fn create_routes() -> Router<AppState> {
     Router::new()
-        .nest("/api/v1/auth", auth::routes())
-        .nest("/api/v1/users", user::routes())
-        .nest("/api/v1/doctors", doctor::routes())
-        .nest("/api/v1/appointments", appointment::routes())
-        .nest("/api/v1/prescriptions", prescription::routes())
+        .nest("/auth", auth::routes())
+        .nest("/users", user::routes())
+        .nest("/doctors", doctor::routes())
+        .nest("/appointments", appointment::routes())
+        .nest("/prescriptions", prescription::routes())
 }

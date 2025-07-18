@@ -3,7 +3,7 @@ use backend::{
     models::user::{CreateUserDto, LoginDto, UserRole, UpdateUserDto, UserStatus},
     utils::test_helpers::{create_test_user},
 };
-use http::StatusCode;
+use axum::http::StatusCode;
 use serde_json::json;
 
 async fn get_auth_token(app: &mut TestApp, account: &str, password: &str) -> String {
@@ -12,7 +12,9 @@ async fn get_auth_token(app: &mut TestApp, account: &str, password: &str) -> Str
         password: password.to_string(),
     };
     
-    let (_, body) = app.post("/api/v1/auth/login", login_dto).await;
+    let (status, body) = app.post("/api/v1/auth/login", login_dto).await;
+    println!("Login response: status={:?}, body={:?}", status, body);
+    assert_eq!(status, StatusCode::OK, "Login failed: {:?}", body);
     body["data"]["token"].as_str().unwrap().to_string()
 }
 
@@ -29,10 +31,13 @@ async fn test_get_user_by_id() {
     let admin_token = get_auth_token(&mut app, &admin_account, &admin_password).await;
     
     // Patient can view their own profile
+    println!("Patient token: {}", patient_token);
+    println!("Requesting: /api/v1/users/{}", patient_id);
     let (status, body) = app.get_with_auth(
         &format!("/api/v1/users/{}", patient_id),
         &patient_token
     ).await;
+    println!("Response: status={:?}, body={:?}", status, body);
     
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["success"], true);
@@ -159,7 +164,7 @@ async fn test_batch_delete_users() {
         "ids": [user1_id, user2_id]
     });
     
-    let (status, body) = app.delete_with_auth(
+    let (status, body) = app.delete_with_auth_body(
         "/api/v1/users/batch/delete",
         delete_request,
         &admin_token

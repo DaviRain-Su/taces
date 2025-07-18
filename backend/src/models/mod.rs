@@ -1,7 +1,4 @@
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
-use validator::Validate;
 
 pub mod user;
 pub mod doctor;

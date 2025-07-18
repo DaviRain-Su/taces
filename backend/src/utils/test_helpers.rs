@@ -1,6 +1,5 @@
 use sqlx::{MySql, MySqlPool, Pool};
 use uuid::Uuid;
-use crate::models::user::*;
 use crate::utils::password::hash_password;
 
 pub async fn create_test_pool() -> Pool<MySql> {
@@ -14,20 +13,27 @@ pub async fn create_test_pool() -> Pool<MySql> {
 
 pub async fn setup_test_db(pool: &Pool<MySql>) {
     // Clean up existing data
-    sqlx::query("SET FOREIGN_KEY_CHECKS = 0")
+    sqlx::query("DELETE FROM prescriptions")
         .execute(pool)
         .await
         .unwrap();
-    
-    let tables = vec!["prescriptions", "appointments", "doctors", "users"];
-    for table in tables {
-        sqlx::query(&format!("TRUNCATE TABLE {}", table))
-            .execute(pool)
-            .await
-            .unwrap();
-    }
-    
-    sqlx::query("SET FOREIGN_KEY_CHECKS = 1")
+    sqlx::query("DELETE FROM appointments")
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query("DELETE FROM circle_posts")
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query("DELETE FROM live_streams")
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query("DELETE FROM doctors")
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query("DELETE FROM users")
         .execute(pool)
         .await
         .unwrap();
@@ -48,7 +54,7 @@ pub async fn create_test_user(pool: &Pool<MySql>, role: &str) -> (Uuid, String, 
         .bind(format!("Test {} User", role))
         .bind(&hashed_password)
         .bind("男")
-        .bind(format!("139{:08}", rand::random::<u32>() % 100000000))
+        .bind(format!("139{:08}", 10000000 + (user_id.as_u128() as u32 % 90000000)))
         .bind(format!("{}@test.com", account))
         .bind(role)
         .execute(pool)

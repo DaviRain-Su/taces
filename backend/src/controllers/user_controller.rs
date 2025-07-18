@@ -8,7 +8,7 @@ use uuid::Uuid;
 use validator::Validate;
 use serde::Deserialize;
 use crate::{
-    config::database::DbPool,
+    AppState,
     models::{user::*, ApiResponse},
     services::user_service,
     middleware::auth::AuthUser,
@@ -30,7 +30,7 @@ pub struct BatchDeleteRequest {
 
 pub async fn list_users(
     Extension(auth_user): Extension<AuthUser>,
-    State(pool): State<DbPool>,
+    State(app_state): State<AppState>,
     Query(query): Query<ListQuery>,
 ) -> Result<Json<ApiResponse<Vec<User>>>, (StatusCode, Json<ApiResponse<()>>)> {
     // Only admin can list all users
@@ -44,7 +44,7 @@ pub async fn list_users(
     let page = query.page.unwrap_or(1);
     let per_page = query.per_page.unwrap_or(20);
     
-    match user_service::list_users(&pool, page, per_page, query.search, query.role, query.status).await {
+    match user_service::list_users(&app_state.pool, page, per_page, query.search, query.role, query.status).await {
         Ok(users) => Ok(Json(ApiResponse::success("Users retrieved successfully", users))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -55,7 +55,7 @@ pub async fn list_users(
 
 pub async fn get_user(
     Extension(auth_user): Extension<AuthUser>,
-    State(pool): State<DbPool>,
+    State(app_state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ApiResponse<User>>, (StatusCode, Json<ApiResponse<()>>)> {
     // Users can view their own profile, admins can view any profile
@@ -66,7 +66,7 @@ pub async fn get_user(
         ));
     }
     
-    match user_service::get_user_by_id(&pool, id).await {
+    match user_service::get_user_by_id(&app_state.pool, id).await {
         Ok(user) => Ok(Json(ApiResponse::success("User retrieved successfully", user))),
         Err(e) => Err((
             StatusCode::NOT_FOUND,
@@ -77,7 +77,7 @@ pub async fn get_user(
 
 pub async fn update_user(
     Extension(auth_user): Extension<AuthUser>,
-    State(pool): State<DbPool>,
+    State(app_state): State<AppState>,
     Path(id): Path<Uuid>,
     Json(dto): Json<UpdateUserDto>,
 ) -> Result<Json<ApiResponse<User>>, (StatusCode, Json<ApiResponse<()>>)> {
@@ -97,7 +97,7 @@ pub async fn update_user(
             )
         })?;
     
-    match user_service::update_user(&pool, id, dto).await {
+    match user_service::update_user(&app_state.pool, id, dto).await {
         Ok(user) => Ok(Json(ApiResponse::success("User updated successfully", user))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -108,7 +108,7 @@ pub async fn update_user(
 
 pub async fn delete_user(
     Extension(auth_user): Extension<AuthUser>,
-    State(pool): State<DbPool>,
+    State(app_state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ApiResponse<()>>, (StatusCode, Json<ApiResponse<()>>)> {
     // Only admin can delete users
@@ -119,7 +119,7 @@ pub async fn delete_user(
         ));
     }
     
-    match user_service::delete_user(&pool, id).await {
+    match user_service::delete_user(&app_state.pool, id).await {
         Ok(_) => Ok(Json(ApiResponse::success("User deleted successfully", ()))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -130,7 +130,7 @@ pub async fn delete_user(
 
 pub async fn batch_delete_users(
     Extension(auth_user): Extension<AuthUser>,
-    State(pool): State<DbPool>,
+    State(app_state): State<AppState>,
     Json(request): Json<BatchDeleteRequest>,
 ) -> Result<Json<ApiResponse<()>>, (StatusCode, Json<ApiResponse<()>>)> {
     // Only admin can batch delete users
@@ -141,7 +141,7 @@ pub async fn batch_delete_users(
         ));
     }
     
-    match user_service::batch_delete_users(&pool, request.ids).await {
+    match user_service::batch_delete_users(&app_state.pool, request.ids).await {
         Ok(count) => Ok(Json(ApiResponse::success(&format!("{} users deleted successfully", count), ()))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -152,7 +152,7 @@ pub async fn batch_delete_users(
 
 pub async fn export_users(
     Extension(auth_user): Extension<AuthUser>,
-    State(pool): State<DbPool>,
+    State(app_state): State<AppState>,
     Query(query): Query<ListQuery>,
 ) -> Result<Json<ApiResponse<String>>, (StatusCode, Json<ApiResponse<()>>)> {
     // Only admin can export users
@@ -163,7 +163,7 @@ pub async fn export_users(
         ));
     }
     
-    match user_service::export_users(&pool, query.search, query.role, query.status).await {
+    match user_service::export_users(&app_state.pool, query.search, query.role, query.status).await {
         Ok(csv_data) => Ok(Json(ApiResponse::success("Users exported successfully", csv_data))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,

@@ -2,7 +2,6 @@
 mod tests {
     use backend::utils::jwt::{create_token, decode_token, Claims};
     use uuid::Uuid;
-    use chrono::{Utc, Duration};
 
     #[test]
     fn test_create_and_decode_token() {
@@ -35,14 +34,22 @@ mod tests {
 
     #[test]
     fn test_decode_expired_token() {
+        use jsonwebtoken::{encode, Header, EncodingKey};
+        use chrono::{Utc, Duration};
+        
         let user_id = Uuid::new_v4();
         let role = "patient".to_string();
         let secret = "test_secret_key";
-        let expiration = -1; // Already expired
         
-        let token = create_token(user_id, role, secret, expiration).unwrap();
+        // Create claims with expired timestamp
+        let mut claims = Claims::new(user_id, role, 3600);
+        claims.exp = (Utc::now() - Duration::hours(1)).timestamp(); // 1 hour ago
+        
+        // Manually encode the token
+        let encoding_key = EncodingKey::from_secret(secret.as_ref());
+        let token = encode(&Header::default(), &claims, &encoding_key).unwrap();
+        
         let result = decode_token(&token, secret);
-        
         assert!(result.is_err());
     }
 

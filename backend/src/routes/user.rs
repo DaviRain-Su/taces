@@ -5,10 +5,11 @@ use axum::{
 };
 use crate::{
     controllers::user_controller,
-    middleware::auth::{auth_middleware, require_role},
+    middleware::auth::auth_middleware,
+    AppState,
 };
 
-pub fn routes() -> Router {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(user_controller::list_users))
         .route("/:id", get(user_controller::get_user))

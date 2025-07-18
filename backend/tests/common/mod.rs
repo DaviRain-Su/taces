@@ -6,9 +6,10 @@ use backend::{
     routes,
     utils::test_helpers::{create_test_pool, setup_test_db},
 };
-use http::{Request, StatusCode};
+use axum::http::{Request, StatusCode};
 use serde_json::Value;
 use tower::Service;
+use axum::body::to_bytes;
 
 pub struct TestApp {
     pub app: Router,
@@ -30,6 +31,9 @@ impl TestApp {
             jwt_expiration: 3600,
             server_port: 3001,
         };
+        
+        // Set JWT_SECRET environment variable for auth middleware
+        std::env::set_var("JWT_SECRET", &config.jwt_secret);
         
         let state = AppState {
             config: config.clone(),
@@ -56,7 +60,7 @@ impl TestApp {
         
         let response = self.app.call(request).await.unwrap();
         let status = response.status();
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
         
         (status, json)
@@ -76,7 +80,7 @@ impl TestApp {
         
         let response = self.app.call(request).await.unwrap();
         let status = response.status();
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
         
         (status, json)
@@ -91,7 +95,7 @@ impl TestApp {
         
         let response = self.app.call(request).await.unwrap();
         let status = response.status();
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
         
         (status, json)
@@ -107,7 +111,7 @@ impl TestApp {
         
         let response = self.app.call(request).await.unwrap();
         let status = response.status();
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
         
         (status, json)
@@ -127,13 +131,13 @@ impl TestApp {
         
         let response = self.app.call(request).await.unwrap();
         let status = response.status();
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
         
         (status, json)
     }
     
-    pub async fn delete_with_auth<T>(&mut self, path: &str, token: &str) -> (StatusCode, Value) {
+    pub async fn delete_with_auth(&mut self, path: &str, token: &str) -> (StatusCode, Value) {
         let request = Request::builder()
             .method("DELETE")
             .uri(path)
@@ -143,7 +147,27 @@ impl TestApp {
         
         let response = self.app.call(request).await.unwrap();
         let status = response.status();
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json: Value = serde_json::from_slice(&body).unwrap();
+        
+        (status, json)
+    }
+    
+    pub async fn delete_with_auth_body<T>(&mut self, path: &str, body: T, token: &str) -> (StatusCode, Value)
+    where
+        T: serde::Serialize,
+    {
+        let request = Request::builder()
+            .method("DELETE")
+            .uri(path)
+            .header("content-type", "application/json")
+            .header("authorization", format!("Bearer {}", token))
+            .body(Body::from(serde_json::to_string(&body).unwrap()))
+            .unwrap();
+        
+        let response = self.app.call(request).await.unwrap();
+        let status = response.status();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
         
         (status, json)

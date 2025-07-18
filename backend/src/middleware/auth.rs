@@ -1,13 +1,12 @@
 use axum::{
-    extract::{Request, State},
+    extract::Request,
     http::{header, StatusCode},
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::Response,
     Json,
 };
 use serde_json::json;
 use crate::{
-    AppState,
     utils::jwt::decode_token,
 };
 
@@ -18,7 +17,6 @@ pub struct AuthUser {
 }
 
 pub async fn auth_middleware(
-    State(app_state): State<AppState>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, (StatusCode, Json<serde_json::Value>)> {
@@ -42,7 +40,11 @@ pub async fn auth_middleware(
         }
     };
 
-    match decode_token(token, &app_state.config.jwt_secret) {
+    // Get JWT secret from environment
+    let jwt_secret = std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "default_jwt_secret".to_string());
+    
+    match decode_token(token, &jwt_secret) {
         Ok(claims) => {
             let auth_user = AuthUser {
                 user_id: claims.sub,
@@ -61,7 +63,7 @@ pub async fn auth_middleware(
     }
 }
 
-pub fn require_role(allowed_roles: Vec<&str>) -> impl Fn(Request, Next) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Response, (StatusCode, Json<serde_json::Value>)>> + Send>> + Clone {
+pub fn require_role(allowed_roles: Vec<String>) -> impl Fn(Request, Next) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Response, (StatusCode, Json<serde_json::Value>)>> + Send>> + Clone {
     move |req: Request, next: Next| {
         let allowed_roles = allowed_roles.clone();
         Box::pin(async move {
@@ -78,7 +80,7 @@ pub fn require_role(allowed_roles: Vec<&str>) -> impl Fn(Request, Next) -> std::
                     )
                 })?;
 
-            if allowed_roles.contains(&auth_user.role.as_str()) {
+            if allowed_roles.contains(&auth_user.role) {
                 Ok(next.run(req).await)
             } else {
                 Err((

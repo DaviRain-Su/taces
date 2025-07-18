@@ -2,9 +2,8 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use validator::Validate;
-use sqlx::FromRow;
 
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
     pub id: Uuid,
     pub account: String,
@@ -23,6 +22,7 @@ pub struct User {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "user_role", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum UserRole {
     Admin,
     Doctor,
@@ -31,12 +31,13 @@ pub enum UserRole {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "user_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum UserStatus {
     Active,
     Inactive,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct CreateUserDto {
     #[validate(length(min = 3, max = 50))]
     pub account: String,
@@ -58,7 +59,7 @@ pub struct UpdateUserDto {
     #[validate(length(min = 2, max = 50))]
     pub name: Option<String>,
     pub gender: Option<String>,
-    #[validate(phone)]
+    #[validate(length(min = 11, max = 11))]
     pub phone: Option<String>,
     #[validate(email)]
     pub email: Option<String>,

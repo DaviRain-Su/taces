@@ -6,6 +6,34 @@ use crate::{
     models::user::*,
 };
 
+fn parse_user_from_row(row: &sqlx::mysql::MySqlRow) -> Result<User> {
+    use sqlx::Row;
+    
+    Ok(User {
+        id: Uuid::parse_str(row.get("id")).map_err(|e| anyhow!("Failed to parse UUID: {}", e))?,
+        account: row.get("account"),
+        name: row.get("name"),
+        password: row.get("password"),
+        gender: row.get("gender"),
+        phone: row.get("phone"),
+        email: row.get("email"),
+        birthday: row.get("birthday"),
+        role: match row.get::<&str, _>("role") {
+            "admin" => UserRole::Admin,
+            "doctor" => UserRole::Doctor,
+            "patient" => UserRole::Patient,
+            _ => return Err(anyhow!("Invalid role")),
+        },
+        status: match row.get::<&str, _>("status") {
+            "active" => UserStatus::Active,
+            "inactive" => UserStatus::Inactive,
+            _ => return Err(anyhow!("Invalid status")),
+        },
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
+    })
+}
+
 pub async fn list_users(
     pool: &DbPool,
     page: u32,
@@ -37,10 +65,15 @@ pub async fn list_users(
     
     query.push_str(&format!(" ORDER BY created_at DESC LIMIT {} OFFSET {}", per_page, offset));
     
-    let users = sqlx::query_as::<_, User>(&query)
+    let rows = sqlx::query(&query)
         .fetch_all(pool)
         .await
         .map_err(|e| anyhow!("Failed to fetch users: {}", e))?;
+    
+    let mut users = Vec::new();
+    for row in rows {
+        users.push(parse_user_from_row(&row)?);
+    }
     
     Ok(users)
 }
@@ -52,13 +85,13 @@ pub async fn get_user_by_id(pool: &DbPool, id: Uuid) -> Result<User> {
         WHERE id = ?
     "#;
     
-    let user = sqlx::query_as::<_, User>(query)
+    let row = sqlx::query(query)
         .bind(id.to_string())
         .fetch_one(pool)
         .await
         .map_err(|e| anyhow!("User not found: {}", e))?;
     
-    Ok(user)
+    parse_user_from_row(&row)
 }
 
 pub async fn update_user(pool: &DbPool, id: Uuid, dto: UpdateUserDto) -> Result<User> {

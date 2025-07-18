@@ -1,6 +1,6 @@
 use crate::common::TestApp;
 use backend::models::user::{CreateUserDto, LoginDto, UserRole};
-use http::StatusCode;
+use axum::http::StatusCode;
 use serde_json::json;
 
 #[tokio::test]

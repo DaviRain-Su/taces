@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, Duration, Timelike};
+use chrono::{DateTime, Utc};
 use crate::{
     config::database::DbPool,
     models::appointment::*,

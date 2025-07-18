@@ -3,17 +3,15 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use uuid::Uuid;
 use validator::Validate;
 use crate::{
-    config::{Config, database::DbPool},
+    AppState,
     models::{user::*, ApiResponse},
     services::auth_service,
 };
 
 pub async fn register(
-    State(pool): State<DbPool>,
-    State(config): State<Config>,
+    State(app_state): State<AppState>,
     Json(dto): Json<CreateUserDto>,
 ) -> Result<Json<ApiResponse<User>>, (StatusCode, Json<ApiResponse<()>>)> {
     dto.validate()
@@ -24,7 +22,7 @@ pub async fn register(
             )
         })?;
 
-    match auth_service::register_user(&pool, dto).await {
+    match auth_service::register_user(&app_state.pool, dto).await {
         Ok(user) => Ok(Json(ApiResponse::success("User registered successfully", user))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -34,8 +32,7 @@ pub async fn register(
 }
 
 pub async fn login(
-    State(pool): State<DbPool>,
-    State(config): State<Config>,
+    State(app_state): State<AppState>,
     Json(dto): Json<LoginDto>,
 ) -> Result<Json<ApiResponse<LoginResponse>>, (StatusCode, Json<ApiResponse<()>>)> {
     dto.validate()
@@ -46,7 +43,7 @@ pub async fn login(
             )
         })?;
 
-    match auth_service::login(&pool, &config, dto).await {
+    match auth_service::login(&app_state.pool, &app_state.config, dto).await {
         Ok(response) => Ok(Json(ApiResponse::success("Login successful", response))),
         Err(e) => Err((
             StatusCode::UNAUTHORIZED,

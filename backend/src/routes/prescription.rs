@@ -6,9 +6,10 @@ use axum::{
 use crate::{
     controllers::prescription_controller,
     middleware::auth::auth_middleware,
+    AppState,
 };
 
-pub fn routes() -> Router {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(prescription_controller::list_prescriptions))
         .route("/:id", get(prescription_controller::get_prescription))
