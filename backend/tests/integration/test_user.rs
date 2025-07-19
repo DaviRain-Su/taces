@@ -1,7 +1,7 @@
 use crate::common::TestApp;
 use axum::http::StatusCode;
 use backend::{
-    models::user::{CreateUserDto, LoginDto, UpdateUserDto, UserRole, UserStatus},
+    models::user::{LoginDto, UpdateUserDto},
     utils::test_helpers::create_test_user,
 };
 use serde_json::json;

@@ -1,3 +1,4 @@
+pub mod test_appointment;
 pub mod test_auth;
 pub mod test_circle;
 pub mod test_circle_post;
@@ -7,6 +8,7 @@ pub mod test_doctor;
 pub mod test_live_stream;
 pub mod test_patient_group;
 pub mod test_patient_profile;
+pub mod test_prescription;
 pub mod test_review;
 pub mod test_template;
 pub mod test_user;

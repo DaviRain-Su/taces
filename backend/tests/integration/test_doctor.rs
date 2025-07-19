@@ -4,8 +4,6 @@ use backend::{
     models::{doctor::*, user::LoginDto},
     utils::test_helpers::{create_test_doctor, create_test_user},
 };
-use serde_json::json;
-use uuid::Uuid;
 
 async fn get_auth_token(app: &mut TestApp, account: &str, password: &str) -> String {
     let login_dto = LoginDto {

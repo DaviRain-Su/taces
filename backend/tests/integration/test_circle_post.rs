@@ -172,7 +172,7 @@ async fn test_post_comments() {
     let (_user1_id, account1, password1) = create_test_user(&app.pool, "patient").await;
     let token1 = get_auth_token(&mut app, &account1, &password1).await;
     
-    let (user2_id, account2, password2) = create_test_user(&app.pool, "patient").await;
+    let (_user2_id, account2, password2) = create_test_user(&app.pool, "patient").await;
     let token2 = get_auth_token(&mut app, &account2, &password2).await;
 
     // Create circle and both users join

@@ -9,7 +9,6 @@ use backend::{
 };
 use serde_json::Value;
 use tower::Service;
-use tower::ServiceExt;
 
 pub struct TestApp {
     pub app: Router,
