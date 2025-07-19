@@ -262,15 +262,21 @@ pub async fn send_system_announcement(
     }
 
     // 获取所有用户ID
-    let user_ids_result: Result<Vec<(Uuid,)>, sqlx::Error> = sqlx::query_as(
+    let user_ids_result = sqlx::query(
         "SELECT id FROM users WHERE status = 'active'"
     )
     .fetch_all(&state.pool)
     .await;
 
     match user_ids_result {
-        Ok(users) => {
-            let user_ids: Vec<Uuid> = users.into_iter().map(|(id,)| id).collect();
+        Ok(rows) => {
+            use sqlx::Row;
+            let user_ids: Vec<Uuid> = rows.into_iter()
+                .filter_map(|row| {
+                    let id_str: String = row.get("id");
+                    Uuid::parse_str(&id_str).ok()
+                })
+                .collect();
             
             match NotificationService::create_bulk_notifications(
                 &state.pool,

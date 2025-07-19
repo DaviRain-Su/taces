@@ -103,7 +103,7 @@ pub struct CreateOrderDto {
     pub user_id: Uuid,
     pub appointment_id: Option<Uuid>,
     pub order_type: OrderType,
-    #[validate(range(min = 0.01))]
+    // TODO: Add custom validation for Decimal
     pub amount: Decimal,
     #[validate(length(max = 500))]
     pub description: Option<String>,
@@ -162,7 +162,7 @@ pub struct RefundRecord {
 #[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct CreateRefundDto {
     pub order_id: Uuid,
-    #[validate(range(min = 0.01))]
+    // TODO: Add custom validation for Decimal
     pub refund_amount: Decimal,
     #[validate(length(min = 1, max = 500))]
     pub refund_reason: String,

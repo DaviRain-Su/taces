@@ -11,8 +11,7 @@ pub struct StatisticsService;
 impl StatisticsService {
     /// 获取管理员仪表盘统计数据
     pub async fn get_dashboard_stats(pool: &DbPool) -> Result<DashboardStats, sqlx::Error> {
-        let stats = query!(
-            r#"
+        let query = r#"
             SELECT 
                 (SELECT COUNT(*) FROM users WHERE status = 'active') as total_users,
                 (SELECT COUNT(*) FROM users WHERE role = 'doctor' AND status = 'active') as total_doctors,
@@ -22,20 +21,22 @@ impl StatisticsService {
                 (SELECT COUNT(*) FROM appointments WHERE DATE(appointment_date) = CURDATE()) as today_appointments,
                 (SELECT COUNT(*) FROM appointments WHERE status = 'pending') as pending_appointments,
                 (SELECT COUNT(*) FROM appointments WHERE status = 'completed') as completed_appointments
-            "#
-        )
-        .fetch_one(pool)
-        .await?;
+        "#;
+        
+        let stats = sqlx::query(query)
+            .fetch_one(pool)
+            .await?;
 
+        use sqlx::Row;
         Ok(DashboardStats {
-            total_users: stats.total_users.unwrap_or(0),
-            total_doctors: stats.total_doctors.unwrap_or(0),
-            total_patients: stats.total_patients.unwrap_or(0),
-            total_appointments: stats.total_appointments.unwrap_or(0),
-            total_prescriptions: stats.total_prescriptions.unwrap_or(0),
-            today_appointments: stats.today_appointments.unwrap_or(0),
-            pending_appointments: stats.pending_appointments.unwrap_or(0),
-            completed_appointments: stats.completed_appointments.unwrap_or(0),
+            total_users: stats.get::<Option<i64>, _>("total_users").unwrap_or(0),
+            total_doctors: stats.get::<Option<i64>, _>("total_doctors").unwrap_or(0),
+            total_patients: stats.get::<Option<i64>, _>("total_patients").unwrap_or(0),
+            total_appointments: stats.get::<Option<i64>, _>("total_appointments").unwrap_or(0),
+            total_prescriptions: stats.get::<Option<i64>, _>("total_prescriptions").unwrap_or(0),
+            today_appointments: stats.get::<Option<i64>, _>("today_appointments").unwrap_or(0),
+            pending_appointments: stats.get::<Option<i64>, _>("pending_appointments").unwrap_or(0),
+            completed_appointments: stats.get::<Option<i64>, _>("completed_appointments").unwrap_or(0),
         })
     }
 
@@ -44,8 +45,7 @@ impl StatisticsService {
         pool: &DbPool,
         doctor_id: Uuid,
     ) -> Result<DoctorStats, sqlx::Error> {
-        let stats = query!(
-            r#"
+        let query = r#"
             SELECT 
                 COUNT(DISTINCT a.id) as total_appointments,
                 COUNT(DISTINCT CASE WHEN a.status = 'completed' THEN a.id END) as completed_appointments,
@@ -62,23 +62,25 @@ impl StatisticsService {
             LEFT JOIN prescriptions p ON d.id = p.doctor_id
             LEFT JOIN patient_reviews r ON d.id = r.doctor_id
             WHERE d.id = ?
-            "#,
-            doctor_id.to_string()
-        )
-        .fetch_one(pool)
-        .await?;
+        "#;
+        
+        let stats = sqlx::query(query)
+            .bind(doctor_id.to_string())
+            .fetch_one(pool)
+            .await?;
 
+        use sqlx::Row;
         Ok(DoctorStats {
-            total_appointments: stats.total_appointments,
-            completed_appointments: stats.completed_appointments,
-            cancelled_appointments: stats.cancelled_appointments,
-            total_patients: stats.total_patients,
-            total_prescriptions: stats.total_prescriptions,
-            average_rating: stats.average_rating,
-            total_reviews: stats.total_reviews,
-            today_appointments: stats.today_appointments,
-            this_week_appointments: stats.this_week_appointments,
-            this_month_appointments: stats.this_month_appointments,
+            total_appointments: stats.get::<Option<i64>, _>("total_appointments").unwrap_or(0),
+            completed_appointments: stats.get::<Option<i64>, _>("completed_appointments").unwrap_or(0),
+            cancelled_appointments: stats.get::<Option<i64>, _>("cancelled_appointments").unwrap_or(0),
+            total_patients: stats.get::<Option<i64>, _>("total_patients").unwrap_or(0),
+            total_prescriptions: stats.get::<Option<i64>, _>("total_prescriptions").unwrap_or(0),
+            average_rating: stats.get("average_rating"),
+            total_reviews: stats.get::<Option<i64>, _>("total_reviews").unwrap_or(0),
+            today_appointments: stats.get::<Option<i64>, _>("today_appointments").unwrap_or(0),
+            this_week_appointments: stats.get::<Option<i64>, _>("this_week_appointments").unwrap_or(0),
+            this_month_appointments: stats.get::<Option<i64>, _>("this_month_appointments").unwrap_or(0),
         })
     }
 
@@ -87,8 +89,7 @@ impl StatisticsService {
         pool: &DbPool,
         patient_id: Uuid,
     ) -> Result<PatientStats, sqlx::Error> {
-        let stats = query!(
-            r#"
+        let query = r#"
             SELECT 
                 COUNT(DISTINCT a.id) as total_appointments,
                 COUNT(DISTINCT CASE WHEN a.status = 'completed' THEN a.id END) as completed_appointments,
@@ -98,18 +99,20 @@ impl StatisticsService {
             FROM appointments a
             LEFT JOIN prescriptions p ON a.patient_id = p.patient_id
             WHERE a.patient_id = ?
-            "#,
-            patient_id.to_string()
-        )
-        .fetch_one(pool)
-        .await?;
+        "#;
+        
+        let stats = sqlx::query(query)
+            .bind(patient_id.to_string())
+            .fetch_one(pool)
+            .await?;
 
+        use sqlx::Row;
         Ok(PatientStats {
-            total_appointments: stats.total_appointments,
-            completed_appointments: stats.completed_appointments,
-            upcoming_appointments: stats.upcoming_appointments,
-            total_prescriptions: stats.total_prescriptions,
-            total_doctors_visited: stats.total_doctors_visited,
+            total_appointments: stats.get::<Option<i64>, _>("total_appointments").unwrap_or(0),
+            completed_appointments: stats.get::<Option<i64>, _>("completed_appointments").unwrap_or(0),
+            upcoming_appointments: stats.get::<Option<i64>, _>("upcoming_appointments").unwrap_or(0),
+            total_prescriptions: stats.get::<Option<i64>, _>("total_prescriptions").unwrap_or(0),
+            total_doctors_visited: stats.get::<Option<i64>, _>("total_doctors_visited").unwrap_or(0),
         })
     }
 
@@ -119,8 +122,7 @@ impl StatisticsService {
         start_date: NaiveDate,
         end_date: NaiveDate,
     ) -> Result<Vec<AppointmentTrend>, sqlx::Error> {
-        let trends = query!(
-            r#"
+        let query = r#"
             SELECT 
                 DATE(appointment_date) as date,
                 COUNT(*) as count
@@ -128,26 +130,27 @@ impl StatisticsService {
             WHERE DATE(appointment_date) BETWEEN ? AND ?
             GROUP BY DATE(appointment_date)
             ORDER BY date
-            "#,
-            start_date,
-            end_date
-        )
-        .fetch_all(pool)
-        .await?;
+        "#;
+        
+        let trends = sqlx::query(query)
+            .bind(start_date)
+            .bind(end_date)
+            .fetch_all(pool)
+            .await?;
 
+        use sqlx::Row;
         Ok(trends
             .into_iter()
             .map(|row| AppointmentTrend {
-                date: row.date.unwrap(),
-                count: row.count,
+                date: row.get("date"),
+                count: row.get("count"),
             })
             .collect())
     }
 
     /// 获取科室统计数据
     pub async fn get_department_stats(pool: &DbPool) -> Result<Vec<DepartmentStats>, sqlx::Error> {
-        let stats = query!(
-            r#"
+        let query = r#"
             SELECT 
                 dep.id as department_id,
                 dep.name as department_name,
@@ -160,27 +163,28 @@ impl StatisticsService {
             LEFT JOIN patient_reviews r ON d.id = r.doctor_id
             GROUP BY dep.id, dep.name
             ORDER BY total_appointments DESC
-            "#
-        )
-        .fetch_all(pool)
-        .await?;
+        "#;
+        
+        let stats = sqlx::query(query)
+            .fetch_all(pool)
+            .await?;
 
+        use sqlx::Row;
         Ok(stats
             .into_iter()
             .map(|row| DepartmentStats {
-                department_id: Uuid::parse_str(&row.department_id).unwrap(),
-                department_name: row.department_name,
-                total_doctors: row.total_doctors as i64,
-                total_appointments: row.total_appointments as i64,
-                average_rating: row.average_rating,
+                department_id: Uuid::parse_str(row.get("department_id")).unwrap(),
+                department_name: row.get("department_name"),
+                total_doctors: row.get::<Option<i64>, _>("total_doctors").unwrap_or(0),
+                total_appointments: row.get::<Option<i64>, _>("total_appointments").unwrap_or(0),
+                average_rating: row.get("average_rating"),
             })
             .collect())
     }
 
     /// 获取时间段分布统计
     pub async fn get_time_slot_stats(pool: &DbPool) -> Result<Vec<TimeSlotStats>, sqlx::Error> {
-        let stats = query!(
-            r#"
+        let query = r#"
             SELECT 
                 time_slot,
                 COUNT(*) as count
@@ -188,20 +192,27 @@ impl StatisticsService {
             WHERE status IN ('completed', 'confirmed', 'pending')
             GROUP BY time_slot
             ORDER BY count DESC
-            "#
-        )
-        .fetch_all(pool)
-        .await?;
+        "#;
+        
+        let stats = sqlx::query(query)
+            .fetch_all(pool)
+            .await?;
 
-        let total: i64 = stats.iter().map(|s| s.count).sum();
-
-        Ok(stats
+        use sqlx::Row;
+        let stats_vec: Vec<(String, i64)> = stats
             .into_iter()
-            .map(|row| TimeSlotStats {
-                time_slot: row.time_slot,
-                count: row.count,
+            .map(|row| (row.get("time_slot"), row.get("count")))
+            .collect();
+        
+        let total: i64 = stats_vec.iter().map(|(_, count)| count).sum();
+
+        Ok(stats_vec
+            .into_iter()
+            .map(|(time_slot, count)| TimeSlotStats {
+                time_slot,
+                count,
                 percentage: if total > 0 {
-                    (row.count as f64 / total as f64) * 100.0
+                    (count as f64 / total as f64) * 100.0
                 } else {
                     0.0
                 },
@@ -211,8 +222,7 @@ impl StatisticsService {
 
     /// 获取内容统计数据
     pub async fn get_content_stats(pool: &DbPool) -> Result<ContentStats, sqlx::Error> {
-        let stats = query!(
-            r#"
+        let query = r#"
             SELECT 
                 (SELECT COUNT(*) FROM articles) as total_articles,
                 (SELECT COUNT(*) FROM videos) as total_videos,
@@ -220,25 +230,26 @@ impl StatisticsService {
                 (SELECT COUNT(*) FROM articles WHERE status = 'published') as published_articles,
                 (SELECT COUNT(*) FROM articles WHERE status = 'draft') as draft_articles,
                 (SELECT COUNT(*) FROM videos WHERE status = 'published') as published_videos
-            "#
-        )
-        .fetch_one(pool)
-        .await?;
+        "#;
+        
+        let stats = sqlx::query(query)
+            .fetch_one(pool)
+            .await?;
 
+        use sqlx::Row;
         Ok(ContentStats {
-            total_articles: stats.total_articles.unwrap_or(0),
-            total_videos: stats.total_videos.unwrap_or(0),
-            total_views: stats.total_views.unwrap_or(0),
-            published_articles: stats.published_articles.unwrap_or(0),
-            draft_articles: stats.draft_articles.unwrap_or(0),
-            published_videos: stats.published_videos.unwrap_or(0),
+            total_articles: stats.get::<Option<i64>, _>("total_articles").unwrap_or(0),
+            total_videos: stats.get::<Option<i64>, _>("total_videos").unwrap_or(0),
+            total_views: stats.get::<Option<i64>, _>("total_views").unwrap_or(0),
+            published_articles: stats.get::<Option<i64>, _>("published_articles").unwrap_or(0),
+            draft_articles: stats.get::<Option<i64>, _>("draft_articles").unwrap_or(0),
+            published_videos: stats.get::<Option<i64>, _>("published_videos").unwrap_or(0),
         })
     }
 
     /// 获取直播统计数据
     pub async fn get_live_stream_stats(pool: &DbPool) -> Result<LiveStreamStats, sqlx::Error> {
-        let stats = query!(
-            r#"
+        let query = r#"
             SELECT 
                 COUNT(*) as total_streams,
                 COUNT(CASE WHEN status = 'scheduled' THEN 1 END) as scheduled_streams,
@@ -246,24 +257,25 @@ impl StatisticsService {
                 0 as total_viewers,  -- 需要实际的观看记录表
                 0.0 as average_viewers_per_stream
             FROM live_streams
-            "#
-        )
-        .fetch_one(pool)
-        .await?;
+        "#;
+        
+        let stats = sqlx::query(query)
+            .fetch_one(pool)
+            .await?;
 
+        use sqlx::Row;
         Ok(LiveStreamStats {
-            total_streams: stats.total_streams,
-            scheduled_streams: stats.scheduled_streams as i64,
-            completed_streams: stats.completed_streams as i64,
-            total_viewers: stats.total_viewers,
-            average_viewers_per_stream: stats.average_viewers_per_stream,
+            total_streams: stats.get("total_streams"),
+            scheduled_streams: stats.get::<Option<i64>, _>("scheduled_streams").unwrap_or(0),
+            completed_streams: stats.get::<Option<i64>, _>("completed_streams").unwrap_or(0),
+            total_viewers: stats.get("total_viewers"),
+            average_viewers_per_stream: stats.get("average_viewers_per_stream"),
         })
     }
 
     /// 获取圈子统计数据
     pub async fn get_circle_stats(pool: &DbPool) -> Result<CircleStats, sqlx::Error> {
-        let stats = query!(
-            r#"
+        let query = r#"
             SELECT 
                 COUNT(DISTINCT c.id) as total_circles,
                 COUNT(DISTINCT cm.user_id) as total_members,
@@ -278,22 +290,27 @@ impl StatisticsService {
             FROM circles c
             LEFT JOIN circle_members cm ON c.id = cm.circle_id
             LEFT JOIN circle_posts cp ON c.id = cp.circle_id
-            "#
-        )
-        .fetch_one(pool)
-        .await?;
+        "#;
+        
+        let stats = sqlx::query(query)
+            .fetch_one(pool)
+            .await?;
 
-        let average_members = if stats.total_circles > 0 {
-            stats.total_members as f64 / stats.total_circles as f64
+        use sqlx::Row;
+        let total_circles: i64 = stats.get("total_circles");
+        let total_members: i64 = stats.get::<Option<i64>, _>("total_members").unwrap_or(0);
+        
+        let average_members = if total_circles > 0 {
+            total_members as f64 / total_circles as f64
         } else {
             0.0
         };
 
         Ok(CircleStats {
-            total_circles: stats.total_circles,
-            total_members: stats.total_members as i64,
-            total_posts: stats.total_posts as i64,
-            active_circles: stats.active_circles as i64,
+            total_circles,
+            total_members,
+            total_posts: stats.get::<Option<i64>, _>("total_posts").unwrap_or(0),
+            active_circles: stats.get::<Option<i64>, _>("active_circles").unwrap_or(0),
             average_members_per_circle: average_members,
         })
     }
@@ -304,8 +321,7 @@ impl StatisticsService {
         start_date: NaiveDate,
         end_date: NaiveDate,
     ) -> Result<Vec<UserGrowthStats>, sqlx::Error> {
-        let stats = query!(
-            r#"
+        let query = r#"
             SELECT 
                 DATE(created_at) as date,
                 COUNT(*) as new_users,
@@ -315,23 +331,26 @@ impl StatisticsService {
             WHERE DATE(created_at) BETWEEN ? AND ?
             GROUP BY DATE(created_at)
             ORDER BY date
-            "#,
-            start_date,
-            end_date
-        )
-        .fetch_all(pool)
-        .await?;
+        "#;
+        
+        let stats = sqlx::query(query)
+            .bind(start_date)
+            .bind(end_date)
+            .fetch_all(pool)
+            .await?;
 
+        use sqlx::Row;
         let mut cumulative_users = 0i64;
         let growth_stats: Vec<UserGrowthStats> = stats
             .into_iter()
             .map(|row| {
-                cumulative_users += row.new_users;
+                let new_users: i64 = row.get("new_users");
+                cumulative_users += new_users;
                 UserGrowthStats {
-                    date: row.date.unwrap(),
-                    new_users: row.new_users,
-                    new_doctors: row.new_doctors as i64,
-                    new_patients: row.new_patients as i64,
+                    date: row.get("date"),
+                    new_users,
+                    new_doctors: row.get::<Option<i64>, _>("new_doctors").unwrap_or(0),
+                    new_patients: row.get::<Option<i64>, _>("new_patients").unwrap_or(0),
                     cumulative_users,
                 }
             })
@@ -345,8 +364,7 @@ impl StatisticsService {
         pool: &DbPool,
         limit: i64,
     ) -> Result<Vec<TopDoctor>, sqlx::Error> {
-        let doctors = query!(
-            r#"
+        let query = r#"
             SELECT 
                 d.id as doctor_id,
                 u.name as doctor_name,
@@ -363,21 +381,23 @@ impl StatisticsService {
             GROUP BY d.id, u.name, dep.name
             ORDER BY appointment_count DESC
             LIMIT ?
-            "#,
-            limit
-        )
-        .fetch_all(pool)
-        .await?;
+        "#;
+        
+        let doctors = sqlx::query(query)
+            .bind(limit)
+            .fetch_all(pool)
+            .await?;
 
+        use sqlx::Row;
         Ok(doctors
             .into_iter()
             .map(|row| TopDoctor {
-                doctor_id: Uuid::parse_str(&row.doctor_id).unwrap(),
-                doctor_name: row.doctor_name,
-                department: row.department.unwrap_or_else(|| "未分配".to_string()),
-                appointment_count: row.appointment_count as i64,
-                average_rating: row.average_rating,
-                review_count: row.review_count as i64,
+                doctor_id: Uuid::parse_str(row.get("doctor_id")).unwrap(),
+                doctor_name: row.get("doctor_name"),
+                department: row.get::<Option<String>, _>("department").unwrap_or_else(|| "未分配".to_string()),
+                appointment_count: row.get::<Option<i64>, _>("appointment_count").unwrap_or(0),
+                average_rating: row.get("average_rating"),
+                review_count: row.get::<Option<i64>, _>("review_count").unwrap_or(0),
             })
             .collect())
     }
@@ -388,8 +408,7 @@ impl StatisticsService {
         limit: i64,
     ) -> Result<Vec<TopContent>, sqlx::Error> {
         // 获取热门文章
-        let articles = query!(
-            r#"
+        let articles_query = r#"
             SELECT 
                 a.id as content_id,
                 a.title,
@@ -402,15 +421,15 @@ impl StatisticsService {
             WHERE a.status = 'published'
             ORDER BY a.view_count DESC
             LIMIT ?
-            "#,
-            limit / 2
-        )
-        .fetch_all(pool)
-        .await?;
+        "#;
+        
+        let articles = sqlx::query(articles_query)
+            .bind(limit / 2)
+            .fetch_all(pool)
+            .await?;
 
         // 获取热门视频
-        let videos = query!(
-            r#"
+        let videos_query = r#"
             SELECT 
                 v.id as content_id,
                 v.title,
@@ -423,22 +442,24 @@ impl StatisticsService {
             WHERE v.status = 'published'
             ORDER BY v.view_count DESC
             LIMIT ?
-            "#,
-            limit / 2
-        )
-        .fetch_all(pool)
-        .await?;
+        "#;
+        
+        let videos = sqlx::query(videos_query)
+            .bind(limit / 2)
+            .fetch_all(pool)
+            .await?;
 
+        use sqlx::Row;
         let mut all_content: Vec<TopContent> = articles
             .into_iter()
             .chain(videos.into_iter())
             .map(|row| TopContent {
-                content_id: Uuid::parse_str(&row.content_id).unwrap(),
-                title: row.title,
-                content_type: row.content_type,
-                author_name: row.author_name,
-                view_count: row.view_count,
-                created_at: row.created_at,
+                content_id: Uuid::parse_str(row.get("content_id")).unwrap(),
+                title: row.get("title"),
+                content_type: row.get("content_type"),
+                author_name: row.get("author_name"),
+                view_count: row.get("view_count"),
+                created_at: row.get("created_at"),
             })
             .collect();
 
@@ -451,8 +472,7 @@ impl StatisticsService {
 
     /// 获取预约热力图数据
     pub async fn get_appointment_heatmap(pool: &DbPool) -> Result<Vec<HeatmapData>, sqlx::Error> {
-        let heatmap = query!(
-            r#"
+        let query = r#"
             SELECT 
                 HOUR(appointment_date) as hour,
                 DAYOFWEEK(appointment_date) - 1 as day_of_week,  -- MySQL: 1=Sunday, 7=Saturday
@@ -461,17 +481,19 @@ impl StatisticsService {
             WHERE status IN ('completed', 'confirmed', 'pending')
             GROUP BY hour, day_of_week
             ORDER BY day_of_week, hour
-            "#
-        )
-        .fetch_all(pool)
-        .await?;
+        "#;
+        
+        let heatmap = sqlx::query(query)
+            .fetch_all(pool)
+            .await?;
 
+        use sqlx::Row;
         Ok(heatmap
             .into_iter()
             .map(|row| HeatmapData {
-                hour: row.hour as i32,
-                day_of_week: row.day_of_week as i32,
-                count: row.count,
+                hour: row.get::<Option<i32>, _>("hour").unwrap_or(0),
+                day_of_week: row.get::<Option<i32>, _>("day_of_week").unwrap_or(0),
+                count: row.get("count"),
             })
             .collect())
     }

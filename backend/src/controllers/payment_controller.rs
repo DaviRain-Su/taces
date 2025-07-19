@@ -248,7 +248,9 @@ pub async fn get_user_balance(
 
     let balance = PaymentService::get_user_balance(&state.pool, user_id)
         .await
-        .or_else(|_| PaymentService::create_user_balance(&state.pool, user_id))
+        .or_else(|_| async {
+            PaymentService::create_user_balance(&state.pool, user_id).await
+        })
         .await?;
 
     Ok(Json(ApiResponse::success("获取余额成功", balance)))

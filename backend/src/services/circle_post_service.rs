@@ -122,7 +122,7 @@ impl CirclePostService {
         let total: i64 = count_query_builder
             .fetch_one(pool)
             .await?
-            .get(0)?;
+            .get::<i64, _>(0);
 
         // Get posts list
         let mut list_query_builder = sqlx::query(&list_query)
@@ -436,8 +436,8 @@ impl CirclePostService {
         .await?
         .ok_or_else(|| anyhow!("Comment not found"))?;
 
-        let comment_user_id: String = comment.get("user_id")?;
-        let post_id: String = comment.get("post_id")?;
+        let comment_user_id: String = comment.get::<String, _>("user_id");
+        let post_id: String = comment.get::<String, _>("post_id");
 
         if !is_admin && comment_user_id != user_id.to_string() {
             return Err(anyhow!("No permission to delete this comment"));
@@ -496,8 +496,8 @@ impl CirclePostService {
         .fetch_all(pool)
         .await?
         .into_iter()
-        .map(|row| row.get("word"))
-        .collect::<Result<Vec<_>, _>>()?;
+        .map(|row| row.get::<String, _>("word"))
+        .collect::<Vec<String>>();
 
         let lower_text = text.to_lowercase();
         for word in sensitive_words {

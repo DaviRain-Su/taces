@@ -121,7 +121,7 @@ impl CircleService {
         let total: i64 = count_query_builder
             .fetch_one(pool)
             .await?
-            .get(0)?;
+            .get::<i64, _>(0);
 
         // Get circles list
         let mut list_query_builder = sqlx::query(&list_query)
@@ -357,7 +357,7 @@ impl CircleService {
         .await?
         .ok_or_else(|| anyhow!("Not a member of this circle"))?;
 
-        let role: String = member.get("role")?;
+        let role: String = member.get::<String, _>("role");
         if role == "owner" {
             return Err(anyhow!("Owner cannot leave the circle"));
         }
@@ -395,7 +395,7 @@ impl CircleService {
             .bind(circle_id.to_string())
             .fetch_one(pool)
             .await?
-            .get(0)?;
+            .get::<i64, _>(0);
 
         // Get members
         let rows = sqlx::query(
@@ -554,7 +554,7 @@ impl CircleService {
         .bind(user_id.to_string())
         .fetch_one(pool)
         .await?
-        .get(0)?;
+        .get::<i64, _>(0)?;
 
         // Get circles
         let rows = sqlx::query(

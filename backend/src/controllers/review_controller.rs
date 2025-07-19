@@ -22,7 +22,7 @@ pub async fn create_review(
     Json(dto): Json<CreateReviewDto>,
 ) -> impl IntoResponse {
     // 只有患者可以创建评价
-    if user.role != "patient" {
+    if user.role != UserRole::Patient {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Only patients can create reviews")),
@@ -113,7 +113,7 @@ pub async fn update_review(
     Json(dto): Json<UpdateReviewDto>,
 ) -> impl IntoResponse {
     // 只有患者可以更新自己的评价
-    if user.role != "patient" {
+    if user.role != UserRole::Patient {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Only patients can update reviews")),
@@ -146,7 +146,7 @@ pub async fn reply_to_review(
     Json(dto): Json<ReplyReviewDto>,
 ) -> impl IntoResponse {
     // 只有医生可以回复评价
-    if user.role != "doctor" {
+    if user.role != UserRole::Doctor {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Only doctors can reply to reviews")),
@@ -179,7 +179,7 @@ pub async fn update_review_visibility(
     Json(dto): Json<UpdateReviewVisibilityDto>,
 ) -> impl IntoResponse {
     // 只有管理员可以管理评价可见性
-    if user.role != "admin" {
+    if user.role != UserRole::Admin {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Only admins can manage review visibility")),
@@ -206,7 +206,7 @@ pub async fn create_tag(
     Json(dto): Json<CreateTagDto>,
 ) -> impl IntoResponse {
     // 只有管理员可以创建标签
-    if user.role != "admin" {
+    if user.role != UserRole::Admin {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Only admins can create tags")),

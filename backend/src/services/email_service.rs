@@ -136,7 +136,7 @@ impl EmailService {
         match smtp_transport.send(email).await {
             Ok(response) => Ok(EmailSendResult {
                 success: true,
-                message_id: Some(response.message().to_string()),
+                message_id: Some(response.message().collect::<Vec<_>>().join(" ")),
                 error_message: None,
             }),
             Err(e) => Ok(EmailSendResult {

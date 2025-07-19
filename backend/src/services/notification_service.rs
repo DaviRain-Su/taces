@@ -332,22 +332,23 @@ impl NotificationService {
         dto: UpdateNotificationSettingsDto,
     ) -> Result<NotificationSettings, sqlx::Error> {
         // 先检查是否存在该设置
-        let exists = query!(
+        let exists = sqlx::query(
             r#"
             SELECT COUNT(*) as count
             FROM notification_settings
             WHERE user_id = ? AND notification_type = ?
-            "#,
-            user_id,
-            dto.notification_type as NotificationType
+            "#
         )
+        .bind(user_id.to_string())
+        .bind(dto.notification_type.to_string())
         .fetch_one(pool)
         .await?;
 
-        let count: i64 = exists.count;
+        use sqlx::Row;
+        let count: i64 = exists.get::<i64, _>("count");
         let settings = if count > 0 {
             // 更新现有设置
-            query!(
+            sqlx::query(
                 r#"
                 UPDATE notification_settings
                 SET enabled = COALESCE(?, enabled),
@@ -356,64 +357,67 @@ impl NotificationService {
                     push_enabled = COALESCE(?, push_enabled),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ? AND notification_type = ?
-                "#,
-                dto.enabled,
-                dto.email_enabled,
-                dto.sms_enabled,
-                dto.push_enabled,
-                user_id,
-                dto.notification_type as NotificationType
+                "#
             )
+            .bind(dto.enabled)
+            .bind(dto.email_enabled)
+            .bind(dto.sms_enabled)
+            .bind(dto.push_enabled)
+            .bind(user_id.to_string())
+            .bind(dto.notification_type.to_string())
             .execute(pool)
             .await?;
 
-            query_as!(
-                NotificationSettings,
-                r#"
-                SELECT id, user_id, notification_type as "notification_type: NotificationType", 
+            let query = r#"
+                SELECT id, user_id, notification_type, 
                        enabled, email_enabled, sms_enabled, push_enabled, 
                        created_at, updated_at
                 FROM notification_settings
                 WHERE user_id = ? AND notification_type = ?
-                "#,
-                user_id,
-                dto.notification_type as NotificationType
-            )
-            .fetch_one(pool)
-            .await?
+            "#;
+            
+            let row = sqlx::query(query)
+                .bind(user_id.to_string())
+                .bind(dto.notification_type.to_string())
+                .fetch_one(pool)
+                .await?;
+                
+            Self::parse_notification_settings_from_row(&row)?
         } else {
             // 创建新设置
-            let result = query!(
+            let settings_id = Uuid::new_v4();
+            
+            let result = sqlx::query(
                 r#"
                 INSERT INTO notification_settings 
-                (user_id, notification_type, enabled, email_enabled, sms_enabled, push_enabled)
-                VALUES (?, ?, ?, ?, ?, ?)
-                "#,
-                user_id,
-                dto.notification_type as NotificationType,
-                dto.enabled.unwrap_or(true),
-                dto.email_enabled.unwrap_or(false),
-                dto.sms_enabled.unwrap_or(false),
-                dto.push_enabled.unwrap_or(true)
+                (id, user_id, notification_type, enabled, email_enabled, sms_enabled, push_enabled)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                "#
             )
+            .bind(settings_id.to_string())
+            .bind(user_id.to_string())
+            .bind(dto.notification_type.to_string())
+            .bind(dto.enabled.unwrap_or(true))
+            .bind(dto.email_enabled.unwrap_or(false))
+            .bind(dto.sms_enabled.unwrap_or(false))
+            .bind(dto.push_enabled.unwrap_or(true))
             .execute(pool)
             .await?;
 
-            let settings_id = result.last_insert_id();
-
-            query_as!(
-                NotificationSettings,
-                r#"
-                SELECT id, user_id, notification_type as "notification_type: NotificationType", 
+            let query = r#"
+                SELECT id, user_id, notification_type, 
                        enabled, email_enabled, sms_enabled, push_enabled, 
                        created_at, updated_at
                 FROM notification_settings
                 WHERE id = ?
-                "#,
-                settings_id
-            )
-            .fetch_one(pool)
-            .await?
+            "#;
+            
+            let row = sqlx::query(query)
+                .bind(settings_id.to_string())
+                .fetch_one(pool)
+                .await?;
+                
+            Self::parse_notification_settings_from_row(&row)?
         };
 
         Ok(settings)
@@ -428,46 +432,67 @@ impl NotificationService {
         let device_info = dto.device_info.unwrap_or(serde_json::json!({}));
 
         // 先禁用该用户该设备类型的其他token
-        query!(
+        sqlx::query(
             r#"
             UPDATE push_tokens
             SET active = false, updated_at = CURRENT_TIMESTAMP
             WHERE user_id = ? AND device_type = ?
-            "#,
-            user_id,
-            dto.device_type
+            "#
         )
+        .bind(user_id.to_string())
+        .bind(&dto.device_type)
         .execute(pool)
         .await?;
 
         // 创建新token
-        let result = query!(
+        let token_id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        let result = sqlx::query(
             r#"
-            INSERT INTO push_tokens (user_id, device_type, token, device_info, active)
-            VALUES (?, ?, ?, ?, true)
-            "#,
-            user_id,
-            dto.device_type,
-            dto.token,
-            device_info
+            INSERT INTO push_tokens (id, user_id, device_type, token, device_info, active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, true, ?, ?)
+            "#
         )
+        .bind(token_id.to_string())
+        .bind(user_id.to_string())
+        .bind(&dto.device_type)
+        .bind(&dto.token)
+        .bind(&device_info)
+        .bind(&now)
+        .bind(&now)
         .execute(pool)
         .await?;
 
-        let token_id = result.last_insert_id();
-
-        let token = query_as!(
-            PushToken,
-            r#"
+        let query = r#"
             SELECT id, user_id, device_type, token, device_info, active, 
                    created_at, updated_at
             FROM push_tokens
             WHERE id = ?
-            "#,
-            token_id
-        )
-        .fetch_one(pool)
-        .await?;
+        "#;
+        
+        let row = sqlx::query(query)
+            .bind(token_id.to_string())
+            .fetch_one(pool)
+            .await?;
+        
+        use sqlx::Row;
+        let token = PushToken {
+            id: Uuid::parse_str(row.get("id")).map_err(|_| sqlx::Error::ColumnDecode {
+                index: "id".to_string(),
+                source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UUID")),
+            })?,
+            user_id: Uuid::parse_str(row.get("user_id")).map_err(|_| sqlx::Error::ColumnDecode {
+                index: "user_id".to_string(),
+                source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UUID")),
+            })?,
+            device_type: row.get("device_type"),
+            token: row.get("token"),
+            device_info: row.get("device_info"),
+            active: row.get("active"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        };
 
         Ok(token)
     }
@@ -481,38 +506,60 @@ impl NotificationService {
         error_message: Option<String>,
         provider: Option<String>,
     ) -> Result<SmsLog, sqlx::Error> {
-        let result = query!(
+        let log_id = Uuid::new_v4();
+        let now = Utc::now();
+        let sent_at = if status == "sent" { Some(now) } else { None };
+        
+        let result = sqlx::query(
             r#"
-            INSERT INTO sms_logs (user_id, phone, template_code, template_params, 
-                                  status, error_message, provider, sent_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
-            user_id,
-            dto.phone,
-            dto.template_code,
-            dto.template_params,
-            status,
-            error_message,
-            provider,
-            if status == "sent" { Some(Utc::now()) } else { None }
+            INSERT INTO sms_logs (id, user_id, phone, template_code, template_params, 
+                                  status, error_message, provider, created_at, sent_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#
         )
+        .bind(log_id.to_string())
+        .bind(user_id.map(|id| id.to_string()))
+        .bind(&dto.phone)
+        .bind(&dto.template_code)
+        .bind(&dto.template_params)
+        .bind(status)
+        .bind(&error_message)
+        .bind(&provider)
+        .bind(&now)
+        .bind(&sent_at)
         .execute(pool)
         .await?;
 
-        let log_id = result.last_insert_id();
-
-        let log = query_as!(
-            SmsLog,
-            r#"
+        let query = r#"
             SELECT id, user_id, phone, template_code, template_params, 
                    status, error_message, provider, created_at, sent_at
             FROM sms_logs
             WHERE id = ?
-            "#,
-            log_id
-        )
-        .fetch_one(pool)
-        .await?;
+        "#;
+        
+        let row = sqlx::query(query)
+            .bind(log_id.to_string())
+            .fetch_one(pool)
+            .await?;
+        
+        use sqlx::Row;
+        let log = SmsLog {
+            id: Uuid::parse_str(row.get("id")).map_err(|_| sqlx::Error::ColumnDecode {
+                index: "id".to_string(),
+                source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UUID")),
+            })?,
+            user_id: row.get::<Option<String>, _>("user_id")
+                .map(|s| Uuid::parse_str(&s).ok())
+                .flatten(),
+            phone: row.get("phone"),
+            template_code: row.get("template_code"),
+            template_params: row.get("template_params"),
+            status: row.get("status"),
+            error_message: row.get("error_message"),
+            provider: row.get("provider"),
+            created_at: row.get("created_at"),
+            sent_at: row.get("sent_at"),
+        };
 
         Ok(log)
     }
@@ -526,38 +573,60 @@ impl NotificationService {
         error_message: Option<String>,
         provider: Option<String>,
     ) -> Result<EmailLog, sqlx::Error> {
-        let result = query!(
+        let log_id = Uuid::new_v4();
+        let now = Utc::now();
+        let sent_at = if status == "sent" { Some(now) } else { None };
+        
+        let result = sqlx::query(
             r#"
-            INSERT INTO email_logs (user_id, email, subject, body, 
-                                    status, error_message, provider, sent_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
-            user_id,
-            dto.email,
-            dto.subject,
-            dto.body,
-            status,
-            error_message,
-            provider,
-            if status == "sent" { Some(Utc::now()) } else { None }
+            INSERT INTO email_logs (id, user_id, email, subject, body, 
+                                    status, error_message, provider, created_at, sent_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#
         )
+        .bind(log_id.to_string())
+        .bind(user_id.map(|id| id.to_string()))
+        .bind(&dto.email)
+        .bind(&dto.subject)
+        .bind(&dto.body)
+        .bind(status)
+        .bind(&error_message)
+        .bind(&provider)
+        .bind(&now)
+        .bind(&sent_at)
         .execute(pool)
         .await?;
 
-        let log_id = result.last_insert_id();
-
-        let log = query_as!(
-            EmailLog,
-            r#"
+        let query = r#"
             SELECT id, user_id, email, subject, body, 
                    status, error_message, provider, created_at, sent_at
             FROM email_logs
             WHERE id = ?
-            "#,
-            log_id
-        )
-        .fetch_one(pool)
-        .await?;
+        "#;
+        
+        let row = sqlx::query(query)
+            .bind(log_id.to_string())
+            .fetch_one(pool)
+            .await?;
+        
+        use sqlx::Row;
+        let log = EmailLog {
+            id: Uuid::parse_str(row.get("id")).map_err(|_| sqlx::Error::ColumnDecode {
+                index: "id".to_string(),
+                source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UUID")),
+            })?,
+            user_id: row.get::<Option<String>, _>("user_id")
+                .map(|s| Uuid::parse_str(&s).ok())
+                .flatten(),
+            email: row.get("email"),
+            subject: row.get("subject"),
+            body: row.get("body"),
+            status: row.get("status"),
+            error_message: row.get("error_message"),
+            provider: row.get("provider"),
+            created_at: row.get("created_at"),
+            sent_at: row.get("sent_at"),
+        };
 
         Ok(log)
     }
@@ -568,20 +637,28 @@ impl NotificationService {
         user_id: Uuid,
         notification_type: &NotificationType,
     ) -> Result<(bool, bool, bool, bool), sqlx::Error> {
-        let settings = query!(
-            r#"
+        let query = r#"
             SELECT enabled, email_enabled, sms_enabled, push_enabled
             FROM notification_settings
             WHERE user_id = ? AND notification_type = ?
-            "#,
-            user_id,
-            notification_type as &NotificationType
-        )
-        .fetch_optional(pool)
-        .await?;
+        "#;
+        
+        let settings = sqlx::query(query)
+            .bind(user_id.to_string())
+            .bind(notification_type.to_string())
+            .fetch_optional(pool)
+            .await?;
 
         match settings {
-            Some(s) => Ok((s.enabled, s.email_enabled, s.sms_enabled, s.push_enabled)),
+            Some(row) => {
+                use sqlx::Row;
+                Ok((
+                    row.get("enabled"),
+                    row.get("email_enabled"),
+                    row.get("sms_enabled"),
+                    row.get("push_enabled")
+                ))
+            },
             None => Ok((true, false, false, true)), // 默认启用通知和推送，禁用邮件和短信
         }
     }

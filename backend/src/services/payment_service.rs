@@ -29,14 +29,14 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(&order_id)
+            .bind(order_id.to_string())
             .bind(&order_no)
-            .bind(&create_dto.user_id)
-            .bind(&create_dto.appointment_id)
+            .bind(create_dto.user_id.to_string())
+            .bind(create_dto.appointment_id.map(|id| id.to_string()))
             .bind(&create_dto.order_type)
             .bind(&create_dto.amount)
             .bind(&expire_time)
-            .bind(&create_dto.description)
+            .bind(create_dto.description.as_deref())
             .bind(&create_dto.metadata)
             .bind(&now)
             .bind(&now)
