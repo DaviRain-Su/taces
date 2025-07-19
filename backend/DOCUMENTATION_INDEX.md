@@ -10,59 +10,65 @@ This index provides links to all documentation files for the TCM Telemedicine Pl
    - API endpoint list
    - Development guidelines
 
-2. **[DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)**
+2. **[PROJECT_STATUS.md](PROJECT_STATUS.md)** ✨ NEW
+   - Current implementation status
+   - Completed features checklist
+   - Pending features and roadmap
+   - Recommended next steps
+
+3. **[DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)**
    - Complete database schema
    - Table structures and relationships
    - Field descriptions
    - Indexes
 
-3. **[TESTING.md](TESTING.md)**
+4. **[TESTING.md](TESTING.md)**
    - Testing guide
    - How to run tests
    - Writing tests
    - Test structure
 
-4. **[.env.example](.env.example)**
+5. **[.env.example](.env.example)**
    - Environment variable template
    - Configuration options
    - Required settings
 
 ## API Documentation
 
-5. **[API_DOCS_CIRCLE_POST.md](API_DOCS_CIRCLE_POST.md)**
+6. **[API_DOCS_CIRCLE_POST.md](API_DOCS_CIRCLE_POST.md)**
    - Circle post management API
    - Permissions and access control
    - Request/response examples
 
-6. **[API_DOCS_TEMPLATE.md](API_DOCS_TEMPLATE.md)**
+7. **[API_DOCS_TEMPLATE.md](API_DOCS_TEMPLATE.md)**
    - Template management API
    - Common phrases and prescription templates
    - Doctor-only endpoints
 
-7. **[API_DOCS_PAYMENT.md](API_DOCS_PAYMENT.md)**
+8. **[API_DOCS_PAYMENT.md](API_DOCS_PAYMENT.md)**
    - Payment system API
    - Order management
    - Payment processing
    - Refund handling
    - Balance management
 
-8. **[API_DOCS_VIDEO_CONSULTATION.md](API_DOCS_VIDEO_CONSULTATION.md)** ✨ NEW
+9. **[API_DOCS_VIDEO_CONSULTATION.md](API_DOCS_VIDEO_CONSULTATION.md)**
    - Video consultation API
    - WebRTC signaling
    - Room management
    - Recording features
    - Consultation templates
 
-9. **[API_DOCS_FILE_UPLOAD.md](API_DOCS_FILE_UPLOAD.md)** ✨ NEW
-   - File upload API
-   - Two-step upload process
-   - File management
-   - Configuration management
-   - Storage statistics
+10. **[API_DOCS_FILE_UPLOAD.md](API_DOCS_FILE_UPLOAD.md)**
+    - File upload API
+    - Two-step upload process
+    - File management
+    - Configuration management
+    - Storage statistics
 
 ## Setup Guides
 
-10. **[PAYMENT_SETUP.md](PAYMENT_SETUP.md)**
+11. **[PAYMENT_SETUP.md](PAYMENT_SETUP.md)**
    - Payment system configuration
    - WeChat Pay setup
    - Alipay setup
@@ -71,7 +77,7 @@ This index provides links to all documentation files for the TCM Telemedicine Pl
 
 ## Development Guides
 
-11. **[../CLAUDE.md](../CLAUDE.md)**
+12. **[../CLAUDE.md](../CLAUDE.md)**
    - Comprehensive development guide
    - System architecture
    - Business requirements
@@ -82,9 +88,10 @@ This index provides links to all documentation files for the TCM Telemedicine Pl
 
 ### For New Developers
 1. Start with [README.md](README.md)
-2. Set up environment using [.env.example](.env.example)
-3. Understand database with [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)
-4. Run tests following [TESTING.md](TESTING.md)
+2. Check current status in [PROJECT_STATUS.md](PROJECT_STATUS.md)
+3. Set up environment using [.env.example](.env.example)
+4. Understand database with [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)
+5. Run tests following [TESTING.md](TESTING.md)
 
 ### For API Integration
 - Authentication: See [README.md](README.md#authentication)
@@ -102,11 +109,12 @@ This index provides links to all documentation files for the TCM Telemedicine Pl
 ## Documentation Status
 
 ### Up to Date ✅
-- README.md (Updated with video consultation and file upload)
-- DATABASE_SCHEMA.md (Includes all tables including video consultation and file upload)
+- README.md (Updated with project status link)
+- PROJECT_STATUS.md (New - comprehensive status overview)
+- DATABASE_SCHEMA.md (Includes all tables)
 - API_DOCS_PAYMENT.md
-- API_DOCS_VIDEO_CONSULTATION.md (New)
-- API_DOCS_FILE_UPLOAD.md (New)
+- API_DOCS_VIDEO_CONSULTATION.md
+- API_DOCS_FILE_UPLOAD.md
 - PAYMENT_SETUP.md
 - TESTING.md
 - .env.example
@@ -117,6 +125,7 @@ This index provides links to all documentation files for the TCM Telemedicine Pl
 - Performance tuning guide
 - WebRTC/Video setup guide
 - OSS/S3 integration guide
+- Redis integration guide
 
 ## Contributing to Documentation
 

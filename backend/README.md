@@ -1,7 +1,12 @@
 # TCM Telemedicine Platform Backend
 
+## Project Status
+📊 **[View Current Project Status](PROJECT_STATUS.md)** - Detailed implementation status and roadmap
+
 ## Overview
 This is the backend service for the TCM Telemedicine Platform (香河香草中医诊所多端诊疗平台), built with Rust using the Axum web framework. The platform provides comprehensive traditional Chinese medicine telemedicine services including appointment management, prescription handling, doctor-patient interactions, content management, and more.
+
+**Backend Status**: ✅ 100% Core Features Implemented | 📚 [Full Documentation Index](DOCUMENTATION_INDEX.md)
 
 ### Key Features
 - **User Management**: Multi-role support (Admin, Doctor, Patient)
