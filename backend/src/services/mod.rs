@@ -9,5 +9,6 @@ pub mod live_stream_service;
 pub mod patient_group_service;
 pub mod patient_profile_service;
 pub mod prescription_service;
+pub mod review_service;
 pub mod template_service;
 pub mod user_service;

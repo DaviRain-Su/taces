@@ -6,7 +6,7 @@ pub mod routes;
 pub mod services;
 pub mod utils;
 
-use config::{database, Config};
+pub use config::{database, Config};
 
 #[derive(Clone)]
 pub struct AppState {

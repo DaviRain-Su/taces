@@ -7,5 +7,6 @@ pub mod test_doctor;
 pub mod test_live_stream;
 pub mod test_patient_group;
 pub mod test_patient_profile;
+pub mod test_review;
 pub mod test_template;
 pub mod test_user;

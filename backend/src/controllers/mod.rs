@@ -9,5 +9,6 @@ pub mod live_stream_controller;
 pub mod patient_group_controller;
 pub mod patient_profile_controller;
 pub mod prescription_controller;
+pub mod review_controller;
 pub mod template_controller;
 pub mod user_controller;

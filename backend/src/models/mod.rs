@@ -10,6 +10,7 @@ pub mod live_stream;
 pub mod patient_group;
 pub mod patient_profile;
 pub mod prescription;
+pub mod review;
 pub mod template;
 pub mod user;
 
@@ -23,6 +24,7 @@ pub use live_stream::*;
 pub use patient_group::*;
 pub use patient_profile::*;
 pub use prescription::*;
+pub use review::*;
 pub use template::*;
 pub use user::*;
 
