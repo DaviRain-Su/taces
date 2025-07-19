@@ -63,6 +63,29 @@ rust_decimal = { version = "1.35", features = ["serde-float"] }
 # Redis for caching
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager", "json"] }
 
+# WebSocket for real-time communication
+axum-extra = { version = "0.9", features = ["typed-header"] }
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+
+# Cloud storage
+aws-config = "1.0"
+aws-sdk-s3 = "1.0"
+
+# Payment integrations
+reqwest = { version = "0.11", features = ["json"] }
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.21"
+md5 = "0.7"
+regex = "1.10"
+rsa = { version = "0.9", features = ["pem"] }
+urlencoding = "2.1"
+
+# Email
+lettre = { version = "0.11", features = ["tokio1-native-tls", "builder"] }
+handlebars = "5.0"
+
 [dev-dependencies]
 tokio-test = "0.4"
 tower = { version = "0.4", features = ["util", "timeout"] }

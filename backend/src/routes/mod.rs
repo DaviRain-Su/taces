@@ -20,6 +20,7 @@ pub mod statistics;
 pub mod template;
 pub mod user;
 pub mod video_consultation;
+pub mod websocket;
 
 pub fn create_routes() -> Router<AppState> {
     Router::new()
@@ -43,4 +44,5 @@ pub fn create_routes() -> Router<AppState> {
         .nest("/", live_stream::routes())
         .nest("/", circle::circle_routes())
         .nest("/", circle_post::circle_post_routes())
+        .nest("/", websocket::routes())
 }

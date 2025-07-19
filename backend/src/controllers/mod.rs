@@ -6,6 +6,7 @@ pub mod content_controller;
 pub mod department_controller;
 pub mod doctor_controller;
 pub mod file_upload_controller;
+pub mod file_upload_controller_enhanced;
 pub mod live_stream_controller;
 pub mod notification_controller;
 pub mod patient_group_controller;

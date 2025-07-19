@@ -1,5 +1,6 @@
 pub mod database;
 pub mod redis;
+pub mod storage;
 
 use serde::Deserialize;
 use std::env;

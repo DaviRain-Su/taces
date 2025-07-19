@@ -4,9 +4,12 @@ use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
 
 use backend::{
-    config::{database, redis, Config},
-    routes, AppState,
+    config::{database, redis, storage, Config},
+    routes, 
+    services::websocket_service::WebSocketManager,
+    AppState,
 };
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
@@ -29,9 +32,15 @@ async fn main() {
 
     // Create Redis connection (optional)
     let redis_pool = redis::create_redis_pool_optional().await;
+    
+    // Create S3 client (optional)
+    let s3_client = storage::create_s3_client_optional().await;
+    
+    // Create WebSocket manager
+    let ws_manager = Arc::new(WebSocketManager::new());
 
     let server_port = config.server_port;
-    let app = create_app(config, pool, redis_pool).await;
+    let app = create_app(config, pool, redis_pool, ws_manager, s3_client).await;
 
     let addr = SocketAddr::from(([127, 0, 0, 1], server_port));
     tracing::info!("TCM Telemedicine Platform listening on {}", addr);
@@ -45,8 +54,14 @@ async fn main() {
         .expect("Failed to start server");
 }
 
-async fn create_app(config: Config, pool: database::DbPool, redis: Option<redis::RedisPool>) -> Router {
-    let state = AppState { config, pool, redis };
+async fn create_app(
+    config: Config, 
+    pool: database::DbPool, 
+    redis: Option<redis::RedisPool>, 
+    ws_manager: Arc<WebSocketManager>,
+    s3_client: Option<aws_sdk_s3::Client>,
+) -> Router {
+    let state = AppState { config, pool, redis, ws_manager, s3_client };
 
     Router::new()
         .route("/", get(root))
