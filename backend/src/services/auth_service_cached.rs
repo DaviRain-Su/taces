@@ -47,7 +47,7 @@ pub async fn login_cached(
     }
     
     // Cache the user
-    let cache_key = crate::services::cache_service::CacheKeys::user(&response.user.id);
+    let cache_key = crate::services::cache_service::CacheKeys::user(&response.user.id.to_string());
     if let Err(e) = crate::services::cache_service::CacheService::set(
         redis,
         &cache_key,
@@ -85,7 +85,7 @@ pub async fn validate_token_cached(
     }
     
     // No session found, validate JWT and create session
-    let claims = crate::utils::jwt::validate_token(token, &config.jwt_secret)?;
+    let claims = crate::utils::jwt::decode_token(token, &config.jwt_secret)?;
     
     let user = user_service_cached::get_user_by_id_cached(pool, redis, claims.sub).await
         .map_err(|e| anyhow!("Failed to get user: {}", e))?;

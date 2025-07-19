@@ -2,7 +2,7 @@ use crate::config::database::DbPool;
 use crate::models::video_consultation::*;
 use crate::models::appointment::{Appointment, AppointmentStatus};
 use crate::utils::errors::AppError;
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use sqlx::{MySql, Transaction};
 use uuid::Uuid;
 use std::collections::HashMap;

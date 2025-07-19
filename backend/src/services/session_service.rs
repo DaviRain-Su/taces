@@ -27,7 +27,7 @@ impl SessionService {
     ) -> Result<(), AppError> {
         let session_data = SessionData {
             user_id: user.id,
-            email: user.email.clone(),
+            email: user.email.clone().unwrap_or_default(),
             role: user.role.to_string(),
             created_at: chrono::Utc::now(),
             last_accessed: chrono::Utc::now(),

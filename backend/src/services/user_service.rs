@@ -98,6 +98,55 @@ pub async fn get_user_by_id(pool: &DbPool, id: Uuid) -> Result<User> {
     parse_user_from_row(&row)
 }
 
+pub async fn get_user_by_email(pool: &DbPool, email: &str) -> Result<User> {
+    let query = r#"
+        SELECT id, account, name, password, gender, phone, email, birthday, role, status, created_at, updated_at
+        FROM users
+        WHERE email = ?
+    "#;
+
+    let row = sqlx::query(query)
+        .bind(email)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| anyhow!("User not found: {}", e))?;
+
+    parse_user_from_row(&row)
+}
+
+pub async fn create_user(pool: &DbPool, dto: CreateUserDto) -> Result<User> {
+    let user_id = Uuid::new_v4();
+    let hashed_password = crate::utils::password::hash_password(&dto.password)?;
+    
+    let query = r#"
+        INSERT INTO users (id, account, name, password, gender, phone, email, birthday, role, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    "#;
+    
+    let role_str = match dto.role {
+        UserRole::Admin => "admin",
+        UserRole::Doctor => "doctor",
+        UserRole::Patient => "patient",
+    };
+    
+    sqlx::query(query)
+        .bind(user_id.to_string())
+        .bind(&dto.account)
+        .bind(&dto.name)
+        .bind(&hashed_password)
+        .bind(&dto.gender)
+        .bind(&dto.phone)
+        .bind(&dto.email)
+        .bind(&dto.birthday)
+        .bind(role_str)
+        .bind("active")
+        .execute(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to create user: {}", e))?;
+    
+    get_user_by_id(pool, user_id).await
+}
+
 pub async fn update_user(pool: &DbPool, id: Uuid, dto: UpdateUserDto) -> Result<User> {
     let mut update_fields = Vec::new();
     let mut bindings = Vec::new();

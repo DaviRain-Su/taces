@@ -42,7 +42,7 @@ impl CacheService {
         let data = serde_json::to_string(value)
             .map_err(|e| format!("Failed to serialize value: {}", e))?;
         
-        conn.set_ex(key, data, expiration.as_secs() as usize)
+        conn.set_ex(key, data, expiration.as_secs())
             .await
             .map_err(|e| format!("Failed to set cache: {}", e))?;
         

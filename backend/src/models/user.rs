@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
+use std::fmt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
@@ -27,6 +28,16 @@ pub enum UserRole {
     Admin,
     Doctor,
     Patient,
+}
+
+impl fmt::Display for UserRole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UserRole::Admin => write!(f, "admin"),
+            UserRole::Doctor => write!(f, "doctor"),
+            UserRole::Patient => write!(f, "patient"),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
