@@ -60,6 +60,9 @@ rand = "0.8"
 # Decimal for monetary values
 rust_decimal = { version = "1.35", features = ["serde-float"] }
 
+# Redis for caching
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager", "json"] }
+
 [dev-dependencies]
 tokio-test = "0.4"
 tower = { version = "0.4", features = ["util", "timeout"] }
