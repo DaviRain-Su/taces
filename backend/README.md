@@ -68,7 +68,61 @@ The server will start on `http://localhost:3000`
 - `GET /api/v1/prescriptions/doctor/:doctor_id` - Get doctor's prescriptions
 - `GET /api/v1/prescriptions/patient/:patient_id` - Get patient's prescriptions
 
-### Circle Management
+### Department Management
+- `GET /api/v1/departments` - List departments
+- `GET /api/v1/departments/:id` - Get department by ID
+- `POST /api/v1/departments` - Create department (Admin only)
+- `PUT /api/v1/departments/:id` - Update department (Admin only)
+- `DELETE /api/v1/departments/:id` - Delete department (Admin only)
+
+### Patient Group Management
+- `GET /api/v1/patient-groups` - List doctor's patient groups
+- `GET /api/v1/patient-groups/:id` - Get patient group by ID
+- `POST /api/v1/patient-groups` - Create patient group (Doctor only)
+- `PUT /api/v1/patient-groups/:id` - Update patient group
+- `DELETE /api/v1/patient-groups/:id` - Delete patient group
+- `POST /api/v1/patient-groups/:id/members` - Add patients to group
+- `DELETE /api/v1/patient-groups/:id/members/:patient_id` - Remove patient from group
+- `POST /api/v1/patient-groups/:id/send-message` - Send message to group
+
+### Patient Profile Management
+- `GET /api/v1/patient-profiles` - List user's patient profiles
+- `GET /api/v1/patient-profiles/:id` - Get patient profile by ID
+- `POST /api/v1/patient-profiles` - Create patient profile
+- `PUT /api/v1/patient-profiles/:id` - Update patient profile
+- `DELETE /api/v1/patient-profiles/:id` - Delete patient profile
+- `PUT /api/v1/patient-profiles/:id/set-default` - Set as default profile
+
+### Content Management
+- `GET /api/v1/content/articles` - List articles
+- `GET /api/v1/content/articles/:id` - Get article by ID
+- `POST /api/v1/content/articles` - Create article (Doctor/Admin only)
+- `PUT /api/v1/content/articles/:id` - Update article
+- `DELETE /api/v1/content/articles/:id` - Delete article
+- `PUT /api/v1/content/articles/:id/view` - Increment view count
+- `GET /api/v1/content/videos` - List videos
+- `GET /api/v1/content/videos/:id` - Get video by ID
+- `POST /api/v1/content/videos` - Create video (Doctor/Admin only)
+- `PUT /api/v1/content/videos/:id` - Update video
+- `DELETE /api/v1/content/videos/:id` - Delete video
+- `PUT /api/v1/content/videos/:id/view` - Increment view count
+- `GET /api/v1/content/categories` - List categories
+- `POST /api/v1/content/categories` - Create category (Admin only)
+- `PUT /api/v1/content/categories/:id` - Update category (Admin only)
+- `DELETE /api/v1/content/categories/:id` - Delete category (Admin only)
+
+### Live Stream Management
+- `GET /api/v1/live-streams` - List live streams
+- `GET /api/v1/live-streams/:id` - Get live stream by ID
+- `POST /api/v1/live-streams` - Create live stream (Doctor only)
+- `PUT /api/v1/live-streams/:id` - Update live stream
+- `DELETE /api/v1/live-streams/:id` - Delete live stream
+- `PUT /api/v1/live-streams/:id/start` - Start live stream
+- `PUT /api/v1/live-streams/:id/end` - End live stream
+- `GET /api/v1/live-streams/upcoming` - Get upcoming live streams
+- `GET /api/v1/live-streams/my` - Get my live streams (Doctor)
+
+### Circle (Community) Management
 - `POST /api/v1/circles` - Create circle
 - `GET /api/v1/circles` - List circles (with search/filter)
 - `GET /api/v1/circles/:id` - Get circle details
@@ -80,6 +134,19 @@ The server will start on `http://localhost:3000`
 - `PUT /api/v1/circles/:id/members/:user_id/role` - Update member role
 - `DELETE /api/v1/circles/:id/members/:user_id` - Remove member
 - `GET /api/v1/my-circles` - Get user's joined circles
+
+### Circle Post Management
+- `GET /api/v1/posts` - List posts (with filters)
+- `GET /api/v1/posts/:id` - Get post by ID
+- `POST /api/v1/posts` - Create post (Circle members only)
+- `PUT /api/v1/posts/:id` - Update post (Author only)
+- `DELETE /api/v1/posts/:id` - Delete post (Author/Admin only)
+- `GET /api/v1/users/:user_id/posts` - Get user's posts
+- `GET /api/v1/circles/:circle_id/posts` - Get circle's posts
+- `POST /api/v1/posts/:id/like` - Toggle like on post
+- `GET /api/v1/posts/:id/comments` - Get post comments
+- `POST /api/v1/posts/:id/comments` - Create comment
+- `DELETE /api/v1/comments/:id` - Delete comment (Author/Admin only)
 
 ## Authentication
 All endpoints except authentication endpoints require a Bearer token in the Authorization header:
