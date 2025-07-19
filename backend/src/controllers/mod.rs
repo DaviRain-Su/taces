@@ -1,5 +1,7 @@
 pub mod appointment_controller;
 pub mod auth_controller;
+pub mod circle_controller;
+pub mod circle_post_controller;
 pub mod content_controller;
 pub mod department_controller;
 pub mod doctor_controller;

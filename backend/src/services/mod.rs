@@ -1,5 +1,7 @@
 pub mod appointment_service;
 pub mod auth_service;
+pub mod circle_post_service;
+pub mod circle_service;
 pub mod content_service;
 pub mod department_service;
 pub mod doctor_service;

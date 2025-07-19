@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod appointment;
+pub mod circle;
 pub mod circle_post;
 pub mod content;
 pub mod department;
@@ -12,6 +13,7 @@ pub mod prescription;
 pub mod user;
 
 pub use appointment::*;
+pub use circle::*;
 pub use circle_post::*;
 pub use content::*;
 pub use department::*;

@@ -3,6 +3,8 @@ use axum::Router;
 
 pub mod appointment;
 pub mod auth;
+pub mod circle;
+pub mod circle_post;
 pub mod content;
 pub mod department;
 pub mod doctor;
@@ -24,4 +26,6 @@ pub fn create_routes() -> Router<AppState> {
         .nest("/patient-profiles", patient_profile::routes())
         .nest("/content", content::routes())
         .nest("/", live_stream::routes())
+        .nest("/", circle::circle_routes())
+        .nest("/", circle_post::circle_post_routes())
 }

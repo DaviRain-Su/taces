@@ -68,6 +68,19 @@ The server will start on `http://localhost:3000`
 - `GET /api/v1/prescriptions/doctor/:doctor_id` - Get doctor's prescriptions
 - `GET /api/v1/prescriptions/patient/:patient_id` - Get patient's prescriptions
 
+### Circle Management
+- `POST /api/v1/circles` - Create circle
+- `GET /api/v1/circles` - List circles (with search/filter)
+- `GET /api/v1/circles/:id` - Get circle details
+- `PUT /api/v1/circles/:id` - Update circle
+- `DELETE /api/v1/circles/:id` - Delete circle (soft delete)
+- `POST /api/v1/circles/:id/join` - Join circle
+- `POST /api/v1/circles/:id/leave` - Leave circle
+- `GET /api/v1/circles/:id/members` - Get circle members
+- `PUT /api/v1/circles/:id/members/:user_id/role` - Update member role
+- `DELETE /api/v1/circles/:id/members/:user_id` - Remove member
+- `GET /api/v1/my-circles` - Get user's joined circles
+
 ## Authentication
 All endpoints except authentication endpoints require a Bearer token in the Authorization header:
 ```

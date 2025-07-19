@@ -1,4 +1,6 @@
 pub mod test_auth;
+pub mod test_circle;
+pub mod test_circle_post;
 pub mod test_content;
 pub mod test_department;
 pub mod test_doctor;

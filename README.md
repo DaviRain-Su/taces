@@ -78,8 +78,13 @@
   - 即将开始的直播列表
   - 主播直播管理
 
-- [ ] **圈子社区** (Circle、CircleMember)
+- [x] **圈子社区** (Circle、CircleMember)
   - 圈子创建和管理
+  - 成员管理（加入/退出/角色管理）
+  - 权限控制（所有者/管理员/成员）
+  - 圈子搜索（分类/关键词）
+
+- [ ] **圈子社区扩展** (CirclePost)
   - 帖子发布（支持图文）
   - 点赞评论功能
   - 敏感词过滤
@@ -236,6 +241,7 @@ open http://localhost:8080
 - 就诊人管理 (`/api/v1/patient-profiles/*`)
 - 内容管理 (`/api/v1/content/*`)
 - 直播管理 (`/api/v1/live-streams/*`)
+- 圈子管理 (`/api/v1/circles/*`)
 
 ## 技术栈
 
