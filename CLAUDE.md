@@ -616,12 +616,58 @@ taces/
 - `DELETE /api/v1/templates/prescription-templates/:id` - 删除处方模板（医生）✅
 - `POST /api/v1/templates/prescription-templates/:id/use` - 增加使用次数（医生）✅
 
+#### 患者评价系统 ✅
+- `GET /api/v1/reviews` - 获取评价列表（管理员）✅
+- `GET /api/v1/reviews/:id` - 获取评价详情 ✅
+- `POST /api/v1/reviews` - 创建评价（患者）✅
+- `PUT /api/v1/reviews/:id` - 更新评价（作者）✅
+- `POST /api/v1/reviews/:id/reply` - 回复评价（医生）✅
+- `PUT /api/v1/reviews/:id/visibility` - 更新评价可见性（管理员）✅
+- `GET /api/v1/reviews/doctor/:doctor_id/reviews` - 获取医生评价（公开）✅
+- `GET /api/v1/reviews/doctor/:doctor_id/statistics` - 获取医生评价统计（公开）✅
+- `GET /api/v1/reviews/patient/:patient_id/reviews` - 获取患者评价 ✅
+- `GET /api/v1/reviews/tags` - 获取评价标签（公开）✅
+- `POST /api/v1/reviews/tags` - 创建评价标签（管理员）✅
+
+#### 通知系统 ✅
+- `GET /api/v1/notifications` - 获取用户通知列表 ✅
+- `GET /api/v1/notifications/:id` - 获取通知详情 ✅
+- `PUT /api/v1/notifications/:id/read` - 标记为已读 ✅
+- `PUT /api/v1/notifications/read-all` - 全部标记已读 ✅
+- `DELETE /api/v1/notifications/:id` - 删除通知 ✅
+- `GET /api/v1/notifications/stats` - 获取通知统计 ✅
+- `GET /api/v1/notifications/settings` - 获取通知设置 ✅
+- `PUT /api/v1/notifications/settings` - 更新通知设置 ✅
+- `POST /api/v1/notifications/push-token` - 注册推送token ✅
+- `POST /api/v1/notifications/announcement` - 发送系统公告（管理员）✅
+
+#### 统计分析 ✅
+- `GET /api/v1/statistics/dashboard` - 管理员仪表盘（管理员）✅
+- `GET /api/v1/statistics/doctor/:doctor_id` - 医生统计 ✅
+- `GET /api/v1/statistics/patient` - 患者统计 ✅
+- `GET /api/v1/statistics/departments` - 科室统计（公开）✅
+- `GET /api/v1/statistics/top-doctors` - 热门医生（公开）✅
+- `GET /api/v1/statistics/top-content` - 热门内容（公开）✅
+- `GET /api/v1/statistics/appointment-trends` - 预约趋势（管理员）✅
+- `GET /api/v1/statistics/time-slots` - 时间段分布（管理员）✅
+- `GET /api/v1/statistics/content` - 内容统计（管理员）✅
+- `GET /api/v1/statistics/live-streams` - 直播统计（管理员）✅
+- `GET /api/v1/statistics/circles` - 圈子统计（管理员）✅
+- `GET /api/v1/statistics/user-growth` - 用户增长（管理员）✅
+- `GET /api/v1/statistics/appointment-heatmap` - 预约热力图（管理员）✅
+- `GET /api/v1/statistics/export` - 数据导出（管理员）✅
+
 #### 待实现接口
-- 患者评价系统
-- 通知系统
-- 统计分析
 - 支付相关
+  - 微信支付集成
+  - 支付宝支付集成
+  - 订单管理
+  - 退款处理
 - 视频问诊
+  - WebRTC信令服务
+  - 视频会话管理
+  - 问诊记录存储
+  - 录制功能
 
 ### 4. 安全要求
 - HTTPS传输
@@ -705,20 +751,33 @@ taces/
   - [ ] WebRTC 集成
   - [ ] 问诊记录保存
 
-### Phase 3: 系统完善（计划中）
+### Phase 3: 系统完善（大部分已完成）
 - [x] 常用语和处方模板 ✅
   - [x] 常用语管理（诊断、医嘱、症状分类）
   - [x] 处方模板管理
   - [x] 使用次数统计
   - [x] 权限控制（仅医生可用）
-- [ ] 患者评价系统
-- [ ] 通知系统
-  - [ ] 站内通知
-  - [ ] 短信通知
-  - [ ] 推送通知
-- [ ] 统计分析功能
-  - [ ] 数据仪表盘
-  - [ ] 报表导出
+- [x] 患者评价系统 ✅
+  - [x] 评价创建和管理
+  - [x] 医生回复功能
+  - [x] 评分统计
+  - [x] 标签系统
+- [x] 通知系统 ✅
+  - [x] 站内通知
+  - [x] 通知设置管理
+  - [x] 推送token管理
+  - [x] 系统公告
+  - [x] 短信/邮件日志
+  - [x] 批量通知
+- [x] 统计分析功能 ✅
+  - [x] 管理员仪表盘
+  - [x] 医生统计
+  - [x] 患者统计
+  - [x] 预约趋势分析
+  - [x] 科室统计
+  - [x] 内容热度统计
+  - [x] 用户增长分析
+  - [x] 数据导出（CSV）
 - [ ] 支付系统集成
   - [ ] 微信支付
   - [ ] 支付宝支付

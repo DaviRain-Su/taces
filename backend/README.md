@@ -1,7 +1,19 @@
 # TCM Telemedicine Platform Backend
 
 ## Overview
-This is the backend service for the TCM Telemedicine Platform, built with Rust using the Axum web framework.
+This is the backend service for the TCM Telemedicine Platform (香河香草中医诊所多端诊疗平台), built with Rust using the Axum web framework. The platform provides comprehensive traditional Chinese medicine telemedicine services including appointment management, prescription handling, doctor-patient interactions, content management, and more.
+
+### Key Features
+- **User Management**: Multi-role support (Admin, Doctor, Patient)
+- **Appointment System**: Online appointment booking with time slot management
+- **Prescription Management**: Digital prescription creation and tracking
+- **Content Platform**: Articles and videos for health education
+- **Live Streaming**: Doctor-hosted health education streams
+- **Community Features**: Patient circles and discussion forums
+- **Notification System**: Multi-channel notifications (In-app, SMS, Email, Push)
+- **Analytics Dashboard**: Comprehensive statistics and data export
+- **Review System**: Patient feedback and ratings
+- **Template Management**: Reusable prescription and phrase templates
 
 ## Setup
 
@@ -161,6 +173,50 @@ The server will start on `http://localhost:3000`
 - `PUT /api/v1/templates/prescription-templates/:id` - Update prescription template
 - `DELETE /api/v1/templates/prescription-templates/:id` - Delete prescription template
 - `POST /api/v1/templates/prescription-templates/:id/use` - Increment usage count
+
+### Review Management
+- `GET /api/v1/reviews` - List reviews (Admin only)
+- `GET /api/v1/reviews/:id` - Get review by ID
+- `POST /api/v1/reviews` - Create review (Patient only, after completed appointment)
+- `PUT /api/v1/reviews/:id` - Update review (Author only)
+- `POST /api/v1/reviews/:id/reply` - Reply to review (Doctor only)
+- `PUT /api/v1/reviews/:id/visibility` - Update review visibility (Admin only)
+- `GET /api/v1/reviews/doctor/:doctor_id/reviews` - Get doctor's reviews (Public)
+- `GET /api/v1/reviews/doctor/:doctor_id/statistics` - Get doctor's review statistics (Public)
+- `GET /api/v1/reviews/patient/:patient_id/reviews` - Get patient's reviews
+- `GET /api/v1/reviews/tags` - Get review tags (Public)
+- `POST /api/v1/reviews/tags` - Create review tag (Admin only)
+
+### Notification System
+- `GET /api/v1/notifications` - Get user notifications (with pagination and filters)
+- `GET /api/v1/notifications/:id` - Get notification details
+- `PUT /api/v1/notifications/:id/read` - Mark notification as read
+- `PUT /api/v1/notifications/read-all` - Mark all notifications as read
+- `DELETE /api/v1/notifications/:id` - Delete notification (soft delete)
+- `GET /api/v1/notifications/stats` - Get notification statistics
+- `GET /api/v1/notifications/settings` - Get notification settings
+- `PUT /api/v1/notifications/settings` - Update notification settings
+- `POST /api/v1/notifications/push-token` - Register push notification token
+- `POST /api/v1/notifications/announcement` - Send system announcement (Admin only)
+
+### Statistics and Analytics
+#### Public Statistics
+- `GET /api/v1/statistics/departments` - Department statistics
+- `GET /api/v1/statistics/top-doctors` - Top 10 doctors by appointments
+- `GET /api/v1/statistics/top-content` - Top 10 popular content
+
+#### Protected Statistics
+- `GET /api/v1/statistics/dashboard` - Admin dashboard statistics (Admin only)
+- `GET /api/v1/statistics/doctor/:doctor_id` - Doctor performance statistics
+- `GET /api/v1/statistics/patient` - Patient activity statistics
+- `GET /api/v1/statistics/appointment-trends` - Appointment trends over time (Admin only)
+- `GET /api/v1/statistics/time-slots` - Time slot distribution (Admin only)
+- `GET /api/v1/statistics/content` - Content statistics (Admin only)
+- `GET /api/v1/statistics/live-streams` - Live stream statistics (Admin only)
+- `GET /api/v1/statistics/circles` - Circle/community statistics (Admin only)
+- `GET /api/v1/statistics/user-growth` - User growth trends (Admin only)
+- `GET /api/v1/statistics/appointment-heatmap` - Appointment heatmap by hour/day (Admin only)
+- `GET /api/v1/statistics/export` - Export data to CSV/Excel (Admin only)
 
 ## Authentication
 All endpoints except authentication endpoints require a Bearer token in the Authorization header:

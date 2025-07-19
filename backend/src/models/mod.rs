@@ -7,10 +7,12 @@ pub mod content;
 pub mod department;
 pub mod doctor;
 pub mod live_stream;
+pub mod notification;
 pub mod patient_group;
 pub mod patient_profile;
 pub mod prescription;
 pub mod review;
+pub mod statistics;
 pub mod template;
 pub mod user;
 
@@ -21,10 +23,12 @@ pub use content::*;
 pub use department::*;
 pub use doctor::*;
 pub use live_stream::*;
+pub use notification::*;
 pub use patient_group::*;
 pub use patient_profile::*;
 pub use prescription::*;
 pub use review::*;
+pub use statistics::*;
 pub use template::*;
 pub use user::*;
 
