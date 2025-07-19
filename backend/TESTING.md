@@ -13,7 +13,9 @@ tests/
 ├── integration/         # Integration tests for API endpoints
 │   ├── test_auth.rs     # Authentication endpoint tests
 │   ├── test_user.rs     # User management tests
-│   └── test_doctor.rs   # Doctor management tests
+│   ├── test_doctor.rs   # Doctor management tests
+│   ├── test_payment.rs  # Payment system tests
+│   └── ...              # Other module tests
 └── common/             # Shared test utilities
     └── mod.rs          # Test app setup and HTTP helpers
 ```

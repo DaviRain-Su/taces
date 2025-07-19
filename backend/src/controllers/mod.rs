@@ -9,6 +9,7 @@ pub mod live_stream_controller;
 pub mod notification_controller;
 pub mod patient_group_controller;
 pub mod patient_profile_controller;
+pub mod payment_controller;
 pub mod prescription_controller;
 pub mod review_controller;
 pub mod statistics_controller;

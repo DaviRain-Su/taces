@@ -468,6 +468,143 @@ CREATE TABLE push_tokens (
 );
 ```
 
+## Payment System
+
+### payment_orders
+Payment order records.
+```sql
+CREATE TABLE payment_orders (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    order_no VARCHAR(50) UNIQUE NOT NULL,
+    user_id CHAR(36) NOT NULL REFERENCES users(id),
+    appointment_id CHAR(36) REFERENCES appointments(id),
+    order_type ENUM('appointment', 'consultation', 'prescription', 'other') NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'CNY',
+    status ENUM('pending', 'paid', 'cancelled', 'refunded', 'partial_refunded', 'expired') NOT NULL DEFAULT 'pending',
+    payment_method ENUM('wechat', 'alipay', 'bank_card', 'balance'),
+    payment_time TIMESTAMP NULL,
+    expire_time TIMESTAMP NOT NULL,
+    description VARCHAR(500),
+    metadata JSON,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### payment_transactions
+Payment transaction records.
+```sql
+CREATE TABLE payment_transactions (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    transaction_no VARCHAR(50) UNIQUE NOT NULL,
+    order_id CHAR(36) NOT NULL REFERENCES payment_orders(id),
+    payment_method ENUM('wechat', 'alipay', 'bank_card', 'balance') NOT NULL,
+    transaction_type ENUM('payment', 'refund') NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    status ENUM('pending', 'success', 'failed') NOT NULL DEFAULT 'pending',
+    external_transaction_id VARCHAR(100),
+    prepay_id VARCHAR(100),
+    trade_no VARCHAR(100),
+    request_data JSON,
+    response_data JSON,
+    callback_data JSON,
+    error_code VARCHAR(50),
+    error_message VARCHAR(500),
+    initiated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL
+);
+```
+
+### refund_records
+Refund request and processing records.
+```sql
+CREATE TABLE refund_records (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    refund_no VARCHAR(50) UNIQUE NOT NULL,
+    order_id CHAR(36) NOT NULL REFERENCES payment_orders(id),
+    transaction_id CHAR(36) NOT NULL REFERENCES payment_transactions(id),
+    user_id CHAR(36) NOT NULL REFERENCES users(id),
+    refund_amount DECIMAL(10, 2) NOT NULL,
+    refund_reason VARCHAR(500) NOT NULL,
+    status ENUM('pending', 'processing', 'success', 'failed', 'cancelled') NOT NULL DEFAULT 'pending',
+    reviewed_by CHAR(36) REFERENCES users(id),
+    reviewed_at TIMESTAMP NULL,
+    review_notes VARCHAR(500),
+    external_refund_id VARCHAR(100),
+    refund_response JSON,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL
+);
+```
+
+### payment_configs
+Payment method configuration.
+```sql
+CREATE TABLE payment_configs (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    payment_method ENUM('wechat', 'alipay') NOT NULL,
+    config_key VARCHAR(50) NOT NULL,
+    config_value TEXT NOT NULL,
+    is_encrypted BOOLEAN DEFAULT FALSE,
+    description VARCHAR(200),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_payment_method_key (payment_method, config_key)
+);
+```
+
+### price_configs
+Service pricing configuration.
+```sql
+CREATE TABLE price_configs (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    service_type VARCHAR(50) NOT NULL,
+    service_name VARCHAR(100) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    discount_price DECIMAL(10, 2),
+    is_active BOOLEAN DEFAULT TRUE,
+    effective_date DATE,
+    expiry_date DATE,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### user_balances
+User account balance.
+```sql
+CREATE TABLE user_balances (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) UNIQUE NOT NULL REFERENCES users(id),
+    balance DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    frozen_balance DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    total_income DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    total_expense DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### balance_transactions
+Balance change records.
+```sql
+CREATE TABLE balance_transactions (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL REFERENCES users(id),
+    transaction_type ENUM('income', 'expense', 'freeze', 'unfreeze') NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    balance_before DECIMAL(10, 2) NOT NULL,
+    balance_after DECIMAL(10, 2) NOT NULL,
+    related_type VARCHAR(50),
+    related_id CHAR(36),
+    description VARCHAR(200) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ## Indexes
 
 Key indexes for performance optimization:
@@ -499,6 +636,26 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_status ON notifications(status);
 CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
 CREATE INDEX idx_notifications_user_status ON notifications(user_id, status);
+
+-- Payment queries
+CREATE INDEX idx_payment_orders_user_id ON payment_orders(user_id);
+CREATE INDEX idx_payment_orders_appointment_id ON payment_orders(appointment_id);
+CREATE INDEX idx_payment_orders_order_no ON payment_orders(order_no);
+CREATE INDEX idx_payment_orders_status ON payment_orders(status);
+CREATE INDEX idx_payment_orders_created_at ON payment_orders(created_at DESC);
+CREATE INDEX idx_payment_transactions_order_id ON payment_transactions(order_id);
+CREATE INDEX idx_payment_transactions_transaction_no ON payment_transactions(transaction_no);
+CREATE INDEX idx_payment_transactions_external_id ON payment_transactions(external_transaction_id);
+CREATE INDEX idx_payment_transactions_status ON payment_transactions(status);
+CREATE INDEX idx_refund_records_order_id ON refund_records(order_id);
+CREATE INDEX idx_refund_records_user_id ON refund_records(user_id);
+CREATE INDEX idx_refund_records_refund_no ON refund_records(refund_no);
+CREATE INDEX idx_refund_records_status ON refund_records(status);
+CREATE INDEX idx_price_configs_service_type ON price_configs(service_type);
+CREATE INDEX idx_price_configs_is_active ON price_configs(is_active);
+CREATE INDEX idx_balance_transactions_user_id ON balance_transactions(user_id);
+CREATE INDEX idx_balance_transactions_type ON balance_transactions(transaction_type);
+CREATE INDEX idx_balance_transactions_created_at ON balance_transactions(created_at DESC);
 ```
 
 ## Migration Notes

@@ -657,17 +657,31 @@ taces/
 - `GET /api/v1/statistics/appointment-heatmap` - 预约热力图（管理员）✅
 - `GET /api/v1/statistics/export` - 数据导出（管理员）✅
 
+#### 支付系统 ✅
+- `POST /api/v1/payment/orders` - 创建支付订单 ✅
+- `GET /api/v1/payment/orders` - 获取订单列表 ✅
+- `GET /api/v1/payment/orders/:id` - 获取订单详情 ✅
+- `PUT /api/v1/payment/orders/:id/cancel` - 取消订单 ✅
+- `POST /api/v1/payment/pay` - 发起支付 ✅
+- `POST /payment/callback` - 支付回调（无需认证）✅
+- `POST /api/v1/payment/refunds` - 申请退款 ✅
+- `GET /api/v1/payment/refunds/:id` - 获取退款详情 ✅
+- `PUT /api/v1/payment/admin/refunds/:id/review` - 审核退款（管理员）✅
+- `GET /api/v1/payment/balance/:user_id` - 获取用户余额 ✅
+- `GET /api/v1/payment/balance/:user_id/transactions` - 获取余额变动记录 ✅
+- `GET /api/v1/payment/prices` - 获取价格配置列表 ✅
+- `GET /api/v1/payment/prices/:service_type` - 获取服务价格 ✅
+- `GET /api/v1/payment/statistics` - 获取支付统计 ✅
+- `PUT /api/v1/payment/admin/config/:payment_method` - 更新支付配置（管理员）✅
+
 #### 待实现接口
-- 支付相关
-  - 微信支付集成
-  - 支付宝支付集成
-  - 订单管理
-  - 退款处理
 - 视频问诊
   - WebRTC信令服务
   - 视频会话管理
   - 问诊记录存储
   - 录制功能
+- Redis缓存集成
+- 文件上传（OSS）
 
 ### 4. 安全要求
 - HTTPS传输
@@ -778,9 +792,15 @@ taces/
   - [x] 内容热度统计
   - [x] 用户增长分析
   - [x] 数据导出（CSV）
-- [ ] 支付系统集成
-  - [ ] 微信支付
-  - [ ] 支付宝支付
+- [x] 支付系统集成 ✅
+  - [x] 订单管理（创建、查询、取消）
+  - [x] 支付处理（支持余额支付）
+  - [x] 退款管理（申请、审核、处理）
+  - [x] 余额系统（充值、支付、查询）
+  - [x] 价格配置管理
+  - [x] 支付统计分析
+  - [ ] 微信支付API集成（接口已预留）
+  - [ ] 支付宝API集成（接口已预留）
 
 ### Phase 4: 前端开发（待启动）
 - [ ] 管理端 Web（React + Ant Design Pro）

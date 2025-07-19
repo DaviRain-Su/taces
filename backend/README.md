@@ -14,6 +14,7 @@ This is the backend service for the TCM Telemedicine Platform (香河香草中�
 - **Analytics Dashboard**: Comprehensive statistics and data export
 - **Review System**: Patient feedback and ratings
 - **Template Management**: Reusable prescription and phrase templates
+- **Payment System**: Complete payment processing with order management, refunds, and balance system
 
 ## Setup
 
@@ -217,6 +218,36 @@ The server will start on `http://localhost:3000`
 - `GET /api/v1/statistics/user-growth` - User growth trends (Admin only)
 - `GET /api/v1/statistics/appointment-heatmap` - Appointment heatmap by hour/day (Admin only)
 - `GET /api/v1/statistics/export` - Export data to CSV/Excel (Admin only)
+
+### Payment System
+#### Order Management
+- `POST /api/v1/payment/orders` - Create payment order
+- `GET /api/v1/payment/orders` - List user's orders
+- `GET /api/v1/payment/orders/:id` - Get order details
+- `PUT /api/v1/payment/orders/:id/cancel` - Cancel pending order
+
+#### Payment Processing
+- `POST /api/v1/payment/pay` - Initiate payment (WeChat/Alipay/Balance)
+- `POST /payment/callback` - Payment gateway callback (No auth required)
+
+#### Refund Management
+- `POST /api/v1/payment/refunds` - Request refund
+- `GET /api/v1/payment/refunds/:id` - Get refund details
+- `PUT /api/v1/payment/admin/refunds/:id/review` - Review refund (Admin only)
+
+#### Balance Management
+- `GET /api/v1/payment/balance/:user_id` - Get user balance
+- `GET /api/v1/payment/balance/:user_id/transactions` - Get balance transaction history
+
+#### Price Configuration
+- `GET /api/v1/payment/prices` - List all price configs
+- `GET /api/v1/payment/prices/:service_type` - Get specific service price
+
+#### Payment Statistics
+- `GET /api/v1/payment/statistics` - Get payment statistics
+
+#### Admin Configuration
+- `PUT /api/v1/payment/admin/config/:payment_method` - Update payment config (Admin only)
 
 ## Authentication
 All endpoints except authentication endpoints require a Bearer token in the Authorization header:
