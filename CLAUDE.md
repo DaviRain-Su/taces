@@ -444,43 +444,78 @@ taces/
 
 ### 3. API端点列表
 
-#### 认证相关
-- `POST /api/v1/auth/register` - 用户注册
-- `POST /api/v1/auth/login` - 用户登录
+#### 认证相关 ✅
+- `POST /api/v1/auth/register` - 用户注册 ✅
+- `POST /api/v1/auth/login` - 用户登录 ✅
 
-#### 用户管理
-- `GET /api/v1/users` - 获取用户列表（管理员）
-- `GET /api/v1/users/:id` - 获取用户详情
-- `PUT /api/v1/users/:id` - 更新用户信息
-- `DELETE /api/v1/users/:id` - 删除用户（管理员）
-- `DELETE /api/v1/users/batch/delete` - 批量删除用户（管理员）
-- `GET /api/v1/users/batch/export` - 导出用户（管理员）
+#### 用户管理 ✅
+- `GET /api/v1/users` - 获取用户列表（管理员）✅
+- `GET /api/v1/users/:id` - 获取用户详情 ✅
+- `PUT /api/v1/users/:id` - 更新用户信息 ✅
+- `DELETE /api/v1/users/:id` - 删除用户（管理员）✅
+- `DELETE /api/v1/users/batch/delete` - 批量删除用户（管理员）✅
+- `GET /api/v1/users/batch/export` - 导出用户（管理员）✅
 
-#### 医生管理
-- `GET /api/v1/doctors` - 获取医生列表（公开）
-- `GET /api/v1/doctors/:id` - 获取医生详情（公开）
-- `POST /api/v1/doctors` - 创建医生档案（管理员）
-- `PUT /api/v1/doctors/:id` - 更新医生信息
-- `PUT /api/v1/doctors/:id/photos` - 更新医生照片
-- `GET /api/v1/doctors/by-user/:user_id` - 根据用户ID获取医生信息
+#### 医生管理 ✅
+- `GET /api/v1/doctors` - 获取医生列表（公开）✅
+- `GET /api/v1/doctors/:id` - 获取医生详情（公开）✅
+- `POST /api/v1/doctors` - 创建医生档案（管理员）✅
+- `PUT /api/v1/doctors/:id` - 更新医生信息 ✅
+- `PUT /api/v1/doctors/:id/photos` - 更新医生照片 ✅
+- `GET /api/v1/doctors/by-user/:user_id` - 根据用户ID获取医生信息 ✅
 
-#### 预约管理
-- `GET /api/v1/appointments` - 获取预约列表
-- `GET /api/v1/appointments/:id` - 获取预约详情
-- `POST /api/v1/appointments` - 创建预约
-- `PUT /api/v1/appointments/:id` - 更新预约
-- `PUT /api/v1/appointments/:id/cancel` - 取消预约
-- `GET /api/v1/appointments/doctor/:doctor_id` - 获取医生的预约
-- `GET /api/v1/appointments/patient/:patient_id` - 获取患者的预约
-- `GET /api/v1/appointments/available-slots` - 获取可用时间段
+#### 科室管理 ✅
+- `GET /api/v1/departments` - 获取科室列表 ✅
+- `GET /api/v1/departments/:id` - 获取科室详情 ✅
+- `GET /api/v1/departments/code/:code` - 根据编码获取科室 ✅
+- `POST /api/v1/departments` - 创建科室（管理员）✅
+- `PUT /api/v1/departments/:id` - 更新科室信息（管理员）✅
+- `DELETE /api/v1/departments/:id` - 删除科室（管理员）✅
 
-#### 处方管理
-- `GET /api/v1/prescriptions` - 获取处方列表（管理员）
-- `GET /api/v1/prescriptions/:id` - 获取处方详情
-- `POST /api/v1/prescriptions` - 创建处方（医生）
-- `GET /api/v1/prescriptions/code/:code` - 根据处方编号获取处方
-- `GET /api/v1/prescriptions/patient/:patient_id` - 获取患者处方
-- `GET /api/v1/prescriptions/doctor/:doctor_id` - 获取医生开具的处方
+#### 预约管理 ✅
+- `GET /api/v1/appointments` - 获取预约列表 ✅
+- `GET /api/v1/appointments/:id` - 获取预约详情 ✅
+- `POST /api/v1/appointments` - 创建预约 ✅
+- `PUT /api/v1/appointments/:id` - 更新预约 ✅
+- `PUT /api/v1/appointments/:id/cancel` - 取消预约 ✅
+- `GET /api/v1/appointments/doctor/:doctor_id` - 获取医生的预约 ✅
+- `GET /api/v1/appointments/patient/:patient_id` - 获取患者的预约 ✅
+- `GET /api/v1/appointments/available-slots` - 获取可用时间段 ✅
+
+#### 处方管理 ✅
+- `GET /api/v1/prescriptions` - 获取处方列表（管理员）✅
+- `GET /api/v1/prescriptions/:id` - 获取处方详情 ✅
+- `POST /api/v1/prescriptions` - 创建处方（医生）✅
+- `GET /api/v1/prescriptions/code/:code` - 根据处方编号获取处方 ✅
+- `GET /api/v1/prescriptions/patient/:patient_id` - 获取患者处方 ✅
+- `GET /api/v1/prescriptions/doctor/:doctor_id` - 获取医生开具的处方 ✅
+
+#### 患者分组管理 ✅
+- `GET /api/v1/patient-groups` - 获取医生的患者分组列表 ✅
+- `GET /api/v1/patient-groups/:id` - 获取分组详情 ✅
+- `POST /api/v1/patient-groups` - 创建患者分组（医生）✅
+- `PUT /api/v1/patient-groups/:id` - 更新分组信息 ✅
+- `DELETE /api/v1/patient-groups/:id` - 删除分组 ✅
+- `POST /api/v1/patient-groups/:id/members` - 添加分组成员 ✅
+- `DELETE /api/v1/patient-groups/:id/members` - 移除分组成员 ✅
+- `POST /api/v1/patient-groups/:id/message` - 发送群消息 ✅
+
+#### 就诊人管理 ✅
+- `GET /api/v1/patient-profiles` - 获取就诊人列表 ✅
+- `GET /api/v1/patient-profiles/:id` - 获取就诊人详情 ✅
+- `POST /api/v1/patient-profiles` - 创建就诊人 ✅
+- `PUT /api/v1/patient-profiles/:id` - 更新就诊人信息 ✅
+- `DELETE /api/v1/patient-profiles/:id` - 删除就诊人 ✅
+- `PUT /api/v1/patient-profiles/:id/default` - 设置默认就诊人 ✅
+
+#### 待实现接口
+- 内容管理（文章、视频）
+- 直播管理
+- 圈子社区
+- 患者评价
+- 通知系统
+- 统计分析
+- 支付相关
 
 ### 4. 安全要求
 - HTTPS传输
@@ -516,23 +551,69 @@ taces/
 
 ### Phase 1: MVP版本（2个月）✅ 已完成
 - [x] 基础架构搭建
+  - [x] Rust + Axum 框架搭建
+  - [x] MySQL 数据库集成
+  - [x] Docker 容器化配置
+  - [x] CI/CD 流程配置
 - [x] 用户认证系统（JWT）
-- [x] 管理端核心功能（用户管理）
-- [x] 医生端基础功能（医生档案管理）
-- [x] 患者端预约功能（预约、处方管理）
+  - [x] 用户注册/登录
+  - [x] JWT 令牌生成和验证
+  - [x] 基于角色的权限控制
+- [x] 管理端核心功能
+  - [x] 用户管理（增删改查）
+  - [x] 批量操作（删除、导出）
+  - [x] 科室管理
+- [x] 医生端基础功能
+  - [x] 医生档案管理
+  - [x] 资质认证信息
+  - [x] 医生照片管理
+- [x] 患者端核心功能
+  - [x] 预约挂号功能
+  - [x] 处方查询功能
+  - [x] 就诊人管理（家庭成员）
+- [x] 新增功能
+  - [x] 患者分组管理（医生端）
+  - [x] 群发消息功能
 
-### Phase 2: 功能完善（1个月）
-- [ ] 视频问诊功能
-- [ ] 直播功能集成
-- [ ] 圈子社区功能
+### Phase 2: 功能完善（进行中）
 - [ ] 内容管理系统
+  - [ ] 文章管理（Article）
+  - [ ] 视频管理（Video）
+  - [ ] 内容审核机制
+- [ ] 直播功能集成
+  - [ ] 直播预告
+  - [ ] 直播间管理
+  - [ ] 观看记录
+- [ ] 圈子社区功能
+  - [ ] 圈子创建（Circle）
+  - [ ] 帖子发布（CirclePost）
+  - [ ] 互动功能（点赞、评论）
+- [ ] 视频问诊功能
+  - [ ] WebRTC 集成
+  - [ ] 问诊记录保存
 
-### Phase 3: 移动端开发（1个月）
+### Phase 3: 系统完善（计划中）
+- [ ] 常用语和处方模板
+- [ ] 患者评价系统
+- [ ] 通知系统
+  - [ ] 站内通知
+  - [ ] 短信通知
+  - [ ] 推送通知
+- [ ] 统计分析功能
+  - [ ] 数据仪表盘
+  - [ ] 报表导出
+- [ ] 支付系统集成
+  - [ ] 微信支付
+  - [ ] 支付宝支付
+
+### Phase 4: 前端开发（待启动）
+- [ ] 管理端 Web（React + Ant Design Pro）
+- [ ] 患者端 Web（Next.js）
 - [ ] 微信小程序
 - [ ] 支付宝小程序
 - [ ] 移动端适配优化
 
-### Phase 4: 原生应用（后续）
+### Phase 5: 原生应用（后续）
 - [ ] iOS应用开发
 - [ ] Android应用开发
 - [ ] 应用商店发布
