@@ -1,7 +1,9 @@
 pub mod appointment_service;
 pub mod auth_service;
+pub mod content_service;
 pub mod department_service;
 pub mod doctor_service;
+pub mod live_stream_service;
 pub mod patient_group_service;
 pub mod patient_profile_service;
 pub mod prescription_service;

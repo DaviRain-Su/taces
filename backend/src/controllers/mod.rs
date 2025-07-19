@@ -1,7 +1,9 @@
 pub mod appointment_controller;
 pub mod auth_controller;
+pub mod content_controller;
 pub mod department_controller;
 pub mod doctor_controller;
+pub mod live_stream_controller;
 pub mod patient_group_controller;
 pub mod patient_profile_controller;
 pub mod prescription_controller;

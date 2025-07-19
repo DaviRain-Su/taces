@@ -62,18 +62,21 @@
   - 默认就诊人设置
   - 身份证号验证
 
-##### ⏳ 待实现功能
-- [ ] **内容管理系统** (Article、Video)
+- [x] **内容管理系统** (Article、Video)
   - 文章发布和管理
-  - 视频上传和播放
+  - 视频信息管理
   - 内容分类和标签
-  - 内容审核机制
+  - 发布渠道管理
+  - 浏览量统计
 
-- [ ] **直播功能** (LiveStream)
+##### ⏳ 待实现功能
+
+- [x] **直播功能** (LiveStream)
   - 直播预告发布
   - 直播间管理
-  - 观看记录统计
-  - 直播回放功能
+  - 直播状态管理（预约/直播中/已结束）
+  - 即将开始的直播列表
+  - 主播直播管理
 
 - [ ] **圈子社区** (Circle、CircleMember)
   - 圈子创建和管理
@@ -228,6 +231,11 @@ open http://localhost:8080
 - 医生管理 (`/api/v1/doctors/*`)
 - 预约管理 (`/api/v1/appointments/*`)
 - 处方管理 (`/api/v1/prescriptions/*`)
+- 科室管理 (`/api/v1/departments/*`)
+- 患者分组 (`/api/v1/patient-groups/*`)
+- 就诊人管理 (`/api/v1/patient-profiles/*`)
+- 内容管理 (`/api/v1/content/*`)
+- 直播管理 (`/api/v1/live-streams/*`)
 
 ## 技术栈
 

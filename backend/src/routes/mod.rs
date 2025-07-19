@@ -3,8 +3,10 @@ use axum::Router;
 
 pub mod appointment;
 pub mod auth;
+pub mod content;
 pub mod department;
 pub mod doctor;
+pub mod live_stream;
 pub mod patient_group;
 pub mod patient_profile;
 pub mod prescription;
@@ -20,4 +22,6 @@ pub fn create_routes() -> Router<AppState> {
         .nest("/departments", department::routes())
         .nest("/patient-groups", patient_group::routes())
         .nest("/patient-profiles", patient_profile::routes())
+        .nest("/content", content::routes())
+        .nest("/", live_stream::routes())
 }

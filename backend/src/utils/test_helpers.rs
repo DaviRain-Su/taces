@@ -22,6 +22,14 @@ pub async fn setup_test_db(pool: &Pool<MySql>) {
         .execute(pool)
         .await
         .unwrap();
+    sqlx::query("DELETE FROM videos")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM articles")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
     sqlx::query("DELETE FROM circle_posts")
         .execute(pool)
         .await
@@ -29,7 +37,7 @@ pub async fn setup_test_db(pool: &Pool<MySql>) {
     sqlx::query("DELETE FROM live_streams")
         .execute(pool)
         .await
-        .unwrap();
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
     sqlx::query("DELETE FROM patient_profiles")
         .execute(pool)
         .await

@@ -416,7 +416,12 @@ taces/
 │       │   ├── mod.rs
 │       │   ├── test_auth.rs
 │       │   ├── test_user.rs
-│       │   └── test_doctor.rs
+│       │   ├── test_doctor.rs
+│       │   ├── test_content.rs
+│       │   ├── test_department.rs
+│       │   ├── test_patient_group.rs
+│       │   ├── test_patient_profile.rs
+│       │   └── test_live_stream.rs
 │       └── unit/
 │           ├── mod.rs
 │           ├── test_jwt.rs
@@ -508,14 +513,31 @@ taces/
 - `DELETE /api/v1/patient-profiles/:id` - 删除就诊人 ✅
 - `PUT /api/v1/patient-profiles/:id/default` - 设置默认就诊人 ✅
 
+#### 内容管理 ✅
+- `GET /api/v1/content/articles` - 获取文章列表 ✅
+- `GET /api/v1/content/articles/:id` - 获取文章详情 ✅
+- `POST /api/v1/content/articles` - 创建文章（医生/管理员）✅
+- `PUT /api/v1/content/articles/:id` - 更新文章 ✅
+- `POST /api/v1/content/articles/:id/publish` - 发布文章 ✅
+- `POST /api/v1/content/articles/:id/unpublish` - 取消发布文章 ✅
+- `DELETE /api/v1/content/articles/:id` - 删除文章 ✅
+- `GET /api/v1/content/videos` - 获取视频列表 ✅
+- `GET /api/v1/content/videos/:id` - 获取视频详情 ✅
+- `POST /api/v1/content/videos` - 创建视频（医生/管理员）✅
+- `PUT /api/v1/content/videos/:id` - 更新视频 ✅
+- `POST /api/v1/content/videos/:id/publish` - 发布视频 ✅
+- `DELETE /api/v1/content/videos/:id` - 删除视频 ✅
+- `GET /api/v1/content/categories` - 获取分类列表 ✅
+- `POST /api/v1/content/categories` - 创建分类（管理员）✅
+
 #### 待实现接口
-- 内容管理（文章、视频）
 - 直播管理
 - 圈子社区
 - 患者评价
 - 通知系统
 - 统计分析
 - 支付相关
+- 视频问诊
 
 ### 4. 安全要求
 - HTTPS传输
@@ -576,10 +598,12 @@ taces/
   - [x] 群发消息功能
 
 ### Phase 2: 功能完善（进行中）
-- [ ] 内容管理系统
-  - [ ] 文章管理（Article）
-  - [ ] 视频管理（Video）
-  - [ ] 内容审核机制
+- [x] 内容管理系统 ✅
+  - [x] 文章管理（Article）
+  - [x] 视频管理（Video）
+  - [x] 内容分类管理
+  - [x] 发布渠道管理
+  - [x] 浏览量统计
 - [ ] 直播功能集成
   - [ ] 直播预告
   - [ ] 直播间管理
