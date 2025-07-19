@@ -658,6 +658,187 @@ CREATE INDEX idx_balance_transactions_type ON balance_transactions(transaction_t
 CREATE INDEX idx_balance_transactions_created_at ON balance_transactions(created_at DESC);
 ```
 
+## Video Consultation System
+
+### video_consultations
+Video consultation sessions.
+```sql
+CREATE TABLE video_consultations (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    appointment_id CHAR(36) NOT NULL REFERENCES appointments(id),
+    doctor_id CHAR(36) NOT NULL REFERENCES doctors(id),
+    patient_id CHAR(36) NOT NULL REFERENCES users(id),
+    room_id VARCHAR(100) UNIQUE NOT NULL,
+    status ENUM('waiting', 'in_progress', 'completed', 'cancelled', 'no_show') NOT NULL DEFAULT 'waiting',
+    scheduled_start_time TIMESTAMP NOT NULL,
+    actual_start_time TIMESTAMP NULL,
+    end_time TIMESTAMP NULL,
+    duration INT,
+    doctor_token TEXT,
+    patient_token TEXT,
+    ice_servers JSON,
+    chief_complaint TEXT,
+    diagnosis TEXT,
+    treatment_plan TEXT,
+    notes TEXT,
+    connection_quality ENUM('excellent', 'good', 'fair', 'poor'),
+    patient_rating INT,
+    patient_feedback TEXT,
+    metadata JSON,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### video_recordings
+Video consultation recording records.
+```sql
+CREATE TABLE video_recordings (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    consultation_id CHAR(36) NOT NULL REFERENCES video_consultations(id),
+    recording_url VARCHAR(500),
+    thumbnail_url VARCHAR(500),
+    file_size BIGINT,
+    duration INT,
+    format VARCHAR(20),
+    status ENUM('recording', 'processing', 'completed', 'failed') NOT NULL DEFAULT 'recording',
+    error_message TEXT,
+    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL,
+    expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### webrtc_signals
+WebRTC signaling messages for video calls.
+```sql
+CREATE TABLE webrtc_signals (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    room_id VARCHAR(100) NOT NULL,
+    from_user_id CHAR(36) NOT NULL REFERENCES users(id),
+    to_user_id CHAR(36) NOT NULL REFERENCES users(id),
+    signal_type ENUM('offer', 'answer', 'ice_candidate', 'join', 'leave', 'error') NOT NULL,
+    payload JSON NOT NULL,
+    delivered BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### video_call_events
+Video call event logs.
+```sql
+CREATE TABLE video_call_events (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    consultation_id CHAR(36) NOT NULL REFERENCES video_consultations(id),
+    user_id CHAR(36) NOT NULL REFERENCES users(id),
+    event_type ENUM(
+        'joined', 'left', 'reconnected', 'disconnected',
+        'camera_on', 'camera_off', 'mic_on', 'mic_off',
+        'screen_share_start', 'screen_share_end',
+        'recording_start', 'recording_end',
+        'network_poor', 'network_recovered'
+    ) NOT NULL,
+    event_data JSON,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### video_consultation_templates
+Consultation templates for doctors.
+```sql
+CREATE TABLE video_consultation_templates (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    doctor_id CHAR(36) NOT NULL REFERENCES doctors(id),
+    name VARCHAR(100) NOT NULL,
+    chief_complaint TEXT,
+    diagnosis TEXT,
+    treatment_plan TEXT,
+    notes TEXT,
+    usage_count INT DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+## File Upload System
+
+### file_uploads
+File upload records.
+```sql
+CREATE TABLE file_uploads (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL REFERENCES users(id),
+    file_type ENUM('image', 'video', 'document', 'audio', 'other') NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_url VARCHAR(500) NOT NULL,
+    file_size BIGINT NOT NULL,
+    mime_type VARCHAR(100),
+    related_type VARCHAR(50),
+    related_id CHAR(36),
+    width INT,
+    height INT,
+    thumbnail_url VARCHAR(500),
+    is_public BOOLEAN DEFAULT FALSE,
+    status ENUM('uploading', 'completed', 'failed', 'deleted') NOT NULL DEFAULT 'uploading',
+    error_message TEXT,
+    bucket_name VARCHAR(100),
+    object_key VARCHAR(500),
+    etag VARCHAR(100),
+    uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NULL,
+    deleted_at TIMESTAMP NULL
+);
+```
+
+### system_configs
+System configuration storage.
+```sql
+CREATE TABLE system_configs (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    category VARCHAR(50) NOT NULL,
+    config_key VARCHAR(100) NOT NULL,
+    config_value TEXT NOT NULL,
+    value_type ENUM('string', 'number', 'boolean', 'json') NOT NULL DEFAULT 'string',
+    description TEXT,
+    is_encrypted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_category_key (category, config_key)
+);
+```
+
+### Indexes for Video Consultation and File Upload
+```sql
+-- Video consultation indexes
+CREATE INDEX idx_video_consultations_appointment_id ON video_consultations(appointment_id);
+CREATE INDEX idx_video_consultations_doctor_id ON video_consultations(doctor_id);
+CREATE INDEX idx_video_consultations_patient_id ON video_consultations(patient_id);
+CREATE INDEX idx_video_consultations_room_id ON video_consultations(room_id);
+CREATE INDEX idx_video_consultations_status ON video_consultations(status);
+CREATE INDEX idx_video_consultations_scheduled_time ON video_consultations(scheduled_start_time);
+CREATE INDEX idx_video_recordings_consultation_id ON video_recordings(consultation_id);
+CREATE INDEX idx_video_recordings_status ON video_recordings(status);
+CREATE INDEX idx_webrtc_signals_room_id ON webrtc_signals(room_id);
+CREATE INDEX idx_webrtc_signals_to_user ON webrtc_signals(to_user_id, delivered);
+CREATE INDEX idx_webrtc_signals_created_at ON webrtc_signals(created_at);
+CREATE INDEX idx_video_call_events_consultation_id ON video_call_events(consultation_id);
+CREATE INDEX idx_video_call_events_user_id ON video_call_events(user_id);
+CREATE INDEX idx_video_call_events_type ON video_call_events(event_type);
+CREATE INDEX idx_video_call_events_created_at ON video_call_events(created_at);
+CREATE INDEX idx_consultation_templates_doctor_id ON video_consultation_templates(doctor_id);
+
+-- File upload indexes
+CREATE INDEX idx_file_uploads_user_id ON file_uploads(user_id);
+CREATE INDEX idx_file_uploads_related ON file_uploads(related_type, related_id);
+CREATE INDEX idx_file_uploads_status ON file_uploads(status);
+CREATE INDEX idx_file_uploads_uploaded_at ON file_uploads(uploaded_at DESC);
+CREATE INDEX idx_system_configs_category ON system_configs(category);
+```
+
 ## Migration Notes
 
 1. All tables use `CHAR(36)` for UUID primary keys
@@ -667,3 +848,6 @@ CREATE INDEX idx_balance_transactions_created_at ON balance_transactions(created
 5. Indexes are created on frequently queried columns
 6. ENUM types are used for fixed value sets
 7. UTF8MB4 character set supports full Unicode including emojis
+8. Video consultation tables support WebRTC signaling and recording
+9. File upload system supports multiple storage backends (OSS, S3, etc.)
+10. System configs allow flexible configuration management

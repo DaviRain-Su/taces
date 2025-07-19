@@ -15,6 +15,8 @@ This is the backend service for the TCM Telemedicine Platform (香河香草中�
 - **Review System**: Patient feedback and ratings
 - **Template Management**: Reusable prescription and phrase templates
 - **Payment System**: Complete payment processing with order management, refunds, and balance system
+- **Video Consultation**: Real-time video consultations with WebRTC, recording, and templates
+- **File Upload**: Secure file upload system with OSS integration
 
 ## Setup
 
@@ -248,6 +250,53 @@ The server will start on `http://localhost:3000`
 
 #### Admin Configuration
 - `PUT /api/v1/payment/admin/config/:payment_method` - Update payment config (Admin only)
+
+### Video Consultation Management
+#### Consultation Sessions
+- `POST /api/v1/video-consultations` - Create video consultation
+- `GET /api/v1/video-consultations` - List consultations
+- `GET /api/v1/video-consultations/:id` - Get consultation details
+- `PUT /api/v1/video-consultations/:id` - Update consultation
+- `PUT /api/v1/video-consultations/:id/start` - Start consultation (Doctor only)
+- `PUT /api/v1/video-consultations/:id/end` - End consultation (Doctor only)
+- `POST /api/v1/video-consultations/:id/rate` - Rate consultation (Patient only)
+
+#### Room Management
+- `POST /api/v1/video-consultations/room/:room_id/join` - Join video room
+
+#### WebRTC Signaling
+- `POST /api/v1/video-consultations/signal` - Send WebRTC signal
+- `GET /api/v1/video-consultations/signal/:room_id` - Receive WebRTC signals
+
+#### Recording Management
+- `POST /api/v1/video-consultations/:id/recording/start` - Start recording (Doctor only)
+- `PUT /api/v1/video-consultations/recording/:id/complete` - Complete recording (Admin only)
+- `GET /api/v1/video-consultations/recording/:id` - Get recording details
+- `GET /api/v1/video-consultations/:id/recordings` - List consultation recordings
+
+#### Consultation Templates
+- `POST /api/v1/video-consultations/templates` - Create consultation template (Doctor only)
+- `GET /api/v1/video-consultations/templates` - List doctor's templates
+- `GET /api/v1/video-consultations/templates/:id` - Get template details
+- `POST /api/v1/video-consultations/templates/:id/use` - Use template (Doctor only)
+
+#### Consultation Statistics
+- `GET /api/v1/video-consultations/statistics` - Get consultation statistics
+
+### File Upload Management
+#### File Operations
+- `POST /api/v1/files/upload` - Create upload URL
+- `PUT /api/v1/files/upload/:id/complete` - Complete file upload
+- `GET /api/v1/files` - List files
+- `GET /api/v1/files/:id` - Get file details
+- `DELETE /api/v1/files/:id` - Delete file
+- `GET /api/v1/files/stats` - Get file storage statistics
+
+#### Configuration (Admin only)
+- `GET /api/v1/files/config/upload` - Get upload configuration
+- `GET /api/v1/files/config/image` - Get image configuration
+- `GET /api/v1/files/config/video` - Get video configuration
+- `PUT /api/v1/files/config/:category/:key` - Update system configuration
 
 ## Authentication
 All endpoints except authentication endpoints require a Bearer token in the Authorization header:

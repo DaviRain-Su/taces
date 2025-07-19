@@ -39,16 +39,30 @@ This index provides links to all documentation files for the TCM Telemedicine Pl
    - Common phrases and prescription templates
    - Doctor-only endpoints
 
-7. **[API_DOCS_PAYMENT.md](API_DOCS_PAYMENT.md)** ✨ NEW
+7. **[API_DOCS_PAYMENT.md](API_DOCS_PAYMENT.md)**
    - Payment system API
    - Order management
    - Payment processing
    - Refund handling
    - Balance management
 
+8. **[API_DOCS_VIDEO_CONSULTATION.md](API_DOCS_VIDEO_CONSULTATION.md)** ✨ NEW
+   - Video consultation API
+   - WebRTC signaling
+   - Room management
+   - Recording features
+   - Consultation templates
+
+9. **[API_DOCS_FILE_UPLOAD.md](API_DOCS_FILE_UPLOAD.md)** ✨ NEW
+   - File upload API
+   - Two-step upload process
+   - File management
+   - Configuration management
+   - Storage statistics
+
 ## Setup Guides
 
-8. **[PAYMENT_SETUP.md](PAYMENT_SETUP.md)** ✨ NEW
+10. **[PAYMENT_SETUP.md](PAYMENT_SETUP.md)**
    - Payment system configuration
    - WeChat Pay setup
    - Alipay setup
@@ -57,7 +71,7 @@ This index provides links to all documentation files for the TCM Telemedicine Pl
 
 ## Development Guides
 
-9. **[../CLAUDE.md](../CLAUDE.md)**
+11. **[../CLAUDE.md](../CLAUDE.md)**
    - Comprehensive development guide
    - System architecture
    - Business requirements
@@ -75,6 +89,8 @@ This index provides links to all documentation files for the TCM Telemedicine Pl
 ### For API Integration
 - Authentication: See [README.md](README.md#authentication)
 - Payment APIs: See [API_DOCS_PAYMENT.md](API_DOCS_PAYMENT.md)
+- Video Consultation APIs: See [API_DOCS_VIDEO_CONSULTATION.md](API_DOCS_VIDEO_CONSULTATION.md)
+- File Upload APIs: See [API_DOCS_FILE_UPLOAD.md](API_DOCS_FILE_UPLOAD.md)
 - Community APIs: See [API_DOCS_CIRCLE_POST.md](API_DOCS_CIRCLE_POST.md)
 - Template APIs: See [API_DOCS_TEMPLATE.md](API_DOCS_TEMPLATE.md)
 
@@ -86,17 +102,21 @@ This index provides links to all documentation files for the TCM Telemedicine Pl
 ## Documentation Status
 
 ### Up to Date ✅
-- README.md (Updated with payment system)
-- DATABASE_SCHEMA.md (Includes payment tables)
-- API_DOCS_PAYMENT.md (New)
-- PAYMENT_SETUP.md (New)
-- TESTING.md (Updated with payment tests)
-- .env.example (Updated with payment config)
+- README.md (Updated with video consultation and file upload)
+- DATABASE_SCHEMA.md (Includes all tables including video consultation and file upload)
+- API_DOCS_PAYMENT.md
+- API_DOCS_VIDEO_CONSULTATION.md (New)
+- API_DOCS_FILE_UPLOAD.md (New)
+- PAYMENT_SETUP.md
+- TESTING.md
+- .env.example
 
 ### May Need Updates 🔄
 - API documentation for other modules (notification, statistics, review)
 - Deployment guide
 - Performance tuning guide
+- WebRTC/Video setup guide
+- OSS/S3 integration guide
 
 ## Contributing to Documentation
 
@@ -109,4 +129,4 @@ When adding new features:
 
 ---
 
-Last updated: 2024-01-20
+Last updated: 2024-01-21
