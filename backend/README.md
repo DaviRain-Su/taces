@@ -148,6 +148,20 @@ The server will start on `http://localhost:3000`
 - `POST /api/v1/posts/:id/comments` - Create comment
 - `DELETE /api/v1/comments/:id` - Delete comment (Author/Admin only)
 
+### Template Management (Doctor only)
+- `GET /api/v1/templates/common-phrases` - List common phrases
+- `GET /api/v1/templates/common-phrases/:id` - Get common phrase by ID
+- `POST /api/v1/templates/common-phrases` - Create common phrase
+- `PUT /api/v1/templates/common-phrases/:id` - Update common phrase
+- `DELETE /api/v1/templates/common-phrases/:id` - Delete common phrase
+- `POST /api/v1/templates/common-phrases/:id/use` - Increment usage count
+- `GET /api/v1/templates/prescription-templates` - List prescription templates
+- `GET /api/v1/templates/prescription-templates/:id` - Get prescription template by ID
+- `POST /api/v1/templates/prescription-templates` - Create prescription template
+- `PUT /api/v1/templates/prescription-templates/:id` - Update prescription template
+- `DELETE /api/v1/templates/prescription-templates/:id` - Delete prescription template
+- `POST /api/v1/templates/prescription-templates/:id/use` - Increment usage count
+
 ## Authentication
 All endpoints except authentication endpoints require a Bearer token in the Authorization header:
 ```

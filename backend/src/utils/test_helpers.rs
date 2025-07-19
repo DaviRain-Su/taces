@@ -50,6 +50,14 @@ pub async fn setup_test_db(pool: &Pool<MySql>) {
         .execute(pool)
         .await
         .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM prescription_templates")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM common_phrases")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
     sqlx::query("DELETE FROM live_streams")
         .execute(pool)
         .await

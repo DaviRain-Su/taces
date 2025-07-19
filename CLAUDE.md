@@ -377,29 +377,59 @@ taces/
 │   │   │   ├── user_controller.rs
 │   │   │   ├── doctor_controller.rs
 │   │   │   ├── appointment_controller.rs
-│   │   │   └── prescription_controller.rs
+│   │   │   ├── prescription_controller.rs
+│   │   │   ├── department_controller.rs
+│   │   │   ├── patient_group_controller.rs
+│   │   │   ├── patient_profile_controller.rs
+│   │   │   ├── content_controller.rs
+│   │   │   ├── live_stream_controller.rs
+│   │   │   ├── circle_controller.rs
+│   │   │   ├── circle_post_controller.rs
+│   │   │   └── template_controller.rs
 │   │   ├── services/   # 业务逻辑层 ✅
 │   │   │   ├── mod.rs
 │   │   │   ├── auth_service.rs
 │   │   │   ├── user_service.rs
 │   │   │   ├── doctor_service.rs
 │   │   │   ├── appointment_service.rs
-│   │   │   └── prescription_service.rs
+│   │   │   ├── prescription_service.rs
+│   │   │   ├── department_service.rs
+│   │   │   ├── patient_group_service.rs
+│   │   │   ├── patient_profile_service.rs
+│   │   │   ├── content_service.rs
+│   │   │   ├── live_stream_service.rs
+│   │   │   ├── circle_service.rs
+│   │   │   ├── circle_post_service.rs
+│   │   │   └── template_service.rs
 │   │   ├── models/     # 数据模型 ✅
 │   │   │   ├── mod.rs
 │   │   │   ├── user.rs
 │   │   │   ├── doctor.rs
 │   │   │   ├── appointment.rs
 │   │   │   ├── prescription.rs
+│   │   │   ├── department.rs
+│   │   │   ├── patient_group.rs
+│   │   │   ├── patient_profile.rs
+│   │   │   ├── content.rs
 │   │   │   ├── live_stream.rs
-│   │   │   └── circle_post.rs
+│   │   │   ├── circle.rs
+│   │   │   ├── circle_post.rs
+│   │   │   └── template.rs
 │   │   ├── routes/     # 路由定义 ✅
 │   │   │   ├── mod.rs
 │   │   │   ├── auth.rs
 │   │   │   ├── user.rs
 │   │   │   ├── doctor.rs
 │   │   │   ├── appointment.rs
-│   │   │   └── prescription.rs
+│   │   │   ├── prescription.rs
+│   │   │   ├── department.rs
+│   │   │   ├── patient_group.rs
+│   │   │   ├── patient_profile.rs
+│   │   │   ├── content.rs
+│   │   │   ├── live_stream.rs
+│   │   │   ├── circle.rs
+│   │   │   ├── circle_post.rs
+│   │   │   └── template.rs
 │   │   ├── middleware/ # 中间件 ✅
 │   │   │   ├── mod.rs
 │   │   │   ├── auth.rs
@@ -417,11 +447,16 @@ taces/
 │       │   ├── test_auth.rs
 │       │   ├── test_user.rs
 │       │   ├── test_doctor.rs
-│       │   ├── test_content.rs
+│       │   ├── test_appointment.rs
+│       │   ├── test_prescription.rs
 │       │   ├── test_department.rs
 │       │   ├── test_patient_group.rs
 │       │   ├── test_patient_profile.rs
-│       │   └── test_live_stream.rs
+│       │   ├── test_content.rs
+│       │   ├── test_live_stream.rs
+│       │   ├── test_circle.rs
+│       │   ├── test_circle_post.rs
+│       │   └── test_template.rs
 │       └── unit/
 │           ├── mod.rs
 │           ├── test_jwt.rs
@@ -530,10 +565,59 @@ taces/
 - `GET /api/v1/content/categories` - 获取分类列表 ✅
 - `POST /api/v1/content/categories` - 创建分类（管理员）✅
 
+#### 直播管理 ✅
+- `GET /api/v1/live-streams` - 获取直播列表 ✅
+- `GET /api/v1/live-streams/:id` - 获取直播详情 ✅
+- `POST /api/v1/live-streams` - 创建直播（医生）✅
+- `PUT /api/v1/live-streams/:id` - 更新直播信息 ✅
+- `DELETE /api/v1/live-streams/:id` - 删除直播 ✅
+- `PUT /api/v1/live-streams/:id/start` - 开始直播 ✅
+- `PUT /api/v1/live-streams/:id/end` - 结束直播 ✅
+- `GET /api/v1/live-streams/upcoming` - 获取即将开始的直播 ✅
+- `GET /api/v1/live-streams/my` - 获取我的直播（医生）✅
+
+#### 圈子管理 ✅
+- `GET /api/v1/circles` - 获取圈子列表 ✅
+- `GET /api/v1/circles/:id` - 获取圈子详情 ✅
+- `POST /api/v1/circles` - 创建圈子 ✅
+- `PUT /api/v1/circles/:id` - 更新圈子信息 ✅
+- `DELETE /api/v1/circles/:id` - 删除圈子 ✅
+- `POST /api/v1/circles/:id/join` - 加入圈子 ✅
+- `POST /api/v1/circles/:id/leave` - 退出圈子 ✅
+- `GET /api/v1/circles/:id/members` - 获取圈子成员 ✅
+- `PUT /api/v1/circles/:id/members/:user_id/role` - 更新成员角色 ✅
+- `DELETE /api/v1/circles/:id/members/:user_id` - 移除成员 ✅
+- `GET /api/v1/my-circles` - 获取我加入的圈子 ✅
+
+#### 圈子帖子管理 ✅
+- `GET /api/v1/posts` - 获取帖子列表 ✅
+- `GET /api/v1/posts/:id` - 获取帖子详情 ✅
+- `POST /api/v1/posts` - 发布帖子（圈子成员）✅
+- `PUT /api/v1/posts/:id` - 更新帖子（作者）✅
+- `DELETE /api/v1/posts/:id` - 删除帖子（作者/管理员）✅
+- `GET /api/v1/users/:user_id/posts` - 获取用户的帖子 ✅
+- `GET /api/v1/circles/:circle_id/posts` - 获取圈子的帖子 ✅
+- `POST /api/v1/posts/:id/like` - 点赞/取消点赞 ✅
+- `GET /api/v1/posts/:id/comments` - 获取帖子评论 ✅
+- `POST /api/v1/posts/:id/comments` - 发表评论 ✅
+- `DELETE /api/v1/comments/:id` - 删除评论（作者/管理员）✅
+
+#### 常用语和处方模板管理 ✅
+- `GET /api/v1/templates/common-phrases` - 获取常用语列表（医生）✅
+- `GET /api/v1/templates/common-phrases/:id` - 获取常用语详情（医生）✅
+- `POST /api/v1/templates/common-phrases` - 创建常用语（医生）✅
+- `PUT /api/v1/templates/common-phrases/:id` - 更新常用语（医生）✅
+- `DELETE /api/v1/templates/common-phrases/:id` - 删除常用语（医生）✅
+- `POST /api/v1/templates/common-phrases/:id/use` - 增加使用次数（医生）✅
+- `GET /api/v1/templates/prescription-templates` - 获取处方模板列表（医生）✅
+- `GET /api/v1/templates/prescription-templates/:id` - 获取处方模板详情（医生）✅
+- `POST /api/v1/templates/prescription-templates` - 创建处方模板（医生）✅
+- `PUT /api/v1/templates/prescription-templates/:id` - 更新处方模板（医生）✅
+- `DELETE /api/v1/templates/prescription-templates/:id` - 删除处方模板（医生）✅
+- `POST /api/v1/templates/prescription-templates/:id/use` - 增加使用次数（医生）✅
+
 #### 待实现接口
-- 直播管理
-- 圈子社区
-- 患者评价
+- 患者评价系统
 - 通知系统
 - 统计分析
 - 支付相关
@@ -622,7 +706,11 @@ taces/
   - [ ] 问诊记录保存
 
 ### Phase 3: 系统完善（计划中）
-- [ ] 常用语和处方模板
+- [x] 常用语和处方模板 ✅
+  - [x] 常用语管理（诊断、医嘱、症状分类）
+  - [x] 处方模板管理
+  - [x] 使用次数统计
+  - [x] 权限控制（仅医生可用）
 - [ ] 患者评价系统
 - [ ] 通知系统
   - [ ] 站内通知
