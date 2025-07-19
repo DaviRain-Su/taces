@@ -6,6 +6,7 @@ pub mod circle_post;
 pub mod content;
 pub mod department;
 pub mod doctor;
+pub mod file_upload;
 pub mod live_stream;
 pub mod notification;
 pub mod patient_group;
@@ -16,6 +17,7 @@ pub mod review;
 pub mod statistics;
 pub mod template;
 pub mod user;
+pub mod video_consultation;
 
 pub use appointment::*;
 pub use circle::*;
@@ -23,6 +25,7 @@ pub use circle_post::*;
 pub use content::*;
 pub use department::*;
 pub use doctor::*;
+pub use file_upload::*;
 pub use live_stream::*;
 pub use notification::*;
 pub use patient_group::*;
@@ -33,6 +36,7 @@ pub use review::*;
 pub use statistics::*;
 pub use template::*;
 pub use user::*;
+pub use video_consultation::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse<T> {
