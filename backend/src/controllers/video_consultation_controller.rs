@@ -19,7 +19,7 @@ pub async fn create_consultation(
     Json(dto): Json<CreateVideoConsultationDto>,
 ) -> Result<impl IntoResponse, AppError> {
     // Verify user is a doctor or admin
-    if auth_user.role != UserRole::Doctor && auth_user.role != UserRole::Admin {
+    if auth_user.role != "doctor" && auth_user.role != "admin" {
         return Err(AppError::Forbidden);
     }
 
@@ -39,7 +39,7 @@ pub async fn get_consultation(
     let consultation = VideoConsultationService::get_consultation(&db, consultation_id).await?;
 
     // Check authorization
-    if auth_user.role != UserRole::Admin 
+    if auth_user.role != "admin" 
         && auth_user.user_id != consultation.doctor_id 
         && auth_user.user_id != consultation.patient_id {
         return Err(AppError::Forbidden);
@@ -58,7 +58,7 @@ pub async fn list_consultations(
 ) -> Result<impl IntoResponse, AppError> {
     // For patients, only show their own consultations
     let mut query_params = query;
-    if auth_user.role == UserRole::Patient {
+    if auth_user.role == "patient" {
         query_params.patient_id = Some(auth_user.user_id);
     }
 
@@ -89,7 +89,7 @@ pub async fn start_consultation(
     Path(consultation_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     // Only doctors can start consultations
-    if auth_user.role != UserRole::Doctor {
+    if auth_user.role != "doctor" {
         return Err(AppError::Forbidden);
     }
 
@@ -108,7 +108,7 @@ pub async fn end_consultation(
     Json(dto): Json<CompleteConsultationDto>,
 ) -> Result<impl IntoResponse, AppError> {
     // Only doctors can end consultations
-    if auth_user.role != UserRole::Doctor {
+    if auth_user.role != "doctor" {
         return Err(AppError::Forbidden);
     }
 
@@ -127,7 +127,7 @@ pub async fn update_consultation(
     Json(dto): Json<UpdateConsultationDto>,
 ) -> Result<impl IntoResponse, AppError> {
     // Only doctors can update consultations
-    if auth_user.role != UserRole::Doctor {
+    if auth_user.role != "doctor" {
         return Err(AppError::Forbidden);
     }
 
@@ -146,7 +146,7 @@ pub async fn rate_consultation(
     Json(dto): Json<RateConsultationDto>,
 ) -> Result<impl IntoResponse, AppError> {
     // Only patients can rate consultations
-    if auth_user.role != UserRole::Patient {
+    if auth_user.role != "patient" {
         return Err(AppError::Forbidden);
     }
 
@@ -192,7 +192,7 @@ pub async fn start_recording(
     Path(consultation_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     // Only doctors can start recording
-    if auth_user.role != UserRole::Doctor {
+    if auth_user.role != "doctor" {
         return Err(AppError::Forbidden);
     }
 
@@ -211,7 +211,7 @@ pub async fn complete_recording(
     Json(dto): Json<serde_json::Value>,
 ) -> Result<impl IntoResponse, AppError> {
     // Only system or admin can complete recording
-    if auth_user.role != UserRole::Admin {
+    if auth_user.role != "admin" {
         return Err(AppError::Forbidden);
     }
 
@@ -237,7 +237,7 @@ pub async fn get_recording(
     // Get consultation to check authorization
     let consultation = VideoConsultationService::get_consultation(&db, recording.consultation_id).await?;
     
-    if auth_user.role != UserRole::Admin 
+    if auth_user.role != "admin" 
         && auth_user.user_id != consultation.doctor_id 
         && auth_user.user_id != consultation.patient_id {
         return Err(AppError::Forbidden);
@@ -257,7 +257,7 @@ pub async fn get_consultation_recordings(
     // Check authorization
     let consultation = VideoConsultationService::get_consultation(&db, consultation_id).await?;
     
-    if auth_user.role != UserRole::Admin 
+    if auth_user.role != "admin" 
         && auth_user.user_id != consultation.doctor_id 
         && auth_user.user_id != consultation.patient_id {
         return Err(AppError::Forbidden);
@@ -278,7 +278,7 @@ pub async fn create_template(
     Json(dto): Json<CreateConsultationTemplateDto>,
 ) -> Result<impl IntoResponse, AppError> {
     // Only doctors can create templates
-    if auth_user.role != UserRole::Doctor {
+    if auth_user.role != "doctor" {
         return Err(AppError::Forbidden);
     }
 
@@ -313,7 +313,7 @@ pub async fn list_doctor_templates(
     Extension(auth_user): Extension<AuthUser>,
 ) -> Result<impl IntoResponse, AppError> {
     // Only doctors can view their templates
-    if auth_user.role != UserRole::Doctor {
+    if auth_user.role != "doctor" {
         return Err(AppError::Forbidden);
     }
 
@@ -331,7 +331,7 @@ pub async fn use_template(
     Path(template_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     // Only doctors can use templates
-    if auth_user.role != UserRole::Doctor {
+    if auth_user.role != "doctor" {
         return Err(AppError::Forbidden);
     }
 
@@ -349,9 +349,9 @@ pub async fn get_consultation_statistics(
     Extension(auth_user): Extension<AuthUser>,
     Query(params): Query<serde_json::Value>,
 ) -> Result<impl IntoResponse, AppError> {
-    let doctor_id = if auth_user.role == UserRole::Doctor {
+    let doctor_id = if auth_user.role == "doctor" {
         Some(auth_user.user_id)
-    } else if auth_user.role == UserRole::Admin {
+    } else if auth_user.role == "admin" {
         params["doctor_id"].as_str().and_then(|s| Uuid::parse_str(s).ok())
     } else {
         return Err(AppError::Forbidden);

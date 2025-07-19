@@ -2,13 +2,41 @@ use crate::config::database::DbPool;
 use crate::models::file_upload::*;
 use crate::utils::errors::AppError;
 use chrono::{Duration, Utc};
-use sqlx::{MySql, Transaction};
+use sqlx::{MySql, Transaction, Row};
 use uuid::Uuid;
 use std::collections::HashMap;
 
 pub struct FileUploadService;
 
 impl FileUploadService {
+    fn parse_file_upload_from_row(row: &sqlx::mysql::MySqlRow) -> Result<FileUpload, AppError> {
+        Ok(FileUpload {
+            id: Uuid::parse_str(row.get("id")).map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
+            user_id: Uuid::parse_str(row.get("user_id")).map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
+            file_type: row.get("file_type"),
+            file_name: row.get("file_name"),
+            file_path: row.get("file_path"),
+            file_url: row.get("file_url"),
+            file_size: row.get("file_size"),
+            mime_type: row.get("mime_type"),
+            related_type: row.get("related_type"),
+            related_id: row.get::<Option<String>, _>("related_id")
+                .map(|s| Uuid::parse_str(&s).ok())
+                .flatten(),
+            width: row.get("width"),
+            height: row.get("height"),
+            thumbnail_url: row.get("thumbnail_url"),
+            is_public: row.get("is_public"),
+            status: row.get("status"),
+            error_message: row.get("error_message"),
+            bucket_name: row.get("bucket_name"),
+            object_key: row.get("object_key"),
+            etag: row.get("etag"),
+            uploaded_at: row.get("uploaded_at"),
+            expires_at: row.get("expires_at"),
+            deleted_at: row.get("deleted_at"),
+        })
+    }
     // File Upload Management
     pub async fn create_upload(
         db: &DbPool,
@@ -35,15 +63,15 @@ impl FileUploadService {
         "#;
 
         sqlx::query(query)
-            .bind(&upload_id)
-            .bind(&user_id)
+            .bind(upload_id.to_string())
+            .bind(user_id.to_string())
             .bind(&dto.file_type)
             .bind(&dto.file_name)
             .bind(&file_path)
             .bind(&dto.file_size)
             .bind(&dto.mime_type)
             .bind(&dto.related_type)
-            .bind(&dto.related_id)
+            .bind(dto.related_id.map(|id| id.to_string()))
             .bind(&now)
             .execute(db)
             .await
@@ -68,7 +96,7 @@ impl FileUploadService {
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         // Verify ownership
-        let file = Self::get_file(&mut tx, upload_id).await?;
+        let file = Self::get_file_tx(&mut tx, upload_id).await?;
         if file.user_id != user_id {
             return Err(AppError::Forbidden);
         }
@@ -94,7 +122,7 @@ impl FileUploadService {
             .bind(&dto.height)
             .bind(&dto.thumbnail_url)
             .bind(&Utc::now())
-            .bind(&upload_id)
+            .bind(upload_id.to_string())
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -113,14 +141,36 @@ impl FileUploadService {
             SELECT * FROM file_uploads WHERE id = ?
         "#;
 
-        sqlx::query_as::<_, FileUpload>(query)
-            .bind(&file_id)
+        let row = sqlx::query(query)
+            .bind(file_id.to_string())
             .fetch_one(db)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("文件不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
-            })
+            })?;
+        
+        Self::parse_file_upload_from_row(&row)
+    }
+
+    async fn get_file_tx(
+        tx: &mut Transaction<'_, MySql>,
+        file_id: Uuid,
+    ) -> Result<FileUpload, AppError> {
+        let query = r#"
+            SELECT * FROM file_uploads WHERE id = ?
+        "#;
+
+        let row = sqlx::query(query)
+            .bind(file_id.to_string())
+            .fetch_one(&mut **tx)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => AppError::NotFound("文件不存在".to_string()),
+                _ => AppError::DatabaseError(e.to_string()),
+            })?;
+        
+        Self::parse_file_upload_from_row(&row)
     }
 
     pub async fn list_files(
@@ -143,7 +193,7 @@ impl FileUploadService {
         if let Some(user_id) = &query_params.user_id {
             query.push_str(" AND user_id = ?");
             count_query.push_str(" AND user_id = ?");
-            bindings.push(Box::new(user_id.clone()));
+            bindings.push(Box::new(user_id.to_string()));
         }
 
         if let Some(file_type) = &query_params.file_type {
@@ -161,7 +211,7 @@ impl FileUploadService {
         if let Some(related_id) = &query_params.related_id {
             query.push_str(" AND related_id = ?");
             count_query.push_str(" AND related_id = ?");
-            bindings.push(Box::new(related_id.clone()));
+            bindings.push(Box::new(related_id.to_string()));
         }
 
         if let Some(status) = &query_params.status {
@@ -193,17 +243,22 @@ impl FileUploadService {
         // Get files
         query.push_str(" ORDER BY uploaded_at DESC LIMIT ? OFFSET ?");
 
-        let mut query_builder = sqlx::query_as::<_, FileUpload>(&query);
+        let mut query_builder = sqlx::query(&query);
         for binding in &bindings {
             query_builder = query_builder.bind(binding.as_ref());
         }
 
-        let files = query_builder
+        let rows = query_builder
             .bind(page_size)
             .bind(offset)
             .fetch_all(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        
+        let mut files = Vec::new();
+        for row in rows {
+            files.push(Self::parse_file_upload_from_row(&row)?);
+        }
 
         Ok(FileListResponse {
             files,
@@ -235,7 +290,7 @@ impl FileUploadService {
 
         sqlx::query(query)
             .bind(&Utc::now())
-            .bind(&file_id)
+            .bind(file_id.to_string())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -254,7 +309,7 @@ impl FileUploadService {
 
         if let Some(uid) = user_id {
             base_query.push_str(" AND user_id = ?");
-            bindings.push(Box::new(uid));
+            bindings.push(Box::new(uid.to_string()));
         }
 
         // Get total stats

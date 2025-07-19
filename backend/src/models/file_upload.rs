@@ -14,7 +14,7 @@ pub enum FileType {
     Other,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "upload_status", rename_all = "lowercase")]
 pub enum UploadStatus {
     Uploading,

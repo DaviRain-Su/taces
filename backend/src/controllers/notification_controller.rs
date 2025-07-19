@@ -47,7 +47,7 @@ pub async fn get_user_notifications(
 
     match NotificationService::get_user_notifications(
         &state.pool,
-        claims.user_id,
+        claims.sub,
         status,
         page,
         page_size,
@@ -81,7 +81,7 @@ pub async fn get_notification_detail(
     Extension(claims): Extension<Claims>,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
-    match NotificationService::get_notification_by_id(&state.pool, id, claims.user_id).await {
+    match NotificationService::get_notification_by_id(&state.pool, id, claims.sub).await {
         Ok(Some(notification)) => {
             let response: NotificationResponse = notification.into();
             Json(ApiResponse::success("获取通知详情成功", response)).into_response()
@@ -108,7 +108,7 @@ pub async fn mark_notification_as_read(
     Extension(claims): Extension<Claims>,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
-    match NotificationService::mark_as_read(&state.pool, id, claims.user_id).await {
+    match NotificationService::mark_as_read(&state.pool, id, claims.sub).await {
         Ok(true) => Json(ApiResponse::success("标记已读成功", json!({ "success": true }))).into_response(),
         Ok(false) => (
             StatusCode::NOT_FOUND,
@@ -131,7 +131,7 @@ pub async fn mark_all_as_read(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match NotificationService::mark_all_as_read(&state.pool, claims.user_id).await {
+    match NotificationService::mark_all_as_read(&state.pool, claims.sub).await {
         Ok(count) => Json(ApiResponse::success(
             "标记所有通知已读成功",
             json!({ "count": count }),
@@ -154,7 +154,7 @@ pub async fn delete_notification(
     Extension(claims): Extension<Claims>,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
-    match NotificationService::delete_notification(&state.pool, id, claims.user_id).await {
+    match NotificationService::delete_notification(&state.pool, id, claims.sub).await {
         Ok(true) => Json(ApiResponse::success("删除通知成功", json!({ "success": true }))).into_response(),
         Ok(false) => (
             StatusCode::NOT_FOUND,
@@ -177,7 +177,7 @@ pub async fn get_notification_stats(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match NotificationService::get_notification_stats(&state.pool, claims.user_id).await {
+    match NotificationService::get_notification_stats(&state.pool, claims.sub).await {
         Ok(stats) => Json(ApiResponse::success("获取通知统计成功", stats)).into_response(),
         Err(e) => {
             eprintln!("获取通知统计失败: {:?}", e);
@@ -195,7 +195,7 @@ pub async fn get_notification_settings(
     State(state): State<AppState>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    match NotificationService::get_user_notification_settings(&state.pool, claims.user_id).await {
+    match NotificationService::get_user_notification_settings(&state.pool, claims.sub).await {
         Ok(settings) => Json(ApiResponse::success("获取通知设置成功", settings)).into_response(),
         Err(e) => {
             eprintln!("获取通知设置失败: {:?}", e);
@@ -214,7 +214,7 @@ pub async fn update_notification_settings(
     Extension(claims): Extension<Claims>,
     Json(dto): Json<UpdateNotificationSettingsDto>,
 ) -> impl IntoResponse {
-    match NotificationService::update_notification_settings(&state.pool, claims.user_id, dto).await {
+    match NotificationService::update_notification_settings(&state.pool, claims.sub, dto).await {
         Ok(settings) => Json(ApiResponse::success("更新通知设置成功", settings)).into_response(),
         Err(e) => {
             eprintln!("更新通知设置失败: {:?}", e);
@@ -233,7 +233,7 @@ pub async fn register_push_token(
     Extension(claims): Extension<Claims>,
     Json(dto): Json<RegisterPushTokenDto>,
 ) -> impl IntoResponse {
-    match NotificationService::register_push_token(&state.pool, claims.user_id, dto).await {
+    match NotificationService::register_push_token(&state.pool, claims.sub, dto).await {
         Ok(token) => Json(ApiResponse::success("注册推送token成功", token)).into_response(),
         Err(e) => {
             eprintln!("注册推送token失败: {:?}", e);

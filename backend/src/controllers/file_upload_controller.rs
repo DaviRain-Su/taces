@@ -48,7 +48,7 @@ pub async fn get_file(
     let file = FileUploadService::get_file(&db, file_id).await?;
 
     // Check authorization
-    if !file.is_public && file.user_id != auth_user.user_id && auth_user.role != UserRole::Admin {
+    if !file.is_public && file.user_id != auth_user.user_id && auth_user.role != "admin" {
         return Err(AppError::Forbidden);
     }
 
@@ -65,7 +65,7 @@ pub async fn list_files(
 ) -> Result<impl IntoResponse, AppError> {
     // For non-admin users, only show their own files
     let mut query_params = query;
-    if auth_user.role != UserRole::Admin {
+    if auth_user.role != "admin" {
         query_params.user_id = Some(auth_user.user_id);
     }
 
@@ -82,7 +82,7 @@ pub async fn delete_file(
     Extension(auth_user): Extension<AuthUser>,
     Path(file_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let is_admin = auth_user.role == UserRole::Admin;
+    let is_admin = auth_user.role == "admin";
     FileUploadService::delete_file(&db, file_id, auth_user.user_id, is_admin).await?;
 
     Ok((
@@ -95,7 +95,7 @@ pub async fn get_file_stats(
     State(db): State<DbPool>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Result<impl IntoResponse, AppError> {
-    let user_id = if auth_user.role == UserRole::Admin {
+    let user_id = if auth_user.role == "admin" {
         None
     } else {
         Some(auth_user.user_id)
@@ -114,7 +114,7 @@ pub async fn get_upload_config(
     State(db): State<DbPool>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Result<impl IntoResponse, AppError> {
-    if auth_user.role != UserRole::Admin {
+    if auth_user.role != "admin" {
         return Err(AppError::Forbidden);
     }
 
@@ -130,7 +130,7 @@ pub async fn get_image_config(
     State(db): State<DbPool>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Result<impl IntoResponse, AppError> {
-    if auth_user.role != UserRole::Admin {
+    if auth_user.role != "admin" {
         return Err(AppError::Forbidden);
     }
 
@@ -146,7 +146,7 @@ pub async fn get_video_config(
     State(db): State<DbPool>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Result<impl IntoResponse, AppError> {
-    if auth_user.role != UserRole::Admin {
+    if auth_user.role != "admin" {
         return Err(AppError::Forbidden);
     }
 
@@ -164,7 +164,7 @@ pub async fn update_system_config(
     Path((category, key)): Path<(String, String)>,
     Json(dto): Json<UpdateSystemConfigDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    if auth_user.role != UserRole::Admin {
+    if auth_user.role != "admin" {
         return Err(AppError::Forbidden);
     }
 
