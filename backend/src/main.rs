@@ -2,7 +2,6 @@ use axum::{routing::get, Router};
 use dotenv::dotenv;
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
-use tracing_subscriber;
 
 use backend::{
     config::{database, Config},

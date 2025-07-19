@@ -61,17 +61,14 @@ pub async fn auth_middleware(
     }
 }
 
-pub fn require_role(
-    allowed_roles: Vec<String>,
-) -> impl Fn(
-    Request,
-    Next,
-) -> std::pin::Pin<
+type BoxedFuture = std::pin::Pin<
     Box<
         dyn std::future::Future<Output = Result<Response, (StatusCode, Json<serde_json::Value>)>>
             + Send,
     >,
-> + Clone {
+>;
+
+pub fn require_role(allowed_roles: Vec<String>) -> impl Fn(Request, Next) -> BoxedFuture + Clone {
     move |req: Request, next: Next| {
         let allowed_roles = allowed_roles.clone();
         Box::pin(async move {

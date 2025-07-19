@@ -1,6 +1,5 @@
 use backend::{
     config::{database, Config},
-    models::{appointment::*, doctor::*, prescription::*, user::*},
     utils::password::hash_password,
 };
 use chrono::{Duration, Utc};
@@ -13,7 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Starting database seeding...");
 
-    let config = Config::from_env()?;
+    let _config = Config::from_env()?;
     let pool = database::create_pool().await?;
 
     // Clear existing data

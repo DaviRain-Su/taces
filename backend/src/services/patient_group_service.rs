@@ -83,7 +83,7 @@ pub async fn get_group_by_id(
         members.push(parse_group_member_from_row(&row)?);
     }
 
-    Ok(parse_group_with_members(&group_row, members)?)
+    parse_group_with_members(&group_row, members)
 }
 
 pub async fn create_group(

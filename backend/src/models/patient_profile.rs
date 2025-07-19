@@ -78,12 +78,12 @@ pub fn validate_id_number(id_number: &str) -> bool {
 
     // Validate date parts
     let month = match month_str.parse::<u32>() {
-        Ok(m) if m >= 1 && m <= 12 => m,
+        Ok(m) if (1..=12).contains(&m) => m,
         _ => return false,
     };
 
     let day = match day_str.parse::<u32>() {
-        Ok(d) if d >= 1 && d <= 31 => d,
+        Ok(d) if (1..=31).contains(&d) => d,
         _ => return false,
     };
 
