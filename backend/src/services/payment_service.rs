@@ -1099,13 +1099,14 @@ impl PaymentService {
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
+        use sqlx::Row;
         Ok(PaymentStatistics {
-            total_orders: row.try_get(0).unwrap_or(0),
-            total_amount: row.try_get(1).unwrap_or(Decimal::ZERO),
-            paid_orders: row.try_get(2).unwrap_or(0),
-            paid_amount: row.try_get(3).unwrap_or(Decimal::ZERO),
-            refunded_orders: row.try_get(4).unwrap_or(0),
-            refunded_amount: row.try_get(5).unwrap_or(Decimal::ZERO),
+            total_orders: row.get::<Option<i64>, _>("total_orders").unwrap_or(0),
+            total_amount: row.get::<Option<Decimal>, _>("total_amount").unwrap_or(Decimal::ZERO),
+            paid_orders: row.get::<Option<i64>, _>("paid_orders").unwrap_or(0),
+            paid_amount: row.get::<Option<Decimal>, _>("paid_amount").unwrap_or(Decimal::ZERO),
+            refunded_orders: row.get::<Option<i64>, _>("refunded_orders").unwrap_or(0),
+            refunded_amount: row.get::<Option<Decimal>, _>("refunded_amount").unwrap_or(Decimal::ZERO),
         })
     }
 

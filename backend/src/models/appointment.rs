@@ -26,7 +26,7 @@ pub enum VisitType {
     Offline,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "appointment_status", rename_all = "lowercase")]
 pub enum AppointmentStatus {
     Pending,

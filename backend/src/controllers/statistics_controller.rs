@@ -1,7 +1,7 @@
 use crate::{
     models::{statistics::*, ApiResponse},
     services::statistics_service::StatisticsService,
-    utils::jwt::Claims,
+    middleware::auth::AuthUser,
     AppState,
 };
 use axum::{
@@ -17,10 +17,10 @@ use uuid::Uuid;
 /// 获取管理员仪表盘统计（仅管理员）
 pub async fn get_dashboard_stats(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
     // 检查权限
-    if claims.role != "admin" {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),
@@ -44,16 +44,16 @@ pub async fn get_dashboard_stats(
 /// 获取医生统计数据
 pub async fn get_doctor_statistics(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(doctor_id): Path<Uuid>,
 ) -> impl IntoResponse {
     // 医生只能查看自己的统计，管理员可以查看所有医生
-    if claims.role == "doctor" {
+    if auth_user.role == "doctor" {
         // 获取医生ID
         let doctor_result: Result<Option<(String,)>, sqlx::Error> = sqlx::query_as(
             "SELECT id FROM doctors WHERE user_id = ?"
         )
-        .bind(claims.user_id.to_string())
+        .bind(auth_user.user_id.to_string())
         .fetch_optional(&state.pool)
         .await;
 
@@ -76,7 +76,7 @@ pub async fn get_doctor_statistics(
                     .into_response();
             }
         }
-    } else if claims.role != "admin" {
+    } else if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),
@@ -100,10 +100,10 @@ pub async fn get_doctor_statistics(
 /// 获取患者统计数据
 pub async fn get_patient_statistics(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
     // 患者只能查看自己的统计
-    if claims.role != "patient" {
+    if auth_user.role != "patient" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),
@@ -111,7 +111,7 @@ pub async fn get_patient_statistics(
             .into_response();
     }
 
-    match StatisticsService::get_patient_stats(&state.pool, claims.user_id).await {
+    match StatisticsService::get_patient_stats(&state.pool, auth_user.user_id).await {
         Ok(stats) => Json(ApiResponse::success("获取患者统计成功", stats)).into_response(),
         Err(e) => {
             eprintln!("获取患者统计失败: {:?}", e);
@@ -127,10 +127,10 @@ pub async fn get_patient_statistics(
 /// 获取预约趋势（管理员）
 pub async fn get_appointment_trends(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Query(date_range): Query<DateRangeQuery>,
 ) -> impl IntoResponse {
-    if claims.role != "admin" {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),
@@ -173,9 +173,9 @@ pub async fn get_department_statistics(State(state): State<AppState>) -> impl In
 /// 获取时间段分布统计（管理员）
 pub async fn get_time_slot_statistics(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
-    if claims.role != "admin" {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),
@@ -199,9 +199,9 @@ pub async fn get_time_slot_statistics(
 /// 获取内容统计（管理员）
 pub async fn get_content_statistics(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
-    if claims.role != "admin" {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),
@@ -225,9 +225,9 @@ pub async fn get_content_statistics(
 /// 获取直播统计（管理员）
 pub async fn get_live_stream_statistics(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
-    if claims.role != "admin" {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),
@@ -251,9 +251,9 @@ pub async fn get_live_stream_statistics(
 /// 获取圈子统计（管理员）
 pub async fn get_circle_statistics(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
-    if claims.role != "admin" {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),
@@ -277,10 +277,10 @@ pub async fn get_circle_statistics(
 /// 获取用户增长统计（管理员）
 pub async fn get_user_growth_statistics(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Query(date_range): Query<DateRangeQuery>,
 ) -> impl IntoResponse {
-    if claims.role != "admin" {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),
@@ -338,9 +338,9 @@ pub async fn get_top_content(State(state): State<AppState>) -> impl IntoResponse
 /// 获取预约热力图（管理员）
 pub async fn get_appointment_heatmap(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
-    if claims.role != "admin" {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),
@@ -364,10 +364,10 @@ pub async fn get_appointment_heatmap(
 /// 导出数据（管理员）
 pub async fn export_data(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Query(export_query): Query<ExportQuery>,
 ) -> impl IntoResponse {
-    if claims.role != "admin" {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限访问")),

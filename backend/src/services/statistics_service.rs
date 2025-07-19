@@ -69,16 +69,16 @@ impl StatisticsService {
         .await?;
 
         Ok(DoctorStats {
-            total_appointments: stats.total_appointments.unwrap_or(0),
-            completed_appointments: stats.completed_appointments.unwrap_or(0),
-            cancelled_appointments: stats.cancelled_appointments.unwrap_or(0),
-            total_patients: stats.total_patients.unwrap_or(0),
-            total_prescriptions: stats.total_prescriptions.unwrap_or(0),
+            total_appointments: stats.total_appointments,
+            completed_appointments: stats.completed_appointments,
+            cancelled_appointments: stats.cancelled_appointments,
+            total_patients: stats.total_patients,
+            total_prescriptions: stats.total_prescriptions,
             average_rating: stats.average_rating,
-            total_reviews: stats.total_reviews.unwrap_or(0),
-            today_appointments: stats.today_appointments.unwrap_or(0),
-            this_week_appointments: stats.this_week_appointments.unwrap_or(0),
-            this_month_appointments: stats.this_month_appointments.unwrap_or(0),
+            total_reviews: stats.total_reviews,
+            today_appointments: stats.today_appointments,
+            this_week_appointments: stats.this_week_appointments,
+            this_month_appointments: stats.this_month_appointments,
         })
     }
 
@@ -105,11 +105,11 @@ impl StatisticsService {
         .await?;
 
         Ok(PatientStats {
-            total_appointments: stats.total_appointments.unwrap_or(0),
-            completed_appointments: stats.completed_appointments.unwrap_or(0),
-            upcoming_appointments: stats.upcoming_appointments.unwrap_or(0),
-            total_prescriptions: stats.total_prescriptions.unwrap_or(0),
-            total_doctors_visited: stats.total_doctors_visited.unwrap_or(0),
+            total_appointments: stats.total_appointments,
+            completed_appointments: stats.completed_appointments,
+            upcoming_appointments: stats.upcoming_appointments,
+            total_prescriptions: stats.total_prescriptions,
+            total_doctors_visited: stats.total_doctors_visited,
         })
     }
 
@@ -170,8 +170,8 @@ impl StatisticsService {
             .map(|row| DepartmentStats {
                 department_id: Uuid::parse_str(&row.department_id).unwrap(),
                 department_name: row.department_name,
-                total_doctors: row.total_doctors.unwrap_or(0),
-                total_appointments: row.total_appointments.unwrap_or(0),
+                total_doctors: row.total_doctors as i64,
+                total_appointments: row.total_appointments as i64,
                 average_rating: row.average_rating,
             })
             .collect())
@@ -253,8 +253,8 @@ impl StatisticsService {
 
         Ok(LiveStreamStats {
             total_streams: stats.total_streams,
-            scheduled_streams: stats.scheduled_streams.unwrap_or(0),
-            completed_streams: stats.completed_streams.unwrap_or(0),
+            scheduled_streams: stats.scheduled_streams as i64,
+            completed_streams: stats.completed_streams as i64,
             total_viewers: stats.total_viewers,
             average_viewers_per_stream: stats.average_viewers_per_stream,
         })
@@ -291,9 +291,9 @@ impl StatisticsService {
 
         Ok(CircleStats {
             total_circles: stats.total_circles,
-            total_members: stats.total_members.unwrap_or(0),
-            total_posts: stats.total_posts.unwrap_or(0),
-            active_circles: stats.active_circles.unwrap_or(0),
+            total_members: stats.total_members as i64,
+            total_posts: stats.total_posts as i64,
+            active_circles: stats.active_circles as i64,
             average_members_per_circle: average_members,
         })
     }
@@ -330,8 +330,8 @@ impl StatisticsService {
                 UserGrowthStats {
                     date: row.date.unwrap(),
                     new_users: row.new_users,
-                    new_doctors: row.new_doctors.unwrap_or(0),
-                    new_patients: row.new_patients.unwrap_or(0),
+                    new_doctors: row.new_doctors as i64,
+                    new_patients: row.new_patients as i64,
                     cumulative_users,
                 }
             })
@@ -375,9 +375,9 @@ impl StatisticsService {
                 doctor_id: Uuid::parse_str(&row.doctor_id).unwrap(),
                 doctor_name: row.doctor_name,
                 department: row.department.unwrap_or_else(|| "未分配".to_string()),
-                appointment_count: row.appointment_count.unwrap_or(0),
+                appointment_count: row.appointment_count as i64,
                 average_rating: row.average_rating,
-                review_count: row.review_count.unwrap_or(0),
+                review_count: row.review_count as i64,
             })
             .collect())
     }
@@ -469,8 +469,8 @@ impl StatisticsService {
         Ok(heatmap
             .into_iter()
             .map(|row| HeatmapData {
-                hour: row.hour.unwrap_or(0) as i32,
-                day_of_week: row.day_of_week.unwrap_or(0) as i32,
+                hour: row.hour as i32,
+                day_of_week: row.day_of_week as i32,
                 count: row.count,
             })
             .collect())

@@ -9,47 +9,92 @@ use uuid::Uuid;
 pub struct NotificationService;
 
 impl NotificationService {
+    fn parse_notification_from_row(row: &sqlx::mysql::MySqlRow) -> Result<Notification, sqlx::Error> {
+        use sqlx::Row;
+        
+        Ok(Notification {
+            id: Uuid::parse_str(row.get("id")).map_err(|_| sqlx::Error::ColumnDecode {
+                index: "id".to_string(),
+                source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UUID")),
+            })?,
+            user_id: Uuid::parse_str(row.get("user_id")).map_err(|_| sqlx::Error::ColumnDecode {
+                index: "user_id".to_string(),
+                source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UUID")),
+            })?,
+            notification_type: row.get("notification_type"),
+            title: row.get("title"),
+            content: row.get("content"),
+            related_id: row.get::<Option<String>, _>("related_id")
+                .map(|s| Uuid::parse_str(&s).ok())
+                .flatten(),
+            status: row.get("status"),
+            metadata: row.get("metadata"),
+            created_at: row.get("created_at"),
+            read_at: row.get("read_at"),
+        })
+    }
+    
+    fn parse_notification_settings_from_row(row: &sqlx::mysql::MySqlRow) -> Result<NotificationSettings, sqlx::Error> {
+        use sqlx::Row;
+        
+        Ok(NotificationSettings {
+            id: Uuid::parse_str(row.get("id")).map_err(|_| sqlx::Error::ColumnDecode {
+                index: "id".to_string(),
+                source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UUID")),
+            })?,
+            user_id: Uuid::parse_str(row.get("user_id")).map_err(|_| sqlx::Error::ColumnDecode {
+                index: "user_id".to_string(),
+                source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UUID")),
+            })?,
+            notification_type: row.get("notification_type"),
+            enabled: row.get("enabled"),
+            email_enabled: row.get("email_enabled"),
+            sms_enabled: row.get("sms_enabled"),
+            push_enabled: row.get("push_enabled"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
+    }
     /// 创建通知
     pub async fn create_notification(
         pool: &DbPool,
         dto: CreateNotificationDto,
     ) -> Result<Notification, sqlx::Error> {
         let metadata = dto.metadata.unwrap_or(serde_json::json!({}));
+        let notification_id = Uuid::new_v4();
         
         // Insert the notification
-        let result = query!(
+        let result = sqlx::query(
             r#"
-            INSERT INTO notifications (user_id, type, title, content, related_id, metadata)
-            VALUES (?, ?, ?, ?, ?, ?)
-            "#,
-            dto.user_id,
-            dto.notification_type as NotificationType,
-            dto.title,
-            dto.content,
-            dto.related_id,
-            metadata
+            INSERT INTO notifications (id, user_id, type, title, content, related_id, metadata, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'unread', NOW())
+            "#
         )
+        .bind(notification_id.to_string())
+        .bind(dto.user_id.to_string())
+        .bind(&dto.notification_type.to_string())
+        .bind(&dto.title)
+        .bind(&dto.content)
+        .bind(dto.related_id.map(|id| id.to_string()))
+        .bind(&metadata)
         .execute(pool)
         .await?;
 
-        let notification_id = result.last_insert_id();
-
         // Fetch the created notification
-        let notification = query_as!(
-            Notification,
-            r#"
-            SELECT id, user_id, type as "notification_type: NotificationType", 
-                   title, content, related_id, status as "status: NotificationStatus", 
+        let query = r#"
+            SELECT id, user_id, type as notification_type, 
+                   title, content, related_id, status, 
                    metadata, created_at, read_at
             FROM notifications
             WHERE id = ?
-            "#,
-            notification_id
-        )
-        .fetch_one(pool)
-        .await?;
+        "#;
+        
+        let row = sqlx::query(query)
+            .bind(notification_id.to_string())
+            .fetch_one(pool)
+            .await?;
 
-        Ok(notification)
+        Self::parse_notification_from_row(&row)
     }
 
     /// 批量创建通知（用于群发）
@@ -107,7 +152,7 @@ impl NotificationService {
             status_condition
         );
         let total: i64 = sqlx::query_scalar(&count_query)
-            .bind(user_id)
+            .bind(user_id.to_string())
             .fetch_one(pool)
             .await?;
 
@@ -125,12 +170,17 @@ impl NotificationService {
             status_condition
         );
 
-        let notifications = sqlx::query_as::<_, Notification>(&list_query)
-            .bind(user_id)
+        let rows = sqlx::query(&list_query)
+            .bind(user_id.to_string())
             .bind(page_size)
             .bind(offset)
             .fetch_all(pool)
             .await?;
+        
+        let mut notifications = Vec::new();
+        for row in rows {
+            notifications.push(Self::parse_notification_from_row(&row)?);
+        }
 
         Ok((notifications, total))
     }
@@ -141,22 +191,24 @@ impl NotificationService {
         id: Uuid,
         user_id: Uuid,
     ) -> Result<Option<Notification>, sqlx::Error> {
-        let notification = query_as!(
-            Notification,
-            r#"
-            SELECT id, user_id, type as "notification_type: NotificationType", 
-                   title, content, related_id, status as "status: NotificationStatus", 
+        let query = r#"
+            SELECT id, user_id, type as notification_type, 
+                   title, content, related_id, status, 
                    metadata, created_at, read_at
             FROM notifications
             WHERE id = ? AND user_id = ? AND status != 'deleted'
-            "#,
-            id,
-            user_id
-        )
-        .fetch_optional(pool)
-        .await?;
-
-        Ok(notification)
+        "#;
+        
+        let row = sqlx::query(query)
+            .bind(id.to_string())
+            .bind(user_id.to_string())
+            .fetch_optional(pool)
+            .await?;
+        
+        match row {
+            Some(row) => Ok(Some(Self::parse_notification_from_row(&row)?)),
+            None => Ok(None)
+        }
     }
 
     /// 标记通知为已读
@@ -165,16 +217,16 @@ impl NotificationService {
         id: Uuid,
         user_id: Uuid,
     ) -> Result<bool, sqlx::Error> {
-        let result = query!(
+        let result = sqlx::query(
             r#"
             UPDATE notifications
             SET status = 'read', read_at = ?
             WHERE id = ? AND user_id = ? AND status = 'unread'
-            "#,
-            Utc::now(),
-            id,
-            user_id
+            "#
         )
+        .bind(Utc::now())
+        .bind(id.to_string())
+        .bind(user_id.to_string())
         .execute(pool)
         .await?;
 
@@ -183,15 +235,15 @@ impl NotificationService {
 
     /// 批量标记为已读
     pub async fn mark_all_as_read(pool: &DbPool, user_id: Uuid) -> Result<u64, sqlx::Error> {
-        let result = query!(
+        let result = sqlx::query(
             r#"
             UPDATE notifications
             SET status = 'read', read_at = ?
             WHERE user_id = ? AND status = 'unread'
-            "#,
-            Utc::now(),
-            user_id
+            "#
         )
+        .bind(Utc::now())
+        .bind(user_id.to_string())
         .execute(pool)
         .await?;
 
@@ -204,15 +256,15 @@ impl NotificationService {
         id: Uuid,
         user_id: Uuid,
     ) -> Result<bool, sqlx::Error> {
-        let result = query!(
+        let result = sqlx::query(
             r#"
             UPDATE notifications
             SET status = 'deleted'
             WHERE id = ? AND user_id = ? AND status != 'deleted'
-            "#,
-            id,
-            user_id
+            "#
         )
+        .bind(id.to_string())
+        .bind(user_id.to_string())
         .execute(pool)
         .await?;
 
@@ -224,22 +276,26 @@ impl NotificationService {
         pool: &DbPool,
         user_id: Uuid,
     ) -> Result<NotificationStats, sqlx::Error> {
-        let stats = query_as!(
-            NotificationStats,
-            r#"
+        let query = r#"
             SELECT 
-                SUM(CASE WHEN status != 'deleted' THEN 1 ELSE 0 END) as "total_count!",
-                SUM(CASE WHEN status = 'unread' THEN 1 ELSE 0 END) as "unread_count!",
-                SUM(CASE WHEN status = 'read' THEN 1 ELSE 0 END) as "read_count!"
+                SUM(CASE WHEN status != 'deleted' THEN 1 ELSE 0 END) as total_count,
+                SUM(CASE WHEN status = 'unread' THEN 1 ELSE 0 END) as unread_count,
+                SUM(CASE WHEN status = 'read' THEN 1 ELSE 0 END) as read_count
             FROM notifications
             WHERE user_id = ?
-            "#,
-            user_id
-        )
-        .fetch_one(pool)
-        .await?;
-
-        Ok(stats)
+        "#;
+        
+        let row = sqlx::query(query)
+            .bind(user_id.to_string())
+            .fetch_one(pool)
+            .await?;
+        
+        use sqlx::Row;
+        Ok(NotificationStats {
+            total_count: row.get::<Option<i64>, _>("total_count").unwrap_or(0),
+            unread_count: row.get::<Option<i64>, _>("unread_count").unwrap_or(0),
+            read_count: row.get::<Option<i64>, _>("read_count").unwrap_or(0),
+        })
     }
 
     /// 获取用户通知设置
@@ -247,20 +303,24 @@ impl NotificationService {
         pool: &DbPool,
         user_id: Uuid,
     ) -> Result<Vec<NotificationSettings>, sqlx::Error> {
-        let settings = query_as!(
-            NotificationSettings,
-            r#"
-            SELECT id, user_id, notification_type as "notification_type: NotificationType", 
+        let query = r#"
+            SELECT id, user_id, notification_type, 
                    enabled, email_enabled, sms_enabled, push_enabled, 
                    created_at, updated_at
             FROM notification_settings
             WHERE user_id = ?
             ORDER BY notification_type
-            "#,
-            user_id
-        )
-        .fetch_all(pool)
-        .await?;
+        "#;
+        
+        let rows = sqlx::query(query)
+            .bind(user_id.to_string())
+            .fetch_all(pool)
+            .await?;
+        
+        let mut settings = Vec::new();
+        for row in rows {
+            settings.push(Self::parse_notification_settings_from_row(&row)?);
+        }
 
         Ok(settings)
     }
@@ -284,7 +344,8 @@ impl NotificationService {
         .fetch_one(pool)
         .await?;
 
-        let settings = if exists.count.unwrap_or(0) > 0 {
+        let count: i64 = exists.count;
+        let settings = if count > 0 {
             // 更新现有设置
             query!(
                 r#"

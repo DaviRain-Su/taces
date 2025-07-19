@@ -25,7 +25,7 @@ impl std::fmt::Display for OrderType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "order_status", rename_all = "snake_case")]
 pub enum OrderStatus {
     Pending,
@@ -52,7 +52,7 @@ pub enum TransactionType {
     Refund,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "transaction_status", rename_all = "lowercase")]
 pub enum TransactionStatus {
     Pending,
@@ -60,7 +60,7 @@ pub enum TransactionStatus {
     Failed,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "refund_status", rename_all = "lowercase")]
 pub enum RefundStatus {
     Pending,

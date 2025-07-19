@@ -738,12 +738,13 @@ impl VideoConsultationService {
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
+        use sqlx::Row;
         Ok(ConsultationStatistics {
-            total_consultations: row.try_get(0).unwrap_or(0),
-            completed_consultations: row.try_get(1).unwrap_or(0),
-            average_duration: row.try_get(2).ok(),
-            average_rating: row.try_get(3).ok(),
-            no_show_rate: row.try_get(4).unwrap_or(0.0),
+            total_consultations: row.get::<Option<i64>, _>("total_consultations").unwrap_or(0),
+            completed_consultations: row.get::<Option<i64>, _>("completed_consultations").unwrap_or(0),
+            average_duration: row.get("average_duration"),
+            average_rating: row.get("average_rating"),
+            no_show_rate: row.get::<Option<f64>, _>("no_show_rate").unwrap_or(0.0),
         })
     }
 

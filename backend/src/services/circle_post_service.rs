@@ -122,7 +122,7 @@ impl CirclePostService {
         let total: i64 = count_query_builder
             .fetch_one(pool)
             .await?
-            .try_get(0)?;
+            .get(0)?;
 
         // Get posts list
         let mut list_query_builder = sqlx::query(&list_query)
@@ -391,7 +391,7 @@ impl CirclePostService {
         .bind(post_id.to_string())
         .fetch_one(pool)
         .await?
-        .try_get(0)?;
+        .get(0)?;
 
         // Get comments
         let rows = sqlx::query(
@@ -436,8 +436,8 @@ impl CirclePostService {
         .await?
         .ok_or_else(|| anyhow!("Comment not found"))?;
 
-        let comment_user_id: String = comment.try_get("user_id")?;
-        let post_id: String = comment.try_get("post_id")?;
+        let comment_user_id: String = comment.get("user_id")?;
+        let post_id: String = comment.get("post_id")?;
 
         if !is_admin && comment_user_id != user_id.to_string() {
             return Err(anyhow!("No permission to delete this comment"));
@@ -496,7 +496,7 @@ impl CirclePostService {
         .fetch_all(pool)
         .await?
         .into_iter()
-        .map(|row| row.try_get("word"))
+        .map(|row| row.get("word"))
         .collect::<Result<Vec<_>, _>>()?;
 
         let lower_text = text.to_lowercase();
@@ -530,83 +530,83 @@ impl CirclePostService {
 }
 
 fn parse_post_row(row: &sqlx::mysql::MySqlRow) -> Result<CirclePost> {
-    let id_str: String = row.try_get("id")?;
-    let author_id_str: String = row.try_get("author_id")?;
-    let circle_id_str: String = row.try_get("circle_id")?;
-    let images: serde_json::Value = row.try_get("images")?;
-    let status_str: String = row.try_get("status")?;
+    let id_str: String = row.get("id");
+    let author_id_str: String = row.get("author_id");
+    let circle_id_str: String = row.get("circle_id");
+    let images: serde_json::Value = row.get("images");
+    let status_str: String = row.get("status");
     
     Ok(CirclePost {
         id: Uuid::parse_str(&id_str)?,
         author_id: Uuid::parse_str(&author_id_str)?,
         circle_id: Uuid::parse_str(&circle_id_str)?,
-        title: row.try_get("title")?,
-        content: row.try_get("content")?,
+        title: row.get("title"),
+        content: row.get("content"),
         images: serde_json::from_value(images)?,
-        likes: row.try_get("likes")?,
-        comments: row.try_get("comments")?,
+        likes: row.get("likes"),
+        comments: row.get("comments"),
         status: match status_str.as_str() {
             "active" => PostStatus::Active,
             "deleted" => PostStatus::Deleted,
             _ => return Err(anyhow!("Invalid post status")),
         },
-        created_at: row.try_get("created_at")?,
-        updated_at: row.try_get("updated_at")?,
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
     })
 }
 
 fn parse_post_with_author_row(row: &sqlx::mysql::MySqlRow) -> Result<CirclePostWithAuthor> {
-    let id_str: String = row.try_get("id")?;
-    let author_id_str: String = row.try_get("author_id")?;
-    let circle_id_str: String = row.try_get("circle_id")?;
-    let images: serde_json::Value = row.try_get("images")?;
+    let id_str: String = row.get("id");
+    let author_id_str: String = row.get("author_id");
+    let circle_id_str: String = row.get("circle_id");
+    let images: serde_json::Value = row.get("images");
     
     Ok(CirclePostWithAuthor {
         id: Uuid::parse_str(&id_str)?,
         author_id: Uuid::parse_str(&author_id_str)?,
-        author_name: row.try_get("author_name")?,
+        author_name: row.get("author_name"),
         circle_id: Uuid::parse_str(&circle_id_str)?,
-        circle_name: row.try_get("circle_name")?,
-        title: row.try_get("title")?,
-        content: row.try_get("content")?,
+        circle_name: row.get("circle_name"),
+        title: row.get("title"),
+        content: row.get("content"),
         images: serde_json::from_value(images)?,
-        likes: row.try_get("likes")?,
-        comments: row.try_get("comments")?,
-        is_liked: row.try_get("is_liked")?,
-        created_at: row.try_get("created_at")?,
-        updated_at: row.try_get("updated_at")?,
+        likes: row.get("likes"),
+        comments: row.get("comments"),
+        is_liked: row.get("is_liked"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
     })
 }
 
 fn parse_comment_row(row: &sqlx::mysql::MySqlRow) -> Result<PostComment> {
-    let id_str: String = row.try_get("id")?;
-    let post_id_str: String = row.try_get("post_id")?;
-    let user_id_str: String = row.try_get("user_id")?;
+    let id_str: String = row.get("id");
+    let post_id_str: String = row.get("post_id");
+    let user_id_str: String = row.get("user_id");
     
     Ok(PostComment {
         id: Uuid::parse_str(&id_str)?,
         post_id: Uuid::parse_str(&post_id_str)?,
         user_id: Uuid::parse_str(&user_id_str)?,
-        content: row.try_get("content")?,
-        is_deleted: row.try_get("is_deleted")?,
-        created_at: row.try_get("created_at")?,
-        updated_at: row.try_get("updated_at")?,
+        content: row.get("content"),
+        is_deleted: row.get("is_deleted"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
     })
 }
 
 fn parse_comment_with_author_row(row: &sqlx::mysql::MySqlRow) -> Result<PostCommentWithAuthor> {
-    let id_str: String = row.try_get("id")?;
-    let post_id_str: String = row.try_get("post_id")?;
-    let user_id_str: String = row.try_get("user_id")?;
+    let id_str: String = row.get("id");
+    let post_id_str: String = row.get("post_id");
+    let user_id_str: String = row.get("user_id");
     
     Ok(PostCommentWithAuthor {
         id: Uuid::parse_str(&id_str)?,
         post_id: Uuid::parse_str(&post_id_str)?,
         user_id: Uuid::parse_str(&user_id_str)?,
-        user_name: row.try_get("user_name")?,
-        content: row.try_get("content")?,
-        is_deleted: row.try_get("is_deleted")?,
-        created_at: row.try_get("created_at")?,
-        updated_at: row.try_get("updated_at")?,
+        user_name: row.get("user_name"),
+        content: row.get("content"),
+        is_deleted: row.get("is_deleted"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
     })
 }

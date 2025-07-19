@@ -30,9 +30,9 @@ impl ReviewService {
         .await?
         .ok_or_else(|| anyhow!("Appointment not found"))?;
 
-        let appointment_patient_id: String = appointment.try_get("patient_id")?;
-        let doctor_id: String = appointment.try_get("doctor_id")?;
-        let status: String = appointment.try_get("status")?;
+        let appointment_patient_id: String = appointment.get("patient_id");
+        let doctor_id: String = appointment.get("doctor_id");
+        let status: String = appointment.get("status");
 
         if appointment_patient_id != patient_id.to_string() {
             return Err(anyhow!("You can only review your own appointments"));
@@ -198,7 +198,7 @@ impl ReviewService {
         let total: i64 = count_query_builder
             .fetch_one(pool)
             .await?
-            .try_get(0)?;
+            .get(0);
 
         // 获取列表
         let mut list_query_builder = sqlx::query(&list_query);
@@ -211,7 +211,7 @@ impl ReviewService {
         
         let mut reviews = vec![];
         for row in rows {
-            let review_id: String = row.try_get("id")?;
+            let review_id: String = row.get("id");
             let review_id = Uuid::parse_str(&review_id)?;
             
             // 获取标签
@@ -387,7 +387,7 @@ impl ReviewService {
         .fetch_one(pool)
         .await?;
         
-        let user_id: String = doctor_check.try_get("user_id")?;
+        let user_id: String = doctor_check.get("user_id")?;
         if user_id != doctor_user_id.to_string() {
             return Err(anyhow!("You can only reply to reviews for yourself"));
         }
@@ -533,17 +533,17 @@ impl ReviewService {
 
         Ok(DoctorReviewStatistics {
             doctor_id,
-            total_reviews: row.try_get("total_reviews")?,
-            average_rating: row.try_get("average_rating")?,
-            average_attitude: row.try_get("average_attitude")?,
-            average_professionalism: row.try_get("average_professionalism")?,
-            average_efficiency: row.try_get("average_efficiency")?,
+            total_reviews: row.get("total_reviews"),
+            average_rating: row.get("average_rating"),
+            average_attitude: row.get("average_attitude"),
+            average_professionalism: row.get("average_professionalism"),
+            average_efficiency: row.get("average_efficiency"),
             rating_distribution: RatingDistribution {
-                five_star: row.try_get("five_star")?,
-                four_star: row.try_get("four_star")?,
-                three_star: row.try_get("three_star")?,
-                two_star: row.try_get("two_star")?,
-                one_star: row.try_get("one_star")?,
+                five_star: row.get("five_star"),
+                four_star: row.get("four_star"),
+                three_star: row.get("three_star"),
+                two_star: row.get("two_star"),
+                one_star: row.get("one_star"),
             },
         })
     }
@@ -614,27 +614,27 @@ impl ReviewService {
     }
 
     fn parse_review_row(row: &sqlx::mysql::MySqlRow) -> Result<PatientReview> {
-        let id_str: String = row.try_get("id")?;
-        let appointment_id_str: String = row.try_get("appointment_id")?;
-        let doctor_id_str: String = row.try_get("doctor_id")?;
-        let patient_id_str: String = row.try_get("patient_id")?;
+        let id_str: String = row.get("id");
+        let appointment_id_str: String = row.get("appointment_id");
+        let doctor_id_str: String = row.get("doctor_id");
+        let patient_id_str: String = row.get("patient_id");
         
         Ok(PatientReview {
             id: Uuid::parse_str(&id_str)?,
             appointment_id: Uuid::parse_str(&appointment_id_str)?,
             doctor_id: Uuid::parse_str(&doctor_id_str)?,
             patient_id: Uuid::parse_str(&patient_id_str)?,
-            rating: row.try_get("rating")?,
-            attitude_rating: row.try_get("attitude_rating")?,
-            professionalism_rating: row.try_get("professionalism_rating")?,
-            efficiency_rating: row.try_get("efficiency_rating")?,
-            comment: row.try_get("comment")?,
-            reply: row.try_get("reply")?,
-            reply_at: row.try_get("reply_at")?,
-            is_anonymous: row.try_get("is_anonymous")?,
-            is_visible: row.try_get("is_visible")?,
-            created_at: row.try_get("created_at")?,
-            updated_at: row.try_get("updated_at")?,
+            rating: row.get("rating"),
+            attitude_rating: row.get("attitude_rating"),
+            professionalism_rating: row.get("professionalism_rating"),
+            efficiency_rating: row.get("efficiency_rating"),
+            comment: row.get("comment"),
+            reply: row.get("reply"),
+            reply_at: row.get("reply_at"),
+            is_anonymous: row.get("is_anonymous"),
+            is_visible: row.get("is_visible"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
         })
     }
 
@@ -642,47 +642,47 @@ impl ReviewService {
         row: &sqlx::mysql::MySqlRow,
         tags: Vec<ReviewTag>,
     ) -> Result<ReviewDetail> {
-        let id_str: String = row.try_get("id")?;
-        let appointment_id_str: String = row.try_get("appointment_id")?;
-        let doctor_id_str: String = row.try_get("doctor_id")?;
-        let patient_id_str: String = row.try_get("patient_id")?;
-        let is_anonymous: bool = row.try_get("is_anonymous")?;
+        let id_str: String = row.get("id");
+        let appointment_id_str: String = row.get("appointment_id");
+        let doctor_id_str: String = row.get("doctor_id");
+        let patient_id_str: String = row.get("patient_id");
+        let is_anonymous: bool = row.get("is_anonymous");
         
         Ok(ReviewDetail {
             id: Uuid::parse_str(&id_str)?,
             appointment_id: Uuid::parse_str(&appointment_id_str)?,
             doctor_id: Uuid::parse_str(&doctor_id_str)?,
-            doctor_name: row.try_get("doctor_name")?,
+            doctor_name: row.get("doctor_name"),
             patient_id: Uuid::parse_str(&patient_id_str)?,
-            patient_name: if is_anonymous { "匿名用户".to_string() } else { row.try_get("patient_name")? },
-            rating: row.try_get("rating")?,
-            attitude_rating: row.try_get("attitude_rating")?,
-            professionalism_rating: row.try_get("professionalism_rating")?,
-            efficiency_rating: row.try_get("efficiency_rating")?,
-            comment: row.try_get("comment")?,
-            reply: row.try_get("reply")?,
-            reply_at: row.try_get("reply_at")?,
+            patient_name: if is_anonymous { "匿名用户".to_string() } else { row.get("patient_name") },
+            rating: row.get("rating"),
+            attitude_rating: row.get("attitude_rating"),
+            professionalism_rating: row.get("professionalism_rating"),
+            efficiency_rating: row.get("efficiency_rating"),
+            comment: row.get("comment"),
+            reply: row.get("reply"),
+            reply_at: row.get("reply_at"),
             is_anonymous,
             tags,
-            appointment_date: row.try_get("appointment_date")?,
-            created_at: row.try_get("created_at")?,
+            appointment_date: row.get("appointment_date"),
+            created_at: row.get("created_at"),
         })
     }
 
     fn parse_tag_row(row: &sqlx::mysql::MySqlRow) -> Result<ReviewTag> {
-        let id_str: String = row.try_get("id")?;
-        let category_str: String = row.try_get("category")?;
+        let id_str: String = row.get("id");
+        let category_str: String = row.get("category");
         
         Ok(ReviewTag {
             id: Uuid::parse_str(&id_str)?,
-            name: row.try_get("name")?,
+            name: row.get("name"),
             category: match category_str.as_str() {
                 "positive" => TagCategory::Positive,
                 "negative" => TagCategory::Negative,
                 _ => return Err(anyhow!("Invalid tag category")),
             },
-            usage_count: row.try_get("usage_count")?,
-            is_active: row.try_get("is_active")?,
+            usage_count: row.get("usage_count"),
+            is_active: row.get("is_active"),
         })
     }
 }

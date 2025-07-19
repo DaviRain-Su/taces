@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 use validator::Validate;
+use std::fmt;
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "notification_type", rename_all = "snake_case")]
@@ -178,6 +179,32 @@ impl From<Notification> for NotificationResponse {
             metadata: notification.metadata,
             created_at: notification.created_at,
             read_at: notification.read_at,
+        }
+    }
+}
+
+impl fmt::Display for NotificationType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NotificationType::AppointmentReminder => write!(f, "appointment_reminder"),
+            NotificationType::AppointmentConfirmed => write!(f, "appointment_confirmed"),
+            NotificationType::AppointmentCancelled => write!(f, "appointment_cancelled"),
+            NotificationType::PrescriptionReady => write!(f, "prescription_ready"),
+            NotificationType::DoctorReply => write!(f, "doctor_reply"),
+            NotificationType::SystemAnnouncement => write!(f, "system_announcement"),
+            NotificationType::ReviewReply => write!(f, "review_reply"),
+            NotificationType::LiveStreamReminder => write!(f, "live_stream_reminder"),
+            NotificationType::GroupMessage => write!(f, "group_message"),
+        }
+    }
+}
+
+impl fmt::Display for NotificationStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NotificationStatus::Unread => write!(f, "unread"),
+            NotificationStatus::Read => write!(f, "read"),
+            NotificationStatus::Deleted => write!(f, "deleted"),
         }
     }
 }

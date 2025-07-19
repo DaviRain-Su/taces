@@ -96,7 +96,7 @@ impl TemplateService {
         let total: i64 = count_query_builder
             .fetch_one(pool)
             .await?
-            .try_get(0)?;
+            .get(0)?;
 
         // 获取列表
         let mut list_query_builder = sqlx::query(&list_query);
@@ -298,7 +298,7 @@ impl TemplateService {
         let total: i64 = count_query_builder
             .fetch_one(pool)
             .await?
-            .try_get(0)?;
+            .get(0)?;
 
         // 获取列表
         let mut list_query_builder = sqlx::query(&list_query);
@@ -464,16 +464,16 @@ impl TemplateService {
         .await?
         .ok_or_else(|| anyhow!("Doctor profile not found"))?;
 
-        let doctor_id_str: String = row.try_get("id")?;
+        let doctor_id_str: String = row.get("id");
         Ok(Uuid::parse_str(&doctor_id_str)?)
     }
 }
 
 // 解析常用语行
 fn parse_common_phrase_row(row: &sqlx::mysql::MySqlRow) -> Result<CommonPhrase> {
-    let id_str: String = row.try_get("id")?;
-    let doctor_id_str: String = row.try_get("doctor_id")?;
-    let category_str: String = row.try_get("category")?;
+    let id_str: String = row.get("id");
+    let doctor_id_str: String = row.get("doctor_id");
+    let category_str: String = row.get("category");
     
     Ok(CommonPhrase {
         id: Uuid::parse_str(&id_str)?,
@@ -484,31 +484,31 @@ fn parse_common_phrase_row(row: &sqlx::mysql::MySqlRow) -> Result<CommonPhrase> 
             "symptom" => crate::models::template::PhraseCategory::Symptom,
             _ => return Err(anyhow!("Invalid category")),
         },
-        content: row.try_get("content")?,
-        usage_count: row.try_get("usage_count")?,
-        is_active: row.try_get("is_active")?,
-        created_at: row.try_get("created_at")?,
-        updated_at: row.try_get("updated_at")?,
+        content: row.get("content"),
+        usage_count: row.get("usage_count"),
+        is_active: row.get("is_active"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
     })
 }
 
 // 解析处方模板行
 fn parse_prescription_template_row(row: &sqlx::mysql::MySqlRow) -> Result<PrescriptionTemplate> {
-    let id_str: String = row.try_get("id")?;
-    let doctor_id_str: String = row.try_get("doctor_id")?;
-    let medicines_json: serde_json::Value = row.try_get("medicines")?;
+    let id_str: String = row.get("id");
+    let doctor_id_str: String = row.get("doctor_id");
+    let medicines_json: serde_json::Value = row.get("medicines");
     
     Ok(PrescriptionTemplate {
         id: Uuid::parse_str(&id_str)?,
         doctor_id: Uuid::parse_str(&doctor_id_str)?,
-        name: row.try_get("name")?,
-        description: row.try_get("description")?,
-        diagnosis: row.try_get("diagnosis")?,
+        name: row.get("name"),
+        description: row.get("description"),
+        diagnosis: row.get("diagnosis"),
         medicines: serde_json::from_value(medicines_json)?,
-        instructions: row.try_get("instructions")?,
-        usage_count: row.try_get("usage_count")?,
-        is_active: row.try_get("is_active")?,
-        created_at: row.try_get("created_at")?,
-        updated_at: row.try_get("updated_at")?,
+        instructions: row.get("instructions"),
+        usage_count: row.get("usage_count"),
+        is_active: row.get("is_active"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
     })
 }

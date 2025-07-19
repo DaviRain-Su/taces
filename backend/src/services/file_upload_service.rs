@@ -9,6 +9,20 @@ use std::collections::HashMap;
 pub struct FileUploadService;
 
 impl FileUploadService {
+    fn parse_system_config_from_row(row: &sqlx::mysql::MySqlRow) -> Result<SystemConfig, AppError> {
+        Ok(SystemConfig {
+            id: Uuid::parse_str(row.get("id")).map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
+            category: row.get("category"),
+            config_key: row.get("config_key"),
+            config_value: row.get("config_value"),
+            value_type: row.get("value_type"),
+            description: row.get("description"),
+            is_encrypted: row.get("is_encrypted"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
+    }
+    
     fn parse_file_upload_from_row(row: &sqlx::mysql::MySqlRow) -> Result<FileUpload, AppError> {
         Ok(FileUpload {
             id: Uuid::parse_str(row.get("id")).map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
@@ -187,49 +201,57 @@ impl FileUploadService {
         let mut count_query = String::from(
             "SELECT COUNT(*) as count, SUM(file_size) as total_size FROM file_uploads WHERE deleted_at IS NULL"
         );
-        let mut bindings: Vec<Box<dyn sqlx::Encode<'_, MySql> + Send + Sync>> = vec![];
-
         // Build WHERE clauses
         if let Some(user_id) = &query_params.user_id {
             query.push_str(" AND user_id = ?");
             count_query.push_str(" AND user_id = ?");
-            bindings.push(Box::new(user_id.to_string()));
         }
 
         if let Some(file_type) = &query_params.file_type {
             query.push_str(" AND file_type = ?");
             count_query.push_str(" AND file_type = ?");
-            bindings.push(Box::new(file_type.clone()));
         }
 
         if let Some(related_type) = &query_params.related_type {
             query.push_str(" AND related_type = ?");
             count_query.push_str(" AND related_type = ?");
-            bindings.push(Box::new(related_type.clone()));
         }
 
         if let Some(related_id) = &query_params.related_id {
             query.push_str(" AND related_id = ?");
             count_query.push_str(" AND related_id = ?");
-            bindings.push(Box::new(related_id.to_string()));
         }
 
         if let Some(status) = &query_params.status {
             query.push_str(" AND status = ?");
             count_query.push_str(" AND status = ?");
-            bindings.push(Box::new(status.clone()));
         }
 
         if let Some(is_public) = &query_params.is_public {
             query.push_str(" AND is_public = ?");
             count_query.push_str(" AND is_public = ?");
-            bindings.push(Box::new(is_public.clone()));
         }
 
         // Get total count and size
         let mut count_builder = sqlx::query(&count_query);
-        for binding in &bindings {
-            count_builder = count_builder.bind(binding.as_ref());
+        
+        if let Some(user_id) = &query_params.user_id {
+            count_builder = count_builder.bind(user_id.to_string());
+        }
+        if let Some(file_type) = &query_params.file_type {
+            count_builder = count_builder.bind(file_type.to_string());
+        }
+        if let Some(related_type) = &query_params.related_type {
+            count_builder = count_builder.bind(related_type.to_string());
+        }
+        if let Some(related_id) = &query_params.related_id {
+            count_builder = count_builder.bind(related_id.to_string());
+        }
+        if let Some(status) = &query_params.status {
+            count_builder = count_builder.bind(status.to_string());
+        }
+        if let Some(is_public) = &query_params.is_public {
+            count_builder = count_builder.bind(is_public);
         }
 
         let count_row = count_builder
@@ -237,15 +259,31 @@ impl FileUploadService {
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
-        let total: i64 = count_row.try_get("count").unwrap_or(0);
-        let total_size: i64 = count_row.try_get("total_size").unwrap_or(0);
+        let total: i64 = count_row.get::<Option<i64>, _>("count").unwrap_or(0);
+        let total_size: i64 = count_row.get::<Option<i64>, _>("total_size").unwrap_or(0);
 
         // Get files
         query.push_str(" ORDER BY uploaded_at DESC LIMIT ? OFFSET ?");
 
         let mut query_builder = sqlx::query(&query);
-        for binding in &bindings {
-            query_builder = query_builder.bind(binding.as_ref());
+        
+        if let Some(user_id) = &query_params.user_id {
+            query_builder = query_builder.bind(user_id.to_string());
+        }
+        if let Some(file_type) = &query_params.file_type {
+            query_builder = query_builder.bind(file_type.to_string());
+        }
+        if let Some(related_type) = &query_params.related_type {
+            query_builder = query_builder.bind(related_type.to_string());
+        }
+        if let Some(related_id) = &query_params.related_id {
+            query_builder = query_builder.bind(related_id.to_string());
+        }
+        if let Some(status) = &query_params.status {
+            query_builder = query_builder.bind(status.to_string());
+        }
+        if let Some(is_public) = &query_params.is_public {
+            query_builder = query_builder.bind(is_public);
         }
 
         let rows = query_builder
@@ -305,11 +343,9 @@ impl FileUploadService {
         user_id: Option<Uuid>,
     ) -> Result<FileStorageStats, AppError> {
         let mut base_query = String::from("FROM file_uploads WHERE deleted_at IS NULL");
-        let mut bindings: Vec<Box<dyn sqlx::Encode<'_, MySql> + Send + Sync>> = vec![];
 
         if let Some(uid) = user_id {
             base_query.push_str(" AND user_id = ?");
-            bindings.push(Box::new(uid.to_string()));
         }
 
         // Get total stats
@@ -319,8 +355,8 @@ impl FileUploadService {
         );
 
         let mut query_builder = sqlx::query(&total_query);
-        for binding in &bindings {
-            query_builder = query_builder.bind(binding.as_ref());
+        if let Some(uid) = user_id {
+            query_builder = query_builder.bind(uid.to_string());
         }
 
         let total_row = query_builder
@@ -328,8 +364,8 @@ impl FileUploadService {
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
-        let total_files: i64 = total_row.try_get("count").unwrap_or(0);
-        let total_size: i64 = total_row.try_get("size").unwrap_or(0);
+        let total_files: i64 = total_row.get::<Option<i64>, _>("count").unwrap_or(0);
+        let total_size: i64 = total_row.get::<Option<i64>, _>("size").unwrap_or(0);
 
         // Get stats by type
         let type_query = format!(
@@ -338,8 +374,8 @@ impl FileUploadService {
         );
 
         let mut query_builder = sqlx::query(&type_query);
-        for binding in &bindings {
-            query_builder = query_builder.bind(binding.as_ref());
+        if let Some(uid) = user_id {
+            query_builder = query_builder.bind(uid.to_string());
         }
 
         let type_rows = query_builder
@@ -350,9 +386,9 @@ impl FileUploadService {
         let mut by_type = Vec::new();
         for row in type_rows {
             by_type.push(TypeStats {
-                file_type: row.try_get("file_type")?,
-                count: row.try_get("count").unwrap_or(0),
-                total_size: row.try_get("size").unwrap_or(0),
+                file_type: row.get("file_type"),
+                count: row.get::<Option<i64>, _>("count").unwrap_or(0),
+                total_size: row.get::<Option<i64>, _>("size").unwrap_or(0),
             });
         }
 
@@ -552,8 +588,8 @@ impl FileUploadService {
 
         let mut configs = HashMap::new();
         for row in rows {
-            let key: String = row.try_get("config_key")?;
-            let value: String = row.try_get("config_value")?;
+            let key: String = row.get("config_key");
+            let value: String = row.get("config_value");
             configs.insert(key, value);
         }
 
@@ -570,7 +606,7 @@ impl FileUploadService {
             WHERE category = ? AND config_key = ?
         "#;
 
-        sqlx::query_as::<_, SystemConfig>(query)
+        let row = sqlx::query(query)
             .bind(category)
             .bind(key)
             .fetch_one(db)
@@ -578,7 +614,9 @@ impl FileUploadService {
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("配置项不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
-            })
+            })?;
+        
+        Self::parse_system_config_from_row(&row)
     }
 
     pub async fn clean_expired_uploads(db: &DbPool) -> Result<u64, AppError> {
@@ -613,10 +651,11 @@ impl FileUploadService {
 
         let mut deleted_count = 0;
         for file in files {
-            let file_id: Uuid = file.try_get("id")?;
+            let file_id_str: String = file.get("id");
+            let file_id = Uuid::parse_str(&file_id_str).map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?;
             
             // TODO: Delete from OSS/S3
-            // let file_path: String = file.try_get("file_path")?;
+            // let file_path: String = file.get("file_path")?;
             // oss_client.delete_object(&file_path).await?;
 
             // Delete record from database
@@ -642,6 +681,17 @@ impl std::fmt::Display for FileType {
             FileType::Document => write!(f, "document"),
             FileType::Audio => write!(f, "audio"),
             FileType::Other => write!(f, "other"),
+        }
+    }
+}
+
+impl std::fmt::Display for UploadStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UploadStatus::Uploading => write!(f, "uploading"),
+            UploadStatus::Completed => write!(f, "completed"),
+            UploadStatus::Failed => write!(f, "failed"),
+            UploadStatus::Deleted => write!(f, "deleted"),
         }
     }
 }

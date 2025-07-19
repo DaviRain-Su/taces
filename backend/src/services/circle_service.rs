@@ -121,7 +121,7 @@ impl CircleService {
         let total: i64 = count_query_builder
             .fetch_one(pool)
             .await?
-            .try_get(0)?;
+            .get(0)?;
 
         // Get circles list
         let mut list_query_builder = sqlx::query(&list_query)
@@ -136,16 +136,16 @@ impl CircleService {
         let circles = rows
             .into_iter()
             .map(|row| {
-                let id_str: String = row.try_get("id")?;
+                let id_str: String = row.get("id");
                 Ok(CircleListItem {
                     id: Uuid::parse_str(&id_str).map_err(|e| anyhow!("Invalid UUID: {}", e))?,
-                    name: row.try_get("name")?,
-                    description: row.try_get("description")?,
-                    avatar: row.try_get("avatar")?,
-                    category: row.try_get("category")?,
-                    member_count: row.try_get("member_count")?,
-                    post_count: row.try_get("post_count")?,
-                    is_joined: row.try_get("is_joined")?,
+                    name: row.get("name"),
+                    description: row.get("description"),
+                    avatar: row.get("avatar"),
+                    category: row.get("category"),
+                    member_count: row.get("member_count"),
+                    post_count: row.get("post_count"),
+                    is_joined: row.get("is_joined"),
                 })
             })
             .collect::<Result<Vec<_>>>()?;
@@ -174,27 +174,27 @@ impl CircleService {
         .await?
         .ok_or_else(|| anyhow!("Circle not found"))?;
 
-        let id_str: String = row.try_get("id")?;
-        let creator_id_str: String = row.try_get("creator_id")?;
+        let id_str: String = row.get("id");
+        let creator_id_str: String = row.get("creator_id");
 
         let circle = Circle {
             id: Uuid::parse_str(&id_str)?,
-            name: row.try_get("name")?,
-            description: row.try_get("description")?,
-            avatar: row.try_get("avatar")?,
-            category: row.try_get("category")?,
+            name: row.get("name"),
+            description: row.get("description"),
+            avatar: row.get("avatar"),
+            category: row.get("category"),
             creator_id: Uuid::parse_str(&creator_id_str)?,
-            member_count: row.try_get("member_count")?,
-            post_count: row.try_get("post_count")?,
-            is_active: row.try_get("is_active")?,
-            created_at: row.try_get("created_at")?,
-            updated_at: row.try_get("updated_at")?,
+            member_count: row.get("member_count"),
+            post_count: row.get("post_count"),
+            is_active: row.get("is_active"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
         };
 
-        let member_id: Option<String> = row.try_get("member_id")?;
+        let member_id: Option<String> = row.get("member_id");
         let is_joined = member_id.is_some();
         let member_role = if is_joined {
-            let role_str: String = row.try_get("member_role")?;
+            let role_str: String = row.get("member_role");
             Some(parse_member_role(&role_str)?)
         } else {
             None
@@ -357,7 +357,7 @@ impl CircleService {
         .await?
         .ok_or_else(|| anyhow!("Not a member of this circle"))?;
 
-        let role: String = member.try_get("role")?;
+        let role: String = member.get("role")?;
         if role == "owner" {
             return Err(anyhow!("Owner cannot leave the circle"));
         }
@@ -395,7 +395,7 @@ impl CircleService {
             .bind(circle_id.to_string())
             .fetch_one(pool)
             .await?
-            .try_get(0)?;
+            .get(0)?;
 
         // Get members
         let rows = sqlx::query(
@@ -424,16 +424,16 @@ impl CircleService {
         let members = rows
             .into_iter()
             .map(|row| {
-                let id_str: String = row.try_get("id")?;
-                let user_id_str: String = row.try_get("user_id")?;
-                let role_str: String = row.try_get("role")?;
+                let id_str: String = row.get("id");
+                let user_id_str: String = row.get("user_id");
+                let role_str: String = row.get("role");
                 Ok(CircleMemberInfo {
                     id: Uuid::parse_str(&id_str)?,
                     user_id: Uuid::parse_str(&user_id_str)?,
-                    user_name: row.try_get("user_name")?,
+                    user_name: row.get("user_name"),
                     user_avatar: None,
                     role: parse_member_role(&role_str)?,
-                    joined_at: row.try_get("joined_at")?,
+                    joined_at: row.get("joined_at"),
                 })
             })
             .collect::<Result<Vec<_>>>()?;
@@ -554,7 +554,7 @@ impl CircleService {
         .bind(user_id.to_string())
         .fetch_one(pool)
         .await?
-        .try_get(0)?;
+        .get(0)?;
 
         // Get circles
         let rows = sqlx::query(
@@ -577,15 +577,15 @@ impl CircleService {
         let circles = rows
             .into_iter()
             .map(|row| {
-                let id_str: String = row.try_get("id")?;
+                let id_str: String = row.get("id");
                 Ok(CircleListItem {
                     id: Uuid::parse_str(&id_str)?,
-                    name: row.try_get("name")?,
-                    description: row.try_get("description")?,
-                    avatar: row.try_get("avatar")?,
-                    category: row.try_get("category")?,
-                    member_count: row.try_get("member_count")?,
-                    post_count: row.try_get("post_count")?,
+                    name: row.get("name"),
+                    description: row.get("description"),
+                    avatar: row.get("avatar"),
+                    category: row.get("category"),
+                    member_count: row.get("member_count"),
+                    post_count: row.get("post_count"),
                     is_joined: true, // User is already a member
                 })
             })
@@ -605,7 +605,7 @@ impl CircleService {
         .await?;
 
         if let Some(row) = result {
-            let role: String = row.try_get("role")?;
+            let role: String = row.get("role");
             Ok(role == "owner")
         } else {
             Ok(false)
@@ -626,7 +626,7 @@ impl CircleService {
         .await?
         .ok_or_else(|| anyhow!("Not a member of this circle"))?;
 
-        let role_str: String = row.try_get("role")?;
+        let role_str: String = row.get("role");
         parse_member_role(&role_str)
     }
 
@@ -669,21 +669,21 @@ impl CircleService {
 }
 
 fn parse_circle_row(row: &sqlx::mysql::MySqlRow) -> Result<Circle> {
-    let id_str: String = row.try_get("id")?;
-    let creator_id_str: String = row.try_get("creator_id")?;
+    let id_str: String = row.get("id");
+    let creator_id_str: String = row.get("creator_id");
     
     Ok(Circle {
         id: Uuid::parse_str(&id_str)?,
-        name: row.try_get("name")?,
-        description: row.try_get("description")?,
-        avatar: row.try_get("avatar")?,
-        category: row.try_get("category")?,
+        name: row.get("name"),
+        description: row.get("description"),
+        avatar: row.get("avatar"),
+        category: row.get("category"),
         creator_id: Uuid::parse_str(&creator_id_str)?,
-        member_count: row.try_get("member_count")?,
-        post_count: row.try_get("post_count")?,
-        is_active: row.try_get("is_active")?,
-        created_at: row.try_get("created_at")?,
-        updated_at: row.try_get("updated_at")?,
+        member_count: row.get("member_count"),
+        post_count: row.get("post_count"),
+        is_active: row.get("is_active"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
     })
 }
 

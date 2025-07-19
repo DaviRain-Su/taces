@@ -1,7 +1,7 @@
 use crate::{
     models::{notification::*, ApiResponse},
     services::notification_service::NotificationService,
-    utils::jwt::Claims,
+    middleware::auth::AuthUser,
     AppState,
 };
 use axum::{
@@ -32,7 +32,7 @@ pub struct NotificationListResponse {
 /// 获取用户通知列表
 pub async fn get_user_notifications(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Query(query): Query<NotificationQuery>,
 ) -> impl IntoResponse {
     let page = query.page.unwrap_or(1).max(1);
@@ -47,7 +47,7 @@ pub async fn get_user_notifications(
 
     match NotificationService::get_user_notifications(
         &state.pool,
-        claims.sub,
+        auth_user.user_id,
         status,
         page,
         page_size,
@@ -78,10 +78,10 @@ pub async fn get_user_notifications(
 /// 获取单个通知详情
 pub async fn get_notification_detail(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
-    match NotificationService::get_notification_by_id(&state.pool, id, claims.sub).await {
+    match NotificationService::get_notification_by_id(&state.pool, id, auth_user.user_id).await {
         Ok(Some(notification)) => {
             let response: NotificationResponse = notification.into();
             Json(ApiResponse::success("获取通知详情成功", response)).into_response()
@@ -105,10 +105,10 @@ pub async fn get_notification_detail(
 /// 标记通知为已读
 pub async fn mark_notification_as_read(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
-    match NotificationService::mark_as_read(&state.pool, id, claims.sub).await {
+    match NotificationService::mark_as_read(&state.pool, id, auth_user.user_id).await {
         Ok(true) => Json(ApiResponse::success("标记已读成功", json!({ "success": true }))).into_response(),
         Ok(false) => (
             StatusCode::NOT_FOUND,
@@ -129,9 +129,9 @@ pub async fn mark_notification_as_read(
 /// 标记所有通知为已读
 pub async fn mark_all_as_read(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
-    match NotificationService::mark_all_as_read(&state.pool, claims.sub).await {
+    match NotificationService::mark_all_as_read(&state.pool, auth_user.user_id).await {
         Ok(count) => Json(ApiResponse::success(
             "标记所有通知已读成功",
             json!({ "count": count }),
@@ -151,10 +151,10 @@ pub async fn mark_all_as_read(
 /// 删除通知
 pub async fn delete_notification(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
-    match NotificationService::delete_notification(&state.pool, id, claims.sub).await {
+    match NotificationService::delete_notification(&state.pool, id, auth_user.user_id).await {
         Ok(true) => Json(ApiResponse::success("删除通知成功", json!({ "success": true }))).into_response(),
         Ok(false) => (
             StatusCode::NOT_FOUND,
@@ -175,9 +175,9 @@ pub async fn delete_notification(
 /// 获取通知统计
 pub async fn get_notification_stats(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
-    match NotificationService::get_notification_stats(&state.pool, claims.sub).await {
+    match NotificationService::get_notification_stats(&state.pool, auth_user.user_id).await {
         Ok(stats) => Json(ApiResponse::success("获取通知统计成功", stats)).into_response(),
         Err(e) => {
             eprintln!("获取通知统计失败: {:?}", e);
@@ -193,9 +193,9 @@ pub async fn get_notification_stats(
 /// 获取通知设置
 pub async fn get_notification_settings(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
-    match NotificationService::get_user_notification_settings(&state.pool, claims.sub).await {
+    match NotificationService::get_user_notification_settings(&state.pool, auth_user.user_id).await {
         Ok(settings) => Json(ApiResponse::success("获取通知设置成功", settings)).into_response(),
         Err(e) => {
             eprintln!("获取通知设置失败: {:?}", e);
@@ -211,10 +211,10 @@ pub async fn get_notification_settings(
 /// 更新通知设置
 pub async fn update_notification_settings(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Json(dto): Json<UpdateNotificationSettingsDto>,
 ) -> impl IntoResponse {
-    match NotificationService::update_notification_settings(&state.pool, claims.sub, dto).await {
+    match NotificationService::update_notification_settings(&state.pool, auth_user.user_id, dto).await {
         Ok(settings) => Json(ApiResponse::success("更新通知设置成功", settings)).into_response(),
         Err(e) => {
             eprintln!("更新通知设置失败: {:?}", e);
@@ -230,10 +230,10 @@ pub async fn update_notification_settings(
 /// 注册推送token
 pub async fn register_push_token(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Json(dto): Json<RegisterPushTokenDto>,
 ) -> impl IntoResponse {
-    match NotificationService::register_push_token(&state.pool, claims.sub, dto).await {
+    match NotificationService::register_push_token(&state.pool, auth_user.user_id, dto).await {
         Ok(token) => Json(ApiResponse::success("注册推送token成功", token)).into_response(),
         Err(e) => {
             eprintln!("注册推送token失败: {:?}", e);
@@ -249,11 +249,11 @@ pub async fn register_push_token(
 /// 发送系统公告（仅管理员）
 pub async fn send_system_announcement(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(auth_user): Extension<AuthUser>,
     Json(dto): Json<CreateNotificationDto>,
 ) -> impl IntoResponse {
     // 检查是否为管理员
-    if claims.role != "admin" {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<()>::error("无权限发送系统公告")),
