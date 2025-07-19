@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -18,7 +18,7 @@ pub struct PatientGroupMember {
     pub id: Uuid,
     pub group_id: Uuid,
     pub patient_id: Uuid,
-    pub patient_name: String, // Will be joined from users table
+    pub patient_name: String,  // Will be joined from users table
     pub patient_phone: String, // Will be joined from users table
     pub joined_at: DateTime<Utc>,
 }

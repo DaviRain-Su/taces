@@ -1,12 +1,8 @@
+use crate::{controllers::user_controller, middleware::auth::auth_middleware, AppState};
 use axum::{
-    routing::{get, put, delete},
-    Router,
     middleware,
-};
-use crate::{
-    controllers::user_controller,
-    middleware::auth::auth_middleware,
-    AppState,
+    routing::{delete, get, put},
+    Router,
 };
 
 pub fn routes() -> Router<AppState> {

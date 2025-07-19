@@ -1,14 +1,14 @@
-use axum::Router;
 use crate::AppState;
+use axum::Router;
 
-pub mod auth;
-pub mod user;
-pub mod doctor;
 pub mod appointment;
-pub mod prescription;
+pub mod auth;
 pub mod department;
+pub mod doctor;
 pub mod patient_group;
 pub mod patient_profile;
+pub mod prescription;
+pub mod user;
 
 pub fn create_routes() -> Router<AppState> {
     Router::new()

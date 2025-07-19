@@ -1,18 +1,17 @@
+use crate::{
+    middleware::auth::AuthUser,
+    models::{department::*, ApiResponse},
+    services::department_service,
+    AppState,
+};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    Json,
-    Extension,
+    Extension, Json,
 };
+use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
-use serde::Deserialize;
-use crate::{
-    AppState,
-    models::{department::*, ApiResponse},
-    services::department_service,
-    middleware::auth::AuthUser,
-};
 
 #[derive(Debug, Deserialize)]
 pub struct ListQuery {
@@ -28,12 +27,26 @@ pub async fn list_departments(
 ) -> Result<Json<ApiResponse<Vec<Department>>>, (StatusCode, Json<ApiResponse<()>>)> {
     let page = query.page.unwrap_or(1);
     let per_page = query.per_page.unwrap_or(20);
-    
-    match department_service::list_departments(&app_state.pool, page, per_page, query.search, query.status).await {
-        Ok(departments) => Ok(Json(ApiResponse::success("Departments retrieved successfully", departments))),
+
+    match department_service::list_departments(
+        &app_state.pool,
+        page,
+        per_page,
+        query.search,
+        query.status,
+    )
+    .await
+    {
+        Ok(departments) => Ok(Json(ApiResponse::success(
+            "Departments retrieved successfully",
+            departments,
+        ))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(&format!("Failed to retrieve departments: {}", e))),
+            Json(ApiResponse::error(&format!(
+                "Failed to retrieve departments: {}",
+                e
+            ))),
         )),
     }
 }
@@ -43,7 +56,10 @@ pub async fn get_department(
     Path(id): Path<Uuid>,
 ) -> Result<Json<ApiResponse<Department>>, (StatusCode, Json<ApiResponse<()>>)> {
     match department_service::get_department_by_id(&app_state.pool, id).await {
-        Ok(department) => Ok(Json(ApiResponse::success("Department retrieved successfully", department))),
+        Ok(department) => Ok(Json(ApiResponse::success(
+            "Department retrieved successfully",
+            department,
+        ))),
         Err(e) => Err((
             StatusCode::NOT_FOUND,
             Json(ApiResponse::error(&format!("Department not found: {}", e))),
@@ -56,7 +72,10 @@ pub async fn get_department_by_code(
     Path(code): Path<String>,
 ) -> Result<Json<ApiResponse<Department>>, (StatusCode, Json<ApiResponse<()>>)> {
     match department_service::get_department_by_code(&app_state.pool, &code).await {
-        Ok(department) => Ok(Json(ApiResponse::success("Department retrieved successfully", department))),
+        Ok(department) => Ok(Json(ApiResponse::success(
+            "Department retrieved successfully",
+            department,
+        ))),
         Err(e) => Err((
             StatusCode::NOT_FOUND,
             Json(ApiResponse::error(&format!("Department not found: {}", e))),
@@ -76,17 +95,19 @@ pub async fn create_department(
             Json(ApiResponse::error("Insufficient permissions")),
         ));
     }
-    
-    dto.validate()
-        .map_err(|e| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(&format!("Validation error: {}", e))),
-            )
-        })?;
-    
+
+    dto.validate().map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(&format!("Validation error: {}", e))),
+        )
+    })?;
+
     match department_service::create_department(&app_state.pool, dto).await {
-        Ok(department) => Ok(Json(ApiResponse::success("Department created successfully", department))),
+        Ok(department) => Ok(Json(ApiResponse::success(
+            "Department created successfully",
+            department,
+        ))),
         Err(e) => {
             if e.to_string().contains("Duplicate entry") {
                 Err((
@@ -96,7 +117,10 @@ pub async fn create_department(
             } else {
                 Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to create department: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to create department: {}",
+                        e
+                    ))),
                 ))
             }
         }
@@ -116,20 +140,25 @@ pub async fn update_department(
             Json(ApiResponse::error("Insufficient permissions")),
         ));
     }
-    
-    dto.validate()
-        .map_err(|e| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(&format!("Validation error: {}", e))),
-            )
-        })?;
-    
+
+    dto.validate().map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(&format!("Validation error: {}", e))),
+        )
+    })?;
+
     match department_service::update_department(&app_state.pool, id, dto).await {
-        Ok(department) => Ok(Json(ApiResponse::success("Department updated successfully", department))),
+        Ok(department) => Ok(Json(ApiResponse::success(
+            "Department updated successfully",
+            department,
+        ))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(&format!("Failed to update department: {}", e))),
+            Json(ApiResponse::error(&format!(
+                "Failed to update department: {}",
+                e
+            ))),
         )),
     }
 }
@@ -146,12 +175,18 @@ pub async fn delete_department(
             Json(ApiResponse::error("Insufficient permissions")),
         ));
     }
-    
+
     match department_service::delete_department(&app_state.pool, id).await {
-        Ok(_) => Ok(Json(ApiResponse::success("Department deleted successfully", ()))),
+        Ok(_) => Ok(Json(ApiResponse::success(
+            "Department deleted successfully",
+            (),
+        ))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(&format!("Failed to delete department: {}", e))),
+            Json(ApiResponse::error(&format!(
+                "Failed to delete department: {}",
+                e
+            ))),
         )),
     }
 }

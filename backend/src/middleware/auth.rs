@@ -1,3 +1,4 @@
+use crate::utils::jwt::decode_token;
 use axum::{
     extract::Request,
     http::{header, StatusCode},
@@ -6,9 +7,6 @@ use axum::{
     Json,
 };
 use serde_json::json;
-use crate::{
-    utils::jwt::decode_token,
-};
 
 #[derive(Clone)]
 pub struct AuthUser {
@@ -41,9 +39,9 @@ pub async fn auth_middleware(
     };
 
     // Get JWT secret from environment
-    let jwt_secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "default_jwt_secret".to_string());
-    
+    let jwt_secret =
+        std::env::var("JWT_SECRET").unwrap_or_else(|_| "default_jwt_secret".to_string());
+
     match decode_token(token, &jwt_secret) {
         Ok(claims) => {
             let auth_user = AuthUser {
@@ -63,22 +61,29 @@ pub async fn auth_middleware(
     }
 }
 
-pub fn require_role(allowed_roles: Vec<String>) -> impl Fn(Request, Next) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Response, (StatusCode, Json<serde_json::Value>)>> + Send>> + Clone {
+pub fn require_role(
+    allowed_roles: Vec<String>,
+) -> impl Fn(
+    Request,
+    Next,
+) -> std::pin::Pin<
+    Box<
+        dyn std::future::Future<Output = Result<Response, (StatusCode, Json<serde_json::Value>)>>
+            + Send,
+    >,
+> + Clone {
     move |req: Request, next: Next| {
         let allowed_roles = allowed_roles.clone();
         Box::pin(async move {
-            let auth_user = req
-                .extensions()
-                .get::<AuthUser>()
-                .ok_or_else(|| {
-                    (
-                        StatusCode::UNAUTHORIZED,
-                        Json(json!({
-                            "success": false,
-                            "message": "Unauthorized"
-                        })),
-                    )
-                })?;
+            let auth_user = req.extensions().get::<AuthUser>().ok_or_else(|| {
+                (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({
+                        "success": false,
+                        "message": "Unauthorized"
+                    })),
+                )
+            })?;
 
             if allowed_roles.contains(&auth_user.role) {
                 Ok(next.run(req).await)

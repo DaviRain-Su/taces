@@ -1,5 +1,5 @@
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc, NaiveDate};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -67,7 +67,7 @@ pub fn validate_id_number(id_number: &str) -> bool {
     if id_number.len() != 15 && id_number.len() != 18 {
         return false;
     }
-    
+
     // Extract date parts
     let (_year_str, month_str, day_str) = if id_number.len() == 18 {
         (&id_number[6..10], &id_number[10..12], &id_number[12..14])
@@ -75,18 +75,18 @@ pub fn validate_id_number(id_number: &str) -> bool {
         // 15-digit ID uses 2-digit year
         (&id_number[6..8], &id_number[8..10], &id_number[10..12])
     };
-    
+
     // Validate date parts
     let month = match month_str.parse::<u32>() {
         Ok(m) if m >= 1 && m <= 12 => m,
         _ => return false,
     };
-    
+
     let day = match day_str.parse::<u32>() {
         Ok(d) if d >= 1 && d <= 31 => d,
         _ => return false,
     };
-    
+
     // Simple date validation (doesn't check for month-specific days)
     if month == 2 && day > 29 {
         return false;
@@ -94,13 +94,13 @@ pub fn validate_id_number(id_number: &str) -> bool {
     if (month == 4 || month == 6 || month == 9 || month == 11) && day > 30 {
         return false;
     }
-    
+
     // For 18-digit ID, validate checksum
     if id_number.len() == 18 {
         let chars: Vec<char> = id_number.chars().collect();
         let weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
         let check_codes = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'];
-        
+
         let mut sum = 0;
         for i in 0..17 {
             if let Some(digit) = chars[i].to_digit(10) {
@@ -109,7 +109,7 @@ pub fn validate_id_number(id_number: &str) -> bool {
                 return false;
             }
         }
-        
+
         let expected_check = check_codes[sum % 11];
         chars[17] == expected_check || (chars[17] == 'x' && expected_check == 'X')
     } else {

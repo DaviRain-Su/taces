@@ -1,12 +1,12 @@
 use crate::common::TestApp;
-use backend::models::user::{CreateUserDto, LoginDto, UserRole};
 use axum::http::StatusCode;
+use backend::models::user::{CreateUserDto, LoginDto, UserRole};
 use serde_json::json;
 
 #[tokio::test]
 async fn test_register_success() {
     let mut app = TestApp::new().await;
-    
+
     let user_dto = CreateUserDto {
         account: "test_user".to_string(),
         name: "测试用户".to_string(),
@@ -17,9 +17,9 @@ async fn test_register_success() {
         birthday: None,
         role: UserRole::Patient,
     };
-    
+
     let (status, body) = app.post("/api/v1/auth/register", user_dto).await;
-    
+
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["success"], true);
     assert_eq!(body["message"], "User registered successfully");
@@ -30,7 +30,7 @@ async fn test_register_success() {
 #[tokio::test]
 async fn test_register_duplicate_account() {
     let mut app = TestApp::new().await;
-    
+
     let user_dto = CreateUserDto {
         account: "duplicate_user".to_string(),
         name: "测试用户1".to_string(),
@@ -41,16 +41,16 @@ async fn test_register_duplicate_account() {
         birthday: None,
         role: UserRole::Patient,
     };
-    
+
     // First registration should succeed
     let (status, _) = app.post("/api/v1/auth/register", user_dto.clone()).await;
     assert_eq!(status, StatusCode::OK);
-    
+
     // Second registration with same account should fail
     let mut user_dto2 = user_dto;
     user_dto2.phone = "13800138002".to_string();
     user_dto2.email = Some("test2@example.com".to_string());
-    
+
     let (status, body) = app.post("/api/v1/auth/register", user_dto2).await;
     assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
     assert_eq!(body["success"], false);
@@ -59,7 +59,7 @@ async fn test_register_duplicate_account() {
 #[tokio::test]
 async fn test_login_success() {
     let mut app = TestApp::new().await;
-    
+
     // Register a user first
     let user_dto = CreateUserDto {
         account: "login_test".to_string(),
@@ -71,18 +71,18 @@ async fn test_login_success() {
         birthday: None,
         role: UserRole::Patient,
     };
-    
+
     let (status, _) = app.post("/api/v1/auth/register", user_dto).await;
     assert_eq!(status, StatusCode::OK);
-    
+
     // Login with correct credentials
     let login_dto = LoginDto {
         account: "login_test".to_string(),
         password: "password123".to_string(),
     };
-    
+
     let (status, body) = app.post("/api/v1/auth/login", login_dto).await;
-    
+
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["success"], true);
     assert_eq!(body["message"], "Login successful");
@@ -93,7 +93,7 @@ async fn test_login_success() {
 #[tokio::test]
 async fn test_login_wrong_password() {
     let mut app = TestApp::new().await;
-    
+
     // Register a user first
     let user_dto = CreateUserDto {
         account: "wrong_pass_test".to_string(),
@@ -105,18 +105,18 @@ async fn test_login_wrong_password() {
         birthday: None,
         role: UserRole::Patient,
     };
-    
+
     let (status, _) = app.post("/api/v1/auth/register", user_dto).await;
     assert_eq!(status, StatusCode::OK);
-    
+
     // Login with wrong password
     let login_dto = LoginDto {
         account: "wrong_pass_test".to_string(),
         password: "wrong_password".to_string(),
     };
-    
+
     let (status, body) = app.post("/api/v1/auth/login", login_dto).await;
-    
+
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert_eq!(body["success"], false);
 }
@@ -124,14 +124,14 @@ async fn test_login_wrong_password() {
 #[tokio::test]
 async fn test_login_nonexistent_user() {
     let mut app = TestApp::new().await;
-    
+
     let login_dto = LoginDto {
         account: "nonexistent_user".to_string(),
         password: "password123".to_string(),
     };
-    
+
     let (status, body) = app.post("/api/v1/auth/login", login_dto).await;
-    
+
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert_eq!(body["success"], false);
 }
@@ -139,7 +139,7 @@ async fn test_login_nonexistent_user() {
 #[tokio::test]
 async fn test_register_validation_errors() {
     let mut app = TestApp::new().await;
-    
+
     // Test with invalid phone
     let user_dto = json!({
         "account": "validation_test",
@@ -149,10 +149,13 @@ async fn test_register_validation_errors() {
         "phone": "invalid_phone",
         "role": "patient"
     });
-    
+
     let (status, body) = app.post("/api/v1/auth/register", user_dto).await;
-    
+
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(body["success"], false);
-    assert!(body["message"].as_str().unwrap().contains("Validation error"));
+    assert!(body["message"]
+        .as_str()
+        .unwrap()
+        .contains("Validation error"));
 }

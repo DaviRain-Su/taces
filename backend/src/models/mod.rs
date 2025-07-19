@@ -1,24 +1,24 @@
 use serde::{Deserialize, Serialize};
 
-pub mod user;
-pub mod doctor;
 pub mod appointment;
-pub mod prescription;
-pub mod live_stream;
 pub mod circle_post;
 pub mod department;
+pub mod doctor;
+pub mod live_stream;
 pub mod patient_group;
 pub mod patient_profile;
+pub mod prescription;
+pub mod user;
 
-pub use user::*;
-pub use doctor::*;
 pub use appointment::*;
-pub use prescription::*;
-pub use live_stream::*;
 pub use circle_post::*;
 pub use department::*;
+pub use doctor::*;
+pub use live_stream::*;
 pub use patient_group::*;
 pub use patient_profile::*;
+pub use prescription::*;
+pub use user::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse<T> {

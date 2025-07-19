@@ -1,17 +1,16 @@
+use crate::{
+    middleware::auth::AuthUser,
+    models::{patient_profile::*, ApiResponse},
+    services::patient_profile_service,
+    AppState,
+};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Json,
-    Extension,
+    Extension, Json,
 };
 use uuid::Uuid;
 use validator::Validate;
-use crate::{
-    AppState,
-    models::{patient_profile::*, ApiResponse},
-    services::patient_profile_service,
-    middleware::auth::AuthUser,
-};
 
 pub async fn list_profiles(
     Extension(auth_user): Extension<AuthUser>,
@@ -21,15 +20,23 @@ pub async fn list_profiles(
     if auth_user.role != "patient" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only patients can manage patient profiles")),
+            Json(ApiResponse::error(
+                "Only patients can manage patient profiles",
+            )),
         ));
     }
-    
+
     match patient_profile_service::list_user_profiles(&app_state.pool, auth_user.user_id).await {
-        Ok(profiles) => Ok(Json(ApiResponse::success("Patient profiles retrieved successfully", profiles))),
+        Ok(profiles) => Ok(Json(ApiResponse::success(
+            "Patient profiles retrieved successfully",
+            profiles,
+        ))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(&format!("Failed to retrieve patient profiles: {}", e))),
+            Json(ApiResponse::error(&format!(
+                "Failed to retrieve patient profiles: {}",
+                e
+            ))),
         )),
     }
 }
@@ -42,12 +49,17 @@ pub async fn get_profile(
     if auth_user.role != "patient" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only patients can manage patient profiles")),
+            Json(ApiResponse::error(
+                "Only patients can manage patient profiles",
+            )),
         ));
     }
-    
+
     match patient_profile_service::get_profile_by_id(&app_state.pool, id, auth_user.user_id).await {
-        Ok(profile) => Ok(Json(ApiResponse::success("Patient profile retrieved successfully", profile))),
+        Ok(profile) => Ok(Json(ApiResponse::success(
+            "Patient profile retrieved successfully",
+            profile,
+        ))),
         Err(e) => {
             if e.to_string().contains("not found") {
                 Err((
@@ -57,7 +69,10 @@ pub async fn get_profile(
             } else {
                 Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to retrieve patient profile: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to retrieve patient profile: {}",
+                        e
+                    ))),
                 ))
             }
         }
@@ -71,18 +86,23 @@ pub async fn get_default_profile(
     if auth_user.role != "patient" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only patients can manage patient profiles")),
+            Json(ApiResponse::error(
+                "Only patients can manage patient profiles",
+            )),
         ));
     }
-    
+
     match patient_profile_service::get_default_profile(&app_state.pool, auth_user.user_id).await {
         Ok(profile) => Ok(Json(ApiResponse::success(
-            "Default patient profile retrieved successfully", 
-            profile
+            "Default patient profile retrieved successfully",
+            profile,
         ))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(&format!("Failed to retrieve default profile: {}", e))),
+            Json(ApiResponse::error(&format!(
+                "Failed to retrieve default profile: {}",
+                e
+            ))),
         )),
     }
 }
@@ -95,20 +115,24 @@ pub async fn create_profile(
     if auth_user.role != "patient" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only patients can manage patient profiles")),
+            Json(ApiResponse::error(
+                "Only patients can manage patient profiles",
+            )),
         ));
     }
-    
-    dto.validate()
-        .map_err(|e| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(&format!("Validation error: {}", e))),
-            )
-        })?;
-    
+
+    dto.validate().map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(&format!("Validation error: {}", e))),
+        )
+    })?;
+
     match patient_profile_service::create_profile(&app_state.pool, auth_user.user_id, dto).await {
-        Ok(profile) => Ok(Json(ApiResponse::success("Patient profile created successfully", profile))),
+        Ok(profile) => Ok(Json(ApiResponse::success(
+            "Patient profile created successfully",
+            profile,
+        ))),
         Err(e) => {
             if e.to_string().contains("Invalid ID number") {
                 Err((
@@ -123,7 +147,10 @@ pub async fn create_profile(
             } else {
                 Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to create patient profile: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to create patient profile: {}",
+                        e
+                    ))),
                 ))
             }
         }
@@ -139,20 +166,25 @@ pub async fn update_profile(
     if auth_user.role != "patient" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only patients can manage patient profiles")),
+            Json(ApiResponse::error(
+                "Only patients can manage patient profiles",
+            )),
         ));
     }
-    
-    dto.validate()
-        .map_err(|e| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(&format!("Validation error: {}", e))),
-            )
-        })?;
-    
-    match patient_profile_service::update_profile(&app_state.pool, id, auth_user.user_id, dto).await {
-        Ok(profile) => Ok(Json(ApiResponse::success("Patient profile updated successfully", profile))),
+
+    dto.validate().map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(&format!("Validation error: {}", e))),
+        )
+    })?;
+
+    match patient_profile_service::update_profile(&app_state.pool, id, auth_user.user_id, dto).await
+    {
+        Ok(profile) => Ok(Json(ApiResponse::success(
+            "Patient profile updated successfully",
+            profile,
+        ))),
         Err(e) => {
             if e.to_string().contains("not found") {
                 Err((
@@ -162,7 +194,10 @@ pub async fn update_profile(
             } else {
                 Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to update patient profile: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to update patient profile: {}",
+                        e
+                    ))),
                 ))
             }
         }
@@ -177,12 +212,17 @@ pub async fn delete_profile(
     if auth_user.role != "patient" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only patients can manage patient profiles")),
+            Json(ApiResponse::error(
+                "Only patients can manage patient profiles",
+            )),
         ));
     }
-    
+
     match patient_profile_service::delete_profile(&app_state.pool, id, auth_user.user_id).await {
-        Ok(_) => Ok(Json(ApiResponse::success("Patient profile deleted successfully", ()))),
+        Ok(_) => Ok(Json(ApiResponse::success(
+            "Patient profile deleted successfully",
+            (),
+        ))),
         Err(e) => {
             if e.to_string().contains("not found") {
                 Err((
@@ -197,7 +237,10 @@ pub async fn delete_profile(
             } else {
                 Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to delete patient profile: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to delete patient profile: {}",
+                        e
+                    ))),
                 ))
             }
         }
@@ -212,12 +255,18 @@ pub async fn set_default(
     if auth_user.role != "patient" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only patients can manage patient profiles")),
+            Json(ApiResponse::error(
+                "Only patients can manage patient profiles",
+            )),
         ));
     }
-    
-    match patient_profile_service::set_default_profile(&app_state.pool, id, auth_user.user_id).await {
-        Ok(_) => Ok(Json(ApiResponse::success("Default profile set successfully", ()))),
+
+    match patient_profile_service::set_default_profile(&app_state.pool, id, auth_user.user_id).await
+    {
+        Ok(_) => Ok(Json(ApiResponse::success(
+            "Default profile set successfully",
+            (),
+        ))),
         Err(e) => {
             if e.to_string().contains("not found") {
                 Err((
@@ -227,7 +276,10 @@ pub async fn set_default(
             } else {
                 Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to set default profile: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to set default profile: {}",
+                        e
+                    ))),
                 ))
             }
         }
