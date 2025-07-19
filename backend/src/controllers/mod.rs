@@ -5,3 +5,4 @@ pub mod appointment_controller;
 pub mod prescription_controller;
 pub mod department_controller;
 pub mod patient_group_controller;
+pub mod patient_profile_controller;

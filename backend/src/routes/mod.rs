@@ -8,6 +8,7 @@ pub mod appointment;
 pub mod prescription;
 pub mod department;
 pub mod patient_group;
+pub mod patient_profile;
 
 pub fn create_routes() -> Router<AppState> {
     Router::new()
@@ -18,4 +19,5 @@ pub fn create_routes() -> Router<AppState> {
         .nest("/prescriptions", prescription::routes())
         .nest("/departments", department::routes())
         .nest("/patient-groups", patient_group::routes())
+        .nest("/patient-profiles", patient_profile::routes())
 }

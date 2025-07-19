@@ -29,6 +29,10 @@ pub async fn setup_test_db(pool: &Pool<MySql>) {
         .execute(pool)
         .await
         .unwrap();
+    sqlx::query("DELETE FROM patient_profiles")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
     sqlx::query("DELETE FROM patient_group_members")
         .execute(pool)
         .await
