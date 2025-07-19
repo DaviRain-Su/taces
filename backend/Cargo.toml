@@ -19,7 +19,8 @@ path = "src/lib.rs"
 
 [dependencies]
 # Web framework
-axum = "0.7"
+axum = { version = "0.7", features = ["multipart", "ws"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
 tokio = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["util"] }
 tower-http = { version = "0.5", features = ["cors", "trace"] }
@@ -29,6 +30,7 @@ sqlx = { version = "0.7", features = [
     "runtime-tokio-rustls",
     "mysql",
     "migrate",
+    "macros",
     "chrono",
     "json",
     "rust_decimal",
@@ -64,7 +66,6 @@ rust_decimal = { version = "1.35", features = ["serde-float"] }
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager", "json"] }
 
 # WebSocket for real-time communication
-axum-extra = { version = "0.9", features = ["typed-header"] }
 tokio-tungstenite = "0.21"
 futures-util = "0.3"
 
@@ -77,7 +78,7 @@ reqwest = { version = "0.11", features = ["json"] }
 hmac = "0.12"
 sha2 = "0.10"
 base64 = "0.21"
-md5 = "0.7"
+md-5 = "0.10"
 regex = "1.10"
 rsa = { version = "0.9", features = ["pem"] }
 urlencoding = "2.1"

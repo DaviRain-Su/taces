@@ -16,14 +16,11 @@ impl NotificationService {
     ) -> Result<Notification, sqlx::Error> {
         let metadata = dto.metadata.unwrap_or(serde_json::json!({}));
         
-        let notification = query_as!(
-            Notification,
+        // Insert the notification
+        let result = query!(
             r#"
             INSERT INTO notifications (user_id, type, title, content, related_id, metadata)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, user_id, type as "notification_type: NotificationType", 
-                      title, content, related_id, status as "status: NotificationStatus", 
-                      metadata, created_at, read_at
+            VALUES (?, ?, ?, ?, ?, ?)
             "#,
             dto.user_id,
             dto.notification_type as NotificationType,
@@ -31,6 +28,23 @@ impl NotificationService {
             dto.content,
             dto.related_id,
             metadata
+        )
+        .execute(pool)
+        .await?;
+
+        let notification_id = result.last_insert_id();
+
+        // Fetch the created notification
+        let notification = query_as!(
+            Notification,
+            r#"
+            SELECT id, user_id, type as "notification_type: NotificationType", 
+                   title, content, related_id, status as "status: NotificationStatus", 
+                   metadata, created_at, read_at
+            FROM notifications
+            WHERE id = ?
+            "#,
+            notification_id
         )
         .fetch_one(pool)
         .await?;
@@ -89,7 +103,7 @@ impl NotificationService {
 
         // 获取总数
         let count_query = format!(
-            "SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 {}",
+            "SELECT COUNT(*) as count FROM notifications WHERE user_id = ? {}",
             status_condition
         );
         let total: i64 = sqlx::query_scalar(&count_query)
@@ -104,9 +118,9 @@ impl NotificationService {
                    title, content, related_id, status as "status: NotificationStatus", 
                    metadata, created_at, read_at
             FROM notifications
-            WHERE user_id = $1 {}
+            WHERE user_id = ? {}
             ORDER BY created_at DESC
-            LIMIT $2 OFFSET $3
+            LIMIT ? OFFSET ?
             "#,
             status_condition
         );
@@ -134,7 +148,7 @@ impl NotificationService {
                    title, content, related_id, status as "status: NotificationStatus", 
                    metadata, created_at, read_at
             FROM notifications
-            WHERE id = $1 AND user_id = $2 AND status != 'deleted'
+            WHERE id = ? AND user_id = ? AND status != 'deleted'
             "#,
             id,
             user_id
@@ -154,12 +168,12 @@ impl NotificationService {
         let result = query!(
             r#"
             UPDATE notifications
-            SET status = 'read', read_at = $3
-            WHERE id = $1 AND user_id = $2 AND status = 'unread'
+            SET status = 'read', read_at = ?
+            WHERE id = ? AND user_id = ? AND status = 'unread'
             "#,
+            Utc::now(),
             id,
-            user_id,
-            Utc::now()
+            user_id
         )
         .execute(pool)
         .await?;
@@ -172,11 +186,11 @@ impl NotificationService {
         let result = query!(
             r#"
             UPDATE notifications
-            SET status = 'read', read_at = $2
-            WHERE user_id = $1 AND status = 'unread'
+            SET status = 'read', read_at = ?
+            WHERE user_id = ? AND status = 'unread'
             "#,
-            user_id,
-            Utc::now()
+            Utc::now(),
+            user_id
         )
         .execute(pool)
         .await?;
@@ -194,7 +208,7 @@ impl NotificationService {
             r#"
             UPDATE notifications
             SET status = 'deleted'
-            WHERE id = $1 AND user_id = $2 AND status != 'deleted'
+            WHERE id = ? AND user_id = ? AND status != 'deleted'
             "#,
             id,
             user_id
@@ -214,11 +228,11 @@ impl NotificationService {
             NotificationStats,
             r#"
             SELECT 
-                COUNT(*) FILTER (WHERE status != 'deleted') as "total_count!",
-                COUNT(*) FILTER (WHERE status = 'unread') as "unread_count!",
-                COUNT(*) FILTER (WHERE status = 'read') as "read_count!"
+                SUM(CASE WHEN status != 'deleted' THEN 1 ELSE 0 END) as "total_count!",
+                SUM(CASE WHEN status = 'unread' THEN 1 ELSE 0 END) as "unread_count!",
+                SUM(CASE WHEN status = 'read' THEN 1 ELSE 0 END) as "read_count!"
             FROM notifications
-            WHERE user_id = $1
+            WHERE user_id = ?
             "#,
             user_id
         )
@@ -240,7 +254,7 @@ impl NotificationService {
                    enabled, email_enabled, sms_enabled, push_enabled, 
                    created_at, updated_at
             FROM notification_settings
-            WHERE user_id = $1
+            WHERE user_id = ?
             ORDER BY notification_type
             "#,
             user_id
@@ -262,7 +276,7 @@ impl NotificationService {
             r#"
             SELECT COUNT(*) as count
             FROM notification_settings
-            WHERE user_id = $1 AND notification_type = $2
+            WHERE user_id = ? AND notification_type = ?
             "#,
             user_id,
             dto.notification_type as NotificationType
@@ -272,40 +286,47 @@ impl NotificationService {
 
         let settings = if exists.count.unwrap_or(0) > 0 {
             // 更新现有设置
-            query_as!(
-                NotificationSettings,
+            query!(
                 r#"
                 UPDATE notification_settings
-                SET enabled = COALESCE($3, enabled),
-                    email_enabled = COALESCE($4, email_enabled),
-                    sms_enabled = COALESCE($5, sms_enabled),
-                    push_enabled = COALESCE($6, push_enabled),
+                SET enabled = COALESCE(?, enabled),
+                    email_enabled = COALESCE(?, email_enabled),
+                    sms_enabled = COALESCE(?, sms_enabled),
+                    push_enabled = COALESCE(?, push_enabled),
                     updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = $1 AND notification_type = $2
-                RETURNING id, user_id, notification_type as "notification_type: NotificationType", 
-                          enabled, email_enabled, sms_enabled, push_enabled, 
-                          created_at, updated_at
+                WHERE user_id = ? AND notification_type = ?
                 "#,
-                user_id,
-                dto.notification_type as NotificationType,
                 dto.enabled,
                 dto.email_enabled,
                 dto.sms_enabled,
-                dto.push_enabled
+                dto.push_enabled,
+                user_id,
+                dto.notification_type as NotificationType
+            )
+            .execute(pool)
+            .await?;
+
+            query_as!(
+                NotificationSettings,
+                r#"
+                SELECT id, user_id, notification_type as "notification_type: NotificationType", 
+                       enabled, email_enabled, sms_enabled, push_enabled, 
+                       created_at, updated_at
+                FROM notification_settings
+                WHERE user_id = ? AND notification_type = ?
+                "#,
+                user_id,
+                dto.notification_type as NotificationType
             )
             .fetch_one(pool)
             .await?
         } else {
             // 创建新设置
-            query_as!(
-                NotificationSettings,
+            let result = query!(
                 r#"
                 INSERT INTO notification_settings 
                 (user_id, notification_type, enabled, email_enabled, sms_enabled, push_enabled)
-                VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING id, user_id, notification_type as "notification_type: NotificationType", 
-                          enabled, email_enabled, sms_enabled, push_enabled, 
-                          created_at, updated_at
+                VALUES (?, ?, ?, ?, ?, ?)
                 "#,
                 user_id,
                 dto.notification_type as NotificationType,
@@ -313,6 +334,22 @@ impl NotificationService {
                 dto.email_enabled.unwrap_or(false),
                 dto.sms_enabled.unwrap_or(false),
                 dto.push_enabled.unwrap_or(true)
+            )
+            .execute(pool)
+            .await?;
+
+            let settings_id = result.last_insert_id();
+
+            query_as!(
+                NotificationSettings,
+                r#"
+                SELECT id, user_id, notification_type as "notification_type: NotificationType", 
+                       enabled, email_enabled, sms_enabled, push_enabled, 
+                       created_at, updated_at
+                FROM notification_settings
+                WHERE id = ?
+                "#,
+                settings_id
             )
             .fetch_one(pool)
             .await?
@@ -334,7 +371,7 @@ impl NotificationService {
             r#"
             UPDATE push_tokens
             SET active = false, updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = $1 AND device_type = $2
+            WHERE user_id = ? AND device_type = ?
             "#,
             user_id,
             dto.device_type
@@ -343,18 +380,30 @@ impl NotificationService {
         .await?;
 
         // 创建新token
-        let token = query_as!(
-            PushToken,
+        let result = query!(
             r#"
             INSERT INTO push_tokens (user_id, device_type, token, device_info, active)
-            VALUES ($1, $2, $3, $4, true)
-            RETURNING id, user_id, device_type, token, device_info, active, 
-                      created_at, updated_at
+            VALUES (?, ?, ?, ?, true)
             "#,
             user_id,
             dto.device_type,
             dto.token,
             device_info
+        )
+        .execute(pool)
+        .await?;
+
+        let token_id = result.last_insert_id();
+
+        let token = query_as!(
+            PushToken,
+            r#"
+            SELECT id, user_id, device_type, token, device_info, active, 
+                   created_at, updated_at
+            FROM push_tokens
+            WHERE id = ?
+            "#,
+            token_id
         )
         .fetch_one(pool)
         .await?;
@@ -371,14 +420,11 @@ impl NotificationService {
         error_message: Option<String>,
         provider: Option<String>,
     ) -> Result<SmsLog, sqlx::Error> {
-        let log = query_as!(
-            SmsLog,
+        let result = query!(
             r#"
             INSERT INTO sms_logs (user_id, phone, template_code, template_params, 
                                   status, error_message, provider, sent_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, user_id, phone, template_code, template_params, 
-                      status, error_message, provider, created_at, sent_at
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             user_id,
             dto.phone,
@@ -388,6 +434,21 @@ impl NotificationService {
             error_message,
             provider,
             if status == "sent" { Some(Utc::now()) } else { None }
+        )
+        .execute(pool)
+        .await?;
+
+        let log_id = result.last_insert_id();
+
+        let log = query_as!(
+            SmsLog,
+            r#"
+            SELECT id, user_id, phone, template_code, template_params, 
+                   status, error_message, provider, created_at, sent_at
+            FROM sms_logs
+            WHERE id = ?
+            "#,
+            log_id
         )
         .fetch_one(pool)
         .await?;
@@ -404,14 +465,11 @@ impl NotificationService {
         error_message: Option<String>,
         provider: Option<String>,
     ) -> Result<EmailLog, sqlx::Error> {
-        let log = query_as!(
-            EmailLog,
+        let result = query!(
             r#"
             INSERT INTO email_logs (user_id, email, subject, body, 
                                     status, error_message, provider, sent_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, user_id, email, subject, body, 
-                      status, error_message, provider, created_at, sent_at
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             user_id,
             dto.email,
@@ -421,6 +479,21 @@ impl NotificationService {
             error_message,
             provider,
             if status == "sent" { Some(Utc::now()) } else { None }
+        )
+        .execute(pool)
+        .await?;
+
+        let log_id = result.last_insert_id();
+
+        let log = query_as!(
+            EmailLog,
+            r#"
+            SELECT id, user_id, email, subject, body, 
+                   status, error_message, provider, created_at, sent_at
+            FROM email_logs
+            WHERE id = ?
+            "#,
+            log_id
         )
         .fetch_one(pool)
         .await?;
@@ -438,7 +511,7 @@ impl NotificationService {
             r#"
             SELECT enabled, email_enabled, sms_enabled, push_enabled
             FROM notification_settings
-            WHERE user_id = $1 AND notification_type = $2
+            WHERE user_id = ? AND notification_type = ?
             "#,
             user_id,
             notification_type as &NotificationType

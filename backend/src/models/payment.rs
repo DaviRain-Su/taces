@@ -14,6 +14,17 @@ pub enum OrderType {
     Other,
 }
 
+impl std::fmt::Display for OrderType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OrderType::Appointment => write!(f, "Appointment"),
+            OrderType::Consultation => write!(f, "Consultation"),
+            OrderType::Prescription => write!(f, "Prescription"),
+            OrderType::Other => write!(f, "Other"),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "order_status", rename_all = "snake_case")]
 pub enum OrderStatus {

@@ -107,7 +107,7 @@ pub struct SmsLog {
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct SendSmsDto {
-    #[validate(phone)]
+    #[validate(length(min = 10, max = 20))]
     pub phone: String,
     pub template_code: String,
     pub template_params: serde_json::Value,

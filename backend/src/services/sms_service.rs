@@ -289,21 +289,21 @@ impl SmsService {
     /// Get Aliyun template code
     fn get_aliyun_template_code(template_code: &str) -> String {
         match template_code {
-            "APPOINTMENT_REMINDER" => "SMS_123456789",
-            "PRESCRIPTION_READY" => "SMS_987654321",
-            "VERIFICATION_CODE" => "SMS_111111111",
+            "APPOINTMENT_REMINDER" => "SMS_123456789".to_string(),
+            "PRESCRIPTION_READY" => "SMS_987654321".to_string(),
+            "VERIFICATION_CODE" => "SMS_111111111".to_string(),
             _ => template_code.to_string(),
-        }.to_string()
+        }
     }
     
     /// Get Tencent template ID
     fn get_tencent_template_id(template_code: &str) -> String {
         match template_code {
-            "APPOINTMENT_REMINDER" => "123456",
-            "PRESCRIPTION_READY" => "654321",
-            "VERIFICATION_CODE" => "111111",
+            "APPOINTMENT_REMINDER" => "123456".to_string(),
+            "PRESCRIPTION_READY" => "654321".to_string(),
+            "VERIFICATION_CODE" => "111111".to_string(),
             _ => template_code.to_string(),
-        }.to_string()
+        }
     }
     
     /// Format template message for providers that don't support templates

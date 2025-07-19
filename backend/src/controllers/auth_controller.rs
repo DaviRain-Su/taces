@@ -5,6 +5,7 @@ use crate::{
     AppState,
 };
 use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum_extra::{headers, TypedHeader};
 use validator::Validate;
 
 pub async fn register(
@@ -53,7 +54,7 @@ pub async fn login(
 pub async fn logout(
     State(app_state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
-    axum::TypedHeader(auth_header): axum::TypedHeader<axum::headers::Authorization<axum::headers::authorization::Bearer>>,
+    TypedHeader(auth_header): TypedHeader<headers::Authorization<headers::authorization::Bearer>>,
 ) -> Result<Json<ApiResponse<()>>, (StatusCode, Json<ApiResponse<()>>)> {
     let token = auth_header.token();
     

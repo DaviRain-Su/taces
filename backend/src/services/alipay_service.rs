@@ -352,7 +352,7 @@ impl AlipayService {
         public_key: &str,
     ) -> Result<bool, AppError> {
         use rsa::{RsaPublicKey, pkcs1::DecodeRsaPublicKey, pkcs1v15::VerifyingKey};
-        use rsa::signature::{Verifier, Signature};
+        use rsa::signature::Verifier;
         
         // Decode base64 signature
         let signature_bytes = BASE64.decode(sign)

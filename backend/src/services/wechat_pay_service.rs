@@ -5,7 +5,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};
-use md5::{Digest as Md5Digest, Md5};
+use md5::Digest as Md5Digest;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
@@ -287,7 +287,7 @@ impl WeChatPayService {
         }
         sign_str.push_str(&format!("key={}", api_key));
         
-        let mut hasher = Md5::new();
+        let mut hasher = md5::Md5::new();
         hasher.update(sign_str.as_bytes());
         let result = hasher.finalize();
         format!("{:X}", result)

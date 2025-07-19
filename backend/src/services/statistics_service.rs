@@ -60,7 +60,7 @@ impl StatisticsService {
             FROM doctors d
             LEFT JOIN appointments a ON d.id = a.doctor_id
             LEFT JOIN prescriptions p ON d.id = p.doctor_id
-            LEFT JOIN reviews r ON d.id = r.doctor_id
+            LEFT JOIN patient_reviews r ON d.id = r.doctor_id
             WHERE d.id = ?
             "#,
             doctor_id.to_string()
@@ -155,9 +155,9 @@ impl StatisticsService {
                 COUNT(DISTINCT a.id) as total_appointments,
                 AVG(r.rating) as average_rating
             FROM departments dep
-            LEFT JOIN doctors d ON dep.id = d.department_id
+            LEFT JOIN doctors d ON dep.name = d.department
             LEFT JOIN appointments a ON d.id = a.doctor_id
-            LEFT JOIN reviews r ON d.id = r.doctor_id
+            LEFT JOIN patient_reviews r ON d.id = r.doctor_id
             GROUP BY dep.id, dep.name
             ORDER BY total_appointments DESC
             "#
@@ -356,9 +356,9 @@ impl StatisticsService {
                 COUNT(DISTINCT r.id) as review_count
             FROM doctors d
             JOIN users u ON d.user_id = u.id
-            LEFT JOIN departments dep ON d.department_id = dep.id
+            LEFT JOIN departments dep ON d.department = dep.name
             LEFT JOIN appointments a ON d.id = a.doctor_id
-            LEFT JOIN reviews r ON d.id = r.doctor_id
+            LEFT JOIN patient_reviews r ON d.id = r.doctor_id
             WHERE u.status = 'active'
             GROUP BY d.id, u.name, dep.name
             ORDER BY appointment_count DESC
@@ -499,7 +499,7 @@ impl StatisticsService {
             JOIN users u_patient ON a.patient_id = u_patient.id
             JOIN doctors d ON a.doctor_id = d.id
             JOIN users u_doctor ON d.user_id = u_doctor.id
-            LEFT JOIN departments dep ON d.department_id = dep.id
+            LEFT JOIN departments dep ON d.department = dep.name
             WHERE 1=1
             "#
         );
