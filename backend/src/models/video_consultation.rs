@@ -6,6 +6,7 @@ use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "consultation_status", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum ConsultationStatus {
     Waiting,
     InProgress,
@@ -16,6 +17,7 @@ pub enum ConsultationStatus {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "connection_quality", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum ConnectionQuality {
     Excellent,
     Good,
@@ -25,6 +27,7 @@ pub enum ConnectionQuality {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "signal_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum SignalType {
     Offer,
     Answer,
@@ -36,6 +39,7 @@ pub enum SignalType {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "recording_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum RecordingStatus {
     Recording,
     Processing,
@@ -45,6 +49,7 @@ pub enum RecordingStatus {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "video_event_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum VideoEventType {
     Joined,
     Left,

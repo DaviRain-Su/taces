@@ -7,6 +7,7 @@ use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "order_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum OrderType {
     Appointment,
     Consultation,
@@ -27,6 +28,7 @@ impl std::fmt::Display for OrderType {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "order_status", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum OrderStatus {
     Pending,
     Paid,
@@ -38,6 +40,7 @@ pub enum OrderStatus {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "payment_method", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum PaymentMethod {
     Wechat,
     Alipay,
@@ -47,6 +50,7 @@ pub enum PaymentMethod {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "transaction_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum TransactionType {
     Payment,
     Refund,
@@ -54,6 +58,7 @@ pub enum TransactionType {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "transaction_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum TransactionStatus {
     Pending,
     Success,
@@ -62,6 +67,7 @@ pub enum TransactionStatus {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "refund_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum RefundStatus {
     Pending,
     Processing,
@@ -72,6 +78,7 @@ pub enum RefundStatus {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "balance_transaction_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum BalanceTransactionType {
     Income,
     Expense,

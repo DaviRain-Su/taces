@@ -28,16 +28,28 @@ impl PaymentService {
             ) VALUES (?, ?, ?, ?, ?, ?, 'CNY', 'pending', ?, ?, ?, ?, ?)
         "#;
 
+        let order_type_str = match create_dto.order_type {
+            OrderType::Appointment => "appointment",
+            OrderType::Consultation => "consultation",
+            OrderType::Prescription => "prescription",
+            OrderType::Other => "other",
+        };
+
         sqlx::query(query)
             .bind(order_id.to_string())
             .bind(&order_no)
             .bind(create_dto.user_id.to_string())
             .bind(create_dto.appointment_id.map(|id| id.to_string()))
-            .bind(&create_dto.order_type)
+            .bind(order_type_str)
             .bind(create_dto.amount)
             .bind(expire_time)
             .bind(create_dto.description.as_deref())
-            .bind(&create_dto.metadata)
+            .bind(
+                create_dto
+                    .metadata
+                    .as_ref()
+                    .and_then(|m| serde_json::to_string(m).ok()),
+            )
             .bind(now)
             .bind(now)
             .execute(db)
@@ -52,14 +64,16 @@ impl PaymentService {
             SELECT * FROM payment_orders WHERE id = ?
         "#;
 
-        sqlx::query_as::<_, PaymentOrder>(query)
-            .bind(order_id)
+        let row = sqlx::query(query)
+            .bind(order_id.to_string())
             .fetch_one(db)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("订单不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
-            })
+            })?;
+
+        Self::parse_order_row(row)
     }
 
     pub async fn get_order_by_no(db: &DbPool, order_no: &str) -> Result<PaymentOrder, AppError> {
@@ -67,14 +81,16 @@ impl PaymentService {
             SELECT * FROM payment_orders WHERE order_no = ?
         "#;
 
-        sqlx::query_as::<_, PaymentOrder>(query)
+        let row = sqlx::query(query)
             .bind(order_no)
             .fetch_one(db)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("订单不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
-            })
+            })?;
+
+        Self::parse_order_row(row)
     }
 
     pub async fn list_orders(
@@ -149,7 +165,7 @@ impl PaymentService {
             where_clause
         );
 
-        let mut orders_query_builder = sqlx::query_as::<_, PaymentOrder>(&orders_query);
+        let mut orders_query_builder = sqlx::query(&orders_query);
 
         // Bind parameters in the same order
         if let Some(user_id) = &query.user_id {
@@ -168,12 +184,17 @@ impl PaymentService {
             orders_query_builder = orders_query_builder.bind(end_date);
         }
 
-        let orders = orders_query_builder
+        let rows = orders_query_builder
             .bind(page_size)
             .bind(offset)
             .fetch_all(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        let mut orders = Vec::new();
+        for row in rows {
+            orders.push(Self::parse_order_row(row)?);
+        }
 
         Ok(OrderListResponse {
             orders,
@@ -198,7 +219,7 @@ impl PaymentService {
 
         let result = sqlx::query(query)
             .bind(Utc::now())
-            .bind(order_id)
+            .bind(order_id.to_string())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -237,10 +258,15 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(transaction_id)
+            .bind(transaction_id.to_string())
             .bind(&transaction_no)
-            .bind(order.id)
-            .bind(&dto.payment_method)
+            .bind(order.id.to_string())
+            .bind(match dto.payment_method {
+                PaymentMethod::Wechat => "wechat",
+                PaymentMethod::Alipay => "alipay",
+                PaymentMethod::BankCard => "bank_card",
+                PaymentMethod::Balance => "balance",
+            })
             .bind(order.amount)
             .bind(Utc::now())
             .execute(db)
@@ -291,7 +317,7 @@ impl PaymentService {
         sqlx::query(query)
             .bind(&prepay_id)
             .bind(&request_data)
-            .bind(transaction_id)
+            .bind(transaction_id.to_string())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -341,7 +367,7 @@ impl PaymentService {
         sqlx::query(query)
             .bind(&trade_no)
             .bind(&request_data)
-            .bind(transaction_id)
+            .bind(transaction_id.to_string())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -397,7 +423,7 @@ impl PaymentService {
 
         sqlx::query(query)
             .bind(Utc::now())
-            .bind(transaction_id)
+            .bind(transaction_id.to_string())
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -413,7 +439,7 @@ impl PaymentService {
         sqlx::query(query)
             .bind(now)
             .bind(now)
-            .bind(order.id)
+            .bind(order.id.to_string())
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -428,7 +454,7 @@ impl PaymentService {
 
             sqlx::query(query)
                 .bind(now)
-                .bind(appointment_id)
+                .bind(appointment_id.to_string())
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -462,18 +488,7 @@ impl PaymentService {
         // Get order and transaction
         let order = Self::get_order_by_no(db, &callback_data.order_no).await?;
 
-        let query = r#"
-            SELECT * FROM payment_transactions
-            WHERE order_id = ? AND payment_method = ? AND status = 'pending'
-            ORDER BY initiated_at DESC LIMIT 1
-        "#;
-
-        let transaction = sqlx::query_as::<_, PaymentTransaction>(query)
-            .bind(order.id)
-            .bind(&payment_method)
-            .fetch_one(db)
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        let transaction = Self::get_transaction_by_order(db, order.id, &payment_method).await?;
 
         // Update transaction
         let query = r#"
@@ -494,7 +509,7 @@ impl PaymentService {
             .bind(&callback_data.external_transaction_id)
             .bind(&callback_data.raw_data)
             .bind(Utc::now())
-            .bind(transaction.id)
+            .bind(transaction.id.to_string())
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -508,10 +523,15 @@ impl PaymentService {
             "#;
 
             sqlx::query(query)
-                .bind(&payment_method)
+                .bind(match &payment_method {
+                    PaymentMethod::Wechat => "wechat",
+                    PaymentMethod::Alipay => "alipay",
+                    PaymentMethod::BankCard => "bank_card",
+                    PaymentMethod::Balance => "balance",
+                })
                 .bind(callback_data.payment_time)
                 .bind(Utc::now())
-                .bind(order.id)
+                .bind(order.id.to_string())
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -526,7 +546,7 @@ impl PaymentService {
 
                 sqlx::query(query)
                     .bind(Utc::now())
-                    .bind(appointment_id)
+                    .bind(appointment_id.to_string())
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -559,17 +579,7 @@ impl PaymentService {
         }
 
         // Get the successful transaction
-        let query = r#"
-            SELECT * FROM payment_transactions
-            WHERE order_id = ? AND transaction_type = 'payment' AND status = 'success'
-            ORDER BY completed_at DESC LIMIT 1
-        "#;
-
-        let transaction = sqlx::query_as::<_, PaymentTransaction>(query)
-            .bind(order.id)
-            .fetch_one(db)
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        let transaction = Self::get_transaction_by_order_type(db, order.id, "payment").await?;
 
         // Create refund record
         let refund_id = Uuid::new_v4();
@@ -584,11 +594,11 @@ impl PaymentService {
 
         let now = Utc::now();
         sqlx::query(query)
-            .bind(refund_id)
+            .bind(refund_id.to_string())
             .bind(&refund_no)
-            .bind(order.id)
-            .bind(transaction.id)
-            .bind(user_id)
+            .bind(order.id.to_string())
+            .bind(transaction.id.to_string())
+            .bind(user_id.to_string())
             .bind(dto.refund_amount)
             .bind(&dto.refund_reason)
             .bind(now)
@@ -605,14 +615,16 @@ impl PaymentService {
             SELECT * FROM refund_records WHERE id = ?
         "#;
 
-        sqlx::query_as::<_, RefundRecord>(query)
-            .bind(refund_id)
+        let row = sqlx::query(query)
+            .bind(refund_id.to_string())
             .fetch_one(db)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("退款记录不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
-            })
+            })?;
+
+        Self::parse_refund_row(row)
     }
 
     pub async fn review_refund(
@@ -641,11 +653,11 @@ impl PaymentService {
 
             let now = Utc::now();
             sqlx::query(query)
-                .bind(reviewer_id)
+                .bind(reviewer_id.to_string())
                 .bind(now)
                 .bind(&dto.review_notes)
                 .bind(now)
-                .bind(refund_id)
+                .bind(refund_id.to_string())
                 .execute(db)
                 .await
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -675,11 +687,11 @@ impl PaymentService {
 
         let now = Utc::now();
         sqlx::query(query)
-            .bind(reviewer_id)
+            .bind(reviewer_id.to_string())
             .bind(now)
             .bind(&review_notes)
             .bind(now)
-            .bind(refund.id)
+            .bind(refund.id.to_string())
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -713,7 +725,7 @@ impl PaymentService {
                 sqlx::query(query)
                     .bind(now)
                     .bind(now)
-                    .bind(refund.id)
+                    .bind(refund.id.to_string())
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -730,7 +742,7 @@ impl PaymentService {
                 sqlx::query(query)
                     .bind(now)
                     .bind(now)
-                    .bind(refund.id)
+                    .bind(refund.id.to_string())
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -753,7 +765,7 @@ impl PaymentService {
         sqlx::query(query)
             .bind(&new_status)
             .bind(now)
-            .bind(order.id)
+            .bind(order.id.to_string())
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -770,9 +782,9 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(refund_transaction_id)
+            .bind(refund_transaction_id.to_string())
             .bind(&refund_transaction_no)
-            .bind(order.id)
+            .bind(order.id.to_string())
             .bind(&transaction.payment_method)
             .bind(refund.refund_amount)
             .bind(now)
@@ -790,15 +802,8 @@ impl PaymentService {
 
     // Balance management
     pub async fn get_user_balance(db: &DbPool, user_id: Uuid) -> Result<UserBalance, AppError> {
-        let query = r#"
-            SELECT * FROM user_balances WHERE user_id = ?
-        "#;
-
-        sqlx::query_as::<_, UserBalance>(query)
-            .bind(user_id)
-            .fetch_optional(db)
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?
+        Self::parse_user_balance_optional(db, user_id)
+            .await?
             .ok_or_else(|| {
                 // Create balance record if not exists
                 AppError::NotFound("用户余额记录不存在".to_string())
@@ -809,15 +814,8 @@ impl PaymentService {
         tx: &mut Transaction<'_, MySql>,
         user_id: Uuid,
     ) -> Result<UserBalance, AppError> {
-        let query = r#"
-            SELECT * FROM user_balances WHERE user_id = ? FOR UPDATE
-        "#;
-
-        sqlx::query_as::<_, UserBalance>(query)
-            .bind(user_id)
-            .fetch_optional(&mut **tx)
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?
+        Self::parse_user_balance_tx(tx, user_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("用户余额记录不存在".to_string()))
     }
 
@@ -833,8 +831,8 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(balance_id)
-            .bind(user_id)
+            .bind(balance_id.to_string())
+            .bind(user_id.to_string())
             .bind(now)
             .bind(now)
             .execute(db)
@@ -912,7 +910,7 @@ impl PaymentService {
             .bind(amount)
             .bind(amount)
             .bind(now)
-            .bind(user_id)
+            .bind(user_id.to_string())
             .execute(&mut **tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -928,14 +926,19 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(transaction_id)
-            .bind(user_id)
-            .bind(&transaction_type)
+            .bind(transaction_id.to_string())
+            .bind(user_id.to_string())
+            .bind(match transaction_type {
+                BalanceTransactionType::Income => "income",
+                BalanceTransactionType::Expense => "expense",
+                BalanceTransactionType::Freeze => "freeze",
+                BalanceTransactionType::Unfreeze => "unfreeze",
+            })
             .bind(amount)
             .bind(balance_before)
             .bind(balance_after)
             .bind(&related_type)
-            .bind(related_id)
+            .bind(related_id.map(|id| id.to_string()))
             .bind(description)
             .bind(now)
             .execute(&mut **tx)
@@ -960,13 +963,19 @@ impl PaymentService {
             LIMIT ? OFFSET ?
         "#;
 
-        sqlx::query_as::<_, BalanceTransaction>(query)
-            .bind(user_id)
+        let rows = sqlx::query(query)
+            .bind(user_id.to_string())
             .bind(page_size)
             .bind(offset)
             .fetch_all(db)
             .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        let mut transactions = Vec::new();
+        for row in rows {
+            transactions.push(Self::parse_balance_transaction_row(row)?);
+        }
+        Ok(transactions)
     }
 
     // Configuration management
@@ -980,7 +989,12 @@ impl PaymentService {
         "#;
 
         let configs: Vec<(String, String)> = sqlx::query_as(query)
-            .bind(&payment_method)
+            .bind(match &payment_method {
+                PaymentMethod::Wechat => "wechat",
+                PaymentMethod::Alipay => "alipay",
+                PaymentMethod::BankCard => "bank_card",
+                PaymentMethod::Balance => "balance",
+            })
             .fetch_all(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -1006,8 +1020,13 @@ impl PaymentService {
 
         let now = Utc::now();
         sqlx::query(query)
-            .bind(Uuid::new_v4())
-            .bind(&payment_method)
+            .bind(Uuid::new_v4().to_string())
+            .bind(match &payment_method {
+                PaymentMethod::Wechat => "wechat",
+                PaymentMethod::Alipay => "alipay",
+                PaymentMethod::BankCard => "bank_card",
+                PaymentMethod::Balance => "balance",
+            })
             .bind(config_key)
             .bind(config_value)
             .bind(is_encrypted)
@@ -1034,11 +1053,16 @@ impl PaymentService {
             LIMIT 1
         "#;
 
-        sqlx::query_as::<_, PriceConfig>(query)
+        let row = sqlx::query(query)
             .bind(service_type)
             .fetch_optional(db)
             .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        match row {
+            Some(row) => Ok(Some(Self::parse_price_config_row(row)?)),
+            None => Ok(None),
+        }
     }
 
     pub async fn list_price_configs(
@@ -1061,15 +1085,18 @@ impl PaymentService {
             }
         };
 
-        if let Some(active) = is_active {
-            sqlx::query_as::<_, PriceConfig>(query)
-                .bind(active)
-                .fetch_all(db)
-                .await
+        let rows = if let Some(active) = is_active {
+            sqlx::query(query).bind(active).fetch_all(db).await
         } else {
-            sqlx::query_as::<_, PriceConfig>(query).fetch_all(db).await
+            sqlx::query(query).fetch_all(db).await
         }
-        .map_err(|e| AppError::DatabaseError(e.to_string()))
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        let mut configs = Vec::new();
+        for row in rows {
+            configs.push(Self::parse_price_config_row(row)?);
+        }
+        Ok(configs)
     }
 
     // Statistics
@@ -1117,7 +1144,7 @@ impl PaymentService {
         let mut query_builder = sqlx::query(&query);
 
         if let Some(uid) = user_id {
-            query_builder = query_builder.bind(uid);
+            query_builder = query_builder.bind(uid.to_string());
         }
 
         if let Some(start) = start_date {
@@ -1159,31 +1186,341 @@ impl PaymentService {
             SELECT * FROM payment_transactions WHERE id = ?
         "#;
 
-        sqlx::query_as::<_, PaymentTransaction>(query)
-            .bind(transaction_id)
+        let row = sqlx::query(query)
+            .bind(transaction_id.to_string())
             .fetch_one(db)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("交易记录不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
-            })
+            })?;
+
+        Self::parse_transaction_row(row)
     }
 
     fn generate_order_no() -> String {
         let timestamp = Utc::now().format("%Y%m%d%H%M%S");
-        let random = rand::random::<u32>() % 10000;
+        let random = chrono::Utc::now().timestamp_subsec_millis() % 10000;
         format!("ORD{}{:04}", timestamp, random)
     }
 
     fn generate_transaction_no() -> String {
         let timestamp = Utc::now().format("%Y%m%d%H%M%S");
-        let random = rand::random::<u32>() % 10000;
+        let random = chrono::Utc::now().timestamp_subsec_millis() % 10000;
         format!("TXN{}{:04}", timestamp, random)
     }
 
     fn generate_refund_no() -> String {
         let timestamp = Utc::now().format("%Y%m%d%H%M%S");
-        let random = rand::random::<u32>() % 10000;
+        let random = chrono::Utc::now().timestamp_subsec_millis() % 10000;
         format!("RFD{}{:04}", timestamp, random)
+    }
+
+    fn parse_order_row(row: sqlx::mysql::MySqlRow) -> Result<PaymentOrder, AppError> {
+        use sqlx::Row;
+
+        let order_type_str: String = row.get("order_type");
+        let order_type = match order_type_str.as_str() {
+            "appointment" => OrderType::Appointment,
+            "consultation" => OrderType::Consultation,
+            "prescription" => OrderType::Prescription,
+            "other" => OrderType::Other,
+            _ => return Err(AppError::BadRequest("Invalid order type".to_string())),
+        };
+
+        let status_str: String = row.get("status");
+        let status = match status_str.as_str() {
+            "pending" => OrderStatus::Pending,
+            "paid" => OrderStatus::Paid,
+            "cancelled" => OrderStatus::Cancelled,
+            "refunded" => OrderStatus::Refunded,
+            "partial_refunded" => OrderStatus::PartialRefunded,
+            "expired" => OrderStatus::Expired,
+            _ => return Err(AppError::BadRequest("Invalid order status".to_string())),
+        };
+
+        let payment_method = row
+            .get::<Option<String>, _>("payment_method")
+            .and_then(|m| match m.as_str() {
+                "alipay" => Some(PaymentMethod::Alipay),
+                "wechat" => Some(PaymentMethod::Wechat),
+                "bank_card" => Some(PaymentMethod::BankCard),
+                "balance" => Some(PaymentMethod::Balance),
+                _ => None,
+            });
+
+        Ok(PaymentOrder {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            order_no: row.get("order_no"),
+            user_id: Uuid::parse_str(row.get("user_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            appointment_id: row
+                .get::<Option<String>, _>("appointment_id")
+                .and_then(|s| Uuid::parse_str(&s).ok()),
+            order_type,
+            amount: row.get("amount"),
+            currency: row.get("currency"),
+            status,
+            payment_method,
+            payment_time: row.get("payment_time"),
+            expire_time: row.get("expire_time"),
+            description: row.get("description"),
+            metadata: row.get("metadata"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
+    }
+
+    fn parse_transaction_row(row: sqlx::mysql::MySqlRow) -> Result<PaymentTransaction, AppError> {
+        use sqlx::Row;
+
+        let payment_method_str: String = row.get("payment_method");
+        let payment_method = match payment_method_str.as_str() {
+            "alipay" => PaymentMethod::Alipay,
+            "wechat" => PaymentMethod::Wechat,
+            "bank_card" => PaymentMethod::BankCard,
+            "balance" => PaymentMethod::Balance,
+            _ => return Err(AppError::BadRequest("Invalid payment method".to_string())),
+        };
+
+        let transaction_type_str: String = row.get("transaction_type");
+        let transaction_type = match transaction_type_str.as_str() {
+            "payment" => TransactionType::Payment,
+            "refund" => TransactionType::Refund,
+            _ => return Err(AppError::BadRequest("Invalid transaction type".to_string())),
+        };
+
+        let status_str: String = row.get("status");
+        let status = match status_str.as_str() {
+            "pending" => TransactionStatus::Pending,
+            "success" => TransactionStatus::Success,
+            "failed" => TransactionStatus::Failed,
+            _ => {
+                return Err(AppError::BadRequest(
+                    "Invalid transaction status".to_string(),
+                ))
+            }
+        };
+
+        Ok(PaymentTransaction {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            transaction_no: row.get("transaction_no"),
+            order_id: Uuid::parse_str(row.get("order_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            payment_method,
+            transaction_type,
+            amount: row.get("amount"),
+            status,
+            external_transaction_id: row.get("external_transaction_id"),
+            prepay_id: row.get("prepay_id"),
+            trade_no: row.get("trade_no"),
+            request_data: row.get("request_data"),
+            response_data: row.get("response_data"),
+            callback_data: row.get("callback_data"),
+            error_code: row.get("error_code"),
+            error_message: row.get("error_message"),
+            initiated_at: row.get("initiated_at"),
+            completed_at: row.get("completed_at"),
+        })
+    }
+
+    fn parse_price_config_row(row: sqlx::mysql::MySqlRow) -> Result<PriceConfig, AppError> {
+        use sqlx::Row;
+
+        Ok(PriceConfig {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            service_type: row.get("service_type"),
+            service_name: row.get("service_name"),
+            price: row.get("price"),
+            discount_price: row.get("discount_price"),
+            is_active: row.get("is_active"),
+            effective_date: row.get("effective_date"),
+            expiry_date: row.get("expiry_date"),
+            description: row.get("description"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
+    }
+
+    fn parse_user_balance_row(row: sqlx::mysql::MySqlRow) -> Result<UserBalance, AppError> {
+        use sqlx::Row;
+
+        Ok(UserBalance {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            user_id: Uuid::parse_str(row.get("user_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            balance: row.get("balance"),
+            frozen_balance: row.get("frozen_balance"),
+            total_income: row.get("total_income"),
+            total_expense: row.get("total_expense"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
+    }
+
+    async fn parse_user_balance_optional(
+        db: &DbPool,
+        user_id: Uuid,
+    ) -> Result<Option<UserBalance>, AppError> {
+        let query = r#"
+            SELECT * FROM user_balances WHERE user_id = ?
+        "#;
+
+        let row = sqlx::query(query)
+            .bind(user_id.to_string())
+            .fetch_optional(db)
+            .await
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        match row {
+            Some(row) => Ok(Some(Self::parse_user_balance_row(row)?)),
+            None => Ok(None),
+        }
+    }
+
+    async fn parse_user_balance_tx(
+        tx: &mut Transaction<'_, MySql>,
+        user_id: Uuid,
+    ) -> Result<Option<UserBalance>, AppError> {
+        let query = r#"
+            SELECT * FROM user_balances WHERE user_id = ? FOR UPDATE
+        "#;
+
+        let row = sqlx::query(query)
+            .bind(user_id.to_string())
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        match row {
+            Some(row) => Ok(Some(Self::parse_user_balance_row(row)?)),
+            None => Ok(None),
+        }
+    }
+
+    async fn get_transaction_by_order(
+        db: &DbPool,
+        order_id: Uuid,
+        payment_method: &PaymentMethod,
+    ) -> Result<PaymentTransaction, AppError> {
+        let query = r#"
+            SELECT * FROM payment_transactions
+            WHERE order_id = ? AND payment_method = ? AND status = 'pending'
+            ORDER BY initiated_at DESC LIMIT 1
+        "#;
+
+        let row = sqlx::query(query)
+            .bind(order_id.to_string())
+            .bind(match payment_method {
+                PaymentMethod::Wechat => "wechat",
+                PaymentMethod::Alipay => "alipay",
+                PaymentMethod::BankCard => "bank_card",
+                PaymentMethod::Balance => "balance",
+            })
+            .fetch_one(db)
+            .await
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        Self::parse_transaction_row(row)
+    }
+
+    async fn get_transaction_by_order_type(
+        db: &DbPool,
+        order_id: Uuid,
+        transaction_type: &str,
+    ) -> Result<PaymentTransaction, AppError> {
+        let query = r#"
+            SELECT * FROM payment_transactions
+            WHERE order_id = ? AND transaction_type = ? AND status = 'success'
+            ORDER BY completed_at DESC LIMIT 1
+        "#;
+
+        let row = sqlx::query(query)
+            .bind(order_id.to_string())
+            .bind(transaction_type)
+            .fetch_one(db)
+            .await
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        Self::parse_transaction_row(row)
+    }
+
+    fn parse_balance_transaction_row(
+        row: sqlx::mysql::MySqlRow,
+    ) -> Result<BalanceTransaction, AppError> {
+        use sqlx::Row;
+
+        let transaction_type_str: String = row.get("transaction_type");
+        let transaction_type = match transaction_type_str.as_str() {
+            "income" => BalanceTransactionType::Income,
+            "expense" => BalanceTransactionType::Expense,
+            "freeze" => BalanceTransactionType::Freeze,
+            "unfreeze" => BalanceTransactionType::Unfreeze,
+            _ => {
+                return Err(AppError::BadRequest(
+                    "Invalid balance transaction type".to_string(),
+                ))
+            }
+        };
+
+        Ok(BalanceTransaction {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            user_id: Uuid::parse_str(row.get("user_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            transaction_type,
+            amount: row.get("amount"),
+            balance_before: row.get("balance_before"),
+            balance_after: row.get("balance_after"),
+            related_type: row.get("related_type"),
+            related_id: row
+                .get::<Option<String>, _>("related_id")
+                .and_then(|s| Uuid::parse_str(&s).ok()),
+            description: row.get("description"),
+            created_at: row.get("created_at"),
+        })
+    }
+
+    fn parse_refund_row(row: sqlx::mysql::MySqlRow) -> Result<RefundRecord, AppError> {
+        use sqlx::Row;
+
+        let status_str: String = row.get("status");
+        let status = match status_str.as_str() {
+            "pending" => RefundStatus::Pending,
+            "processing" => RefundStatus::Processing,
+            "success" => RefundStatus::Success,
+            "failed" => RefundStatus::Failed,
+            "cancelled" => RefundStatus::Cancelled,
+            _ => return Err(AppError::BadRequest("Invalid refund status".to_string())),
+        };
+
+        Ok(RefundRecord {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            refund_no: row.get("refund_no"),
+            order_id: Uuid::parse_str(row.get("order_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            transaction_id: Uuid::parse_str(row.get("transaction_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            user_id: Uuid::parse_str(row.get("user_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            refund_amount: row.get("refund_amount"),
+            refund_reason: row.get("refund_reason"),
+            status,
+            reviewed_by: row
+                .get::<Option<String>, _>("reviewed_by")
+                .and_then(|s| Uuid::parse_str(&s).ok()),
+            reviewed_at: row.get("reviewed_at"),
+            review_notes: row.get("review_notes"),
+            external_refund_id: row.get("external_refund_id"),
+            refund_response: row.get("refund_response"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            completed_at: row.get("completed_at"),
+        })
     }
 }

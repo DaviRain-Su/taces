@@ -217,7 +217,14 @@ pub async fn get_doctor_by_user_id(pool: &DbPool, user_id: Uuid) -> Result<Docto
         department: sqlx::Row::get(&row, "department"),
         title: sqlx::Row::get(&row, "title"),
         introduction: sqlx::Row::get(&row, "introduction"),
-        specialties: serde_json::from_str(sqlx::Row::get(&row, "specialties")).unwrap_or_default(),
+        specialties: sqlx::Row::get::<serde_json::Value, _>(&row, "specialties")
+            .as_array()
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default(),
         experience: sqlx::Row::get(&row, "experience"),
         avatar: sqlx::Row::get(&row, "avatar"),
         license_photo: sqlx::Row::get(&row, "license_photo"),
@@ -238,8 +245,8 @@ fn generate_prescription_code() -> String {
 fn parse_prescription_row(row: sqlx::mysql::MySqlRow) -> Result<Prescription> {
     use sqlx::Row;
 
-    let medicines_json: String = row.get("medicines");
-    let medicines: Vec<Medicine> = serde_json::from_str(&medicines_json)
+    let medicines_json: serde_json::Value = row.get("medicines");
+    let medicines: Vec<Medicine> = serde_json::from_value(medicines_json)
         .map_err(|e| anyhow!("Failed to parse medicines: {}", e))?;
 
     Ok(Prescription {

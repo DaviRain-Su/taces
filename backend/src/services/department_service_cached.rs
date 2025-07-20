@@ -279,12 +279,17 @@ async fn update_department_uncached(
         WHERE id = ?
     "#;
 
+    let status_str = input.status.map(|s| match s {
+        DepartmentStatus::Active => "active",
+        DepartmentStatus::Inactive => "inactive",
+    });
+
     sqlx::query(query)
         .bind(input.name)
         .bind(input.contact_person)
         .bind(input.contact_phone)
         .bind(input.description)
-        .bind(input.status)
+        .bind(status_str)
         .bind(Utc::now())
         .bind(id.to_string())
         .execute(pool)

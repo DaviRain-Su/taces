@@ -155,7 +155,7 @@ async fn test_batch_delete_users() {
 
     // Batch delete
     let delete_request = json!({
-        "ids": [user1_id, user2_id]
+        "ids": [user1_id.to_string(), user2_id.to_string()]
     });
 
     let (status, body) = app

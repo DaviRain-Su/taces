@@ -23,9 +23,6 @@ pub fn routes() -> Router<AppState> {
             "/balance/:user_id/transactions",
             get(get_balance_transactions),
         )
-        // Price configuration routes (public)
-        .route("/prices/:service_type", get(get_price_config))
-        .route("/prices", get(list_price_configs))
         // Statistics routes
         .route("/statistics", get(get_payment_statistics))
         // Admin only routes
@@ -39,4 +36,7 @@ pub fn public_routes() -> Router<AppState> {
     Router::new()
         // Payment callback route (no auth required)
         .route("/payment/callback", post(payment_callback))
+        // Price configuration routes (public)
+        .route("/prices/:service_type", get(get_price_config))
+        .route("/prices", get(list_price_configs))
 }

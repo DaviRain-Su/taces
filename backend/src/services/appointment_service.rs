@@ -116,45 +116,57 @@ pub async fn update_appointment(
     id: Uuid,
     dto: UpdateAppointmentDto,
 ) -> Result<Appointment> {
-    let mut update_fields = Vec::new();
-    let mut bindings = Vec::new();
+    let mut query = "UPDATE appointments SET ".to_string();
+    let mut first = true;
+
+    if dto.appointment_date.is_some() {
+        query.push_str("appointment_date = ?");
+        first = false;
+    }
+
+    if dto.time_slot.is_some() {
+        if !first {
+            query.push_str(", ");
+        }
+        query.push_str("time_slot = ?");
+        first = false;
+    }
+
+    if dto.status.is_some() {
+        if !first {
+            query.push_str(", ");
+        }
+        query.push_str("status = ?");
+        first = false;
+    }
+
+    if !first {
+        query.push_str(", ");
+    }
+    query.push_str("updated_at = ? WHERE id = ?");
+
+    if first && dto.appointment_date.is_none() && dto.time_slot.is_none() && dto.status.is_none() {
+        return get_appointment_by_id(pool, id).await;
+    }
+
+    let mut query_builder = sqlx::query(&query);
 
     if let Some(date) = dto.appointment_date {
-        update_fields.push("appointment_date = ?");
-        bindings.push(date.to_string());
+        query_builder = query_builder.bind(date);
     }
 
-    if let Some(slot) = &dto.time_slot {
-        update_fields.push("time_slot = ?");
-        bindings.push(slot.clone());
+    if let Some(slot) = dto.time_slot {
+        query_builder = query_builder.bind(slot);
     }
 
-    if let Some(status) = &dto.status {
-        update_fields.push("status = ?");
+    if let Some(status) = dto.status {
         let status_str = match status {
             AppointmentStatus::Pending => "pending",
             AppointmentStatus::Confirmed => "confirmed",
             AppointmentStatus::Completed => "completed",
             AppointmentStatus::Cancelled => "cancelled",
         };
-        bindings.push(status_str.to_string());
-    }
-
-    update_fields.push("updated_at = ?");
-
-    if update_fields.is_empty() {
-        return get_appointment_by_id(pool, id).await;
-    }
-
-    let query = format!(
-        "UPDATE appointments SET {} WHERE id = ?",
-        update_fields.join(", ")
-    );
-
-    let mut query_builder = sqlx::query(&query);
-
-    for binding in bindings {
-        query_builder = query_builder.bind(binding);
+        query_builder = query_builder.bind(status_str);
     }
 
     query_builder = query_builder.bind(Utc::now());

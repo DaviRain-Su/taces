@@ -43,7 +43,7 @@ pub fn create_routes() -> Router<AppState> {
             video_consultation::video_consultation_routes(),
         )
         .nest("/files", file_upload::file_upload_routes())
-        .nest("/", payment::public_routes())
+        .nest("/payment", payment::public_routes())
         .nest("/", live_stream::routes())
         .nest("/", circle::circle_routes())
         .nest("/", circle_post::circle_post_routes())

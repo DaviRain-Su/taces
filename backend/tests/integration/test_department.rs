@@ -34,10 +34,6 @@ async fn test_department_crud() {
     let (status, body) = app
         .post_with_auth("/api/v1/departments", create_dto, &admin_token)
         .await;
-    println!(
-        "Create department response: status={:?}, body={:?}",
-        status, body
-    );
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
     let department_id = body["data"]["id"].as_str().unwrap();

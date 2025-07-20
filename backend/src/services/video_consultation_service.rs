@@ -1,5 +1,5 @@
 use crate::config::database::DbPool;
-use crate::models::appointment::{Appointment, AppointmentStatus};
+use crate::models::appointment::{Appointment, AppointmentStatus, VisitType};
 use crate::models::video_consultation::*;
 use crate::utils::errors::AppError;
 use chrono::{DateTime, Duration, Utc};
@@ -33,10 +33,10 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(consultation_id)
-            .bind(dto.appointment_id)
-            .bind(dto.doctor_id)
-            .bind(dto.patient_id)
+            .bind(consultation_id.to_string())
+            .bind(dto.appointment_id.to_string())
+            .bind(dto.doctor_id.to_string())
+            .bind(dto.patient_id.to_string())
             .bind(&room_id)
             .bind(dto.scheduled_start_time)
             .bind(&dto.chief_complaint)
@@ -57,14 +57,16 @@ impl VideoConsultationService {
             SELECT * FROM video_consultations WHERE id = ?
         "#;
 
-        sqlx::query_as::<_, VideoConsultation>(query)
-            .bind(consultation_id)
+        let row = sqlx::query(query)
+            .bind(consultation_id.to_string())
             .fetch_one(db)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("视频问诊记录不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
-            })
+            })?;
+
+        Self::parse_consultation_row(row)
     }
 
     pub async fn get_consultation_by_room_id(
@@ -75,14 +77,16 @@ impl VideoConsultationService {
             SELECT * FROM video_consultations WHERE room_id = ?
         "#;
 
-        sqlx::query_as::<_, VideoConsultation>(query)
+        let row = sqlx::query(query)
             .bind(room_id)
             .fetch_one(db)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("房间不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
-            })
+            })?;
+
+        Self::parse_consultation_row(row)
     }
 
     pub async fn list_consultations(
@@ -94,33 +98,33 @@ impl VideoConsultationService {
         let offset = (page - 1) * page_size;
 
         // Build query dynamically based on filters
-        match (&query.doctor_id, &query.patient_id, &query.status, &query.date_from, &query.date_to) {
+        let rows = match (&query.doctor_id, &query.patient_id, &query.status, &query.date_from, &query.date_to) {
             (Some(doctor_id), None, None, None, None) => {
-                sqlx::query_as::<_, VideoConsultation>(
+                sqlx::query(
                     "SELECT * FROM video_consultations WHERE doctor_id = ? ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
                 )
-                .bind(*doctor_id)
+                .bind(doctor_id.to_string())
                 .bind(page_size)
                 .bind(offset)
                 .fetch_all(db)
                 .await
             },
             (None, Some(patient_id), None, None, None) => {
-                sqlx::query_as::<_, VideoConsultation>(
+                sqlx::query(
                     "SELECT * FROM video_consultations WHERE patient_id = ? ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
                 )
-                .bind(*patient_id)
+                .bind(patient_id.to_string())
                 .bind(page_size)
                 .bind(offset)
                 .fetch_all(db)
                 .await
             },
             (Some(doctor_id), Some(patient_id), None, None, None) => {
-                sqlx::query_as::<_, VideoConsultation>(
+                sqlx::query(
                     "SELECT * FROM video_consultations WHERE doctor_id = ? AND patient_id = ? ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
                 )
-                .bind(*doctor_id)
-                .bind(*patient_id)
+                .bind(doctor_id.to_string())
+                .bind(patient_id.to_string())
                 .bind(page_size)
                 .bind(offset)
                 .fetch_all(db)
@@ -147,7 +151,7 @@ impl VideoConsultationService {
                 );
 
                 // For now, just return all consultations if filters are complex
-                sqlx::query_as::<_, VideoConsultation>(
+                sqlx::query(
                     "SELECT * FROM video_consultations ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
                 )
                 .bind(page_size)
@@ -156,7 +160,11 @@ impl VideoConsultationService {
                 .await
             }
         }
-        .map_err(|e| AppError::DatabaseError(e.to_string()))
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        rows.into_iter()
+            .map(|row| Self::parse_consultation_row(row))
+            .collect::<Result<Vec<_>, _>>()
     }
 
     // Room Management
@@ -198,7 +206,7 @@ impl VideoConsultationService {
         sqlx::query(update_query)
             .bind(&token)
             .bind(Utc::now())
-            .bind(consultation.id)
+            .bind(consultation.id.to_string())
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -257,7 +265,7 @@ impl VideoConsultationService {
         let result = sqlx::query(query)
             .bind(now)
             .bind(now)
-            .bind(consultation_id)
+            .bind(consultation_id.to_string())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -324,7 +332,7 @@ impl VideoConsultationService {
             .bind(&complete_dto.treatment_plan)
             .bind(&complete_dto.notes)
             .bind(now)
-            .bind(consultation_id)
+            .bind(consultation_id.to_string())
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -338,7 +346,7 @@ impl VideoConsultationService {
 
         sqlx::query(query)
             .bind(now)
-            .bind(consultation.appointment_id)
+            .bind(consultation.appointment_id.to_string())
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -391,7 +399,7 @@ impl VideoConsultationService {
             .bind(&dto.treatment_plan)
             .bind(&dto.notes)
             .bind(Utc::now())
-            .bind(consultation_id)
+            .bind(consultation_id.to_string())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -427,7 +435,7 @@ impl VideoConsultationService {
             .bind(dto.rating)
             .bind(&dto.feedback)
             .bind(Utc::now())
-            .bind(consultation_id)
+            .bind(consultation_id.to_string())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -462,10 +470,10 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(signal_id)
+            .bind(signal_id.to_string())
             .bind(&dto.room_id)
-            .bind(from_user_id)
-            .bind(dto.to_user_id)
+            .bind(from_user_id.to_string())
+            .bind(dto.to_user_id.to_string())
             .bind(&dto.signal_type)
             .bind(&dto.payload)
             .bind(Utc::now())
@@ -500,12 +508,17 @@ impl VideoConsultationService {
             ORDER BY created_at ASC
         "#;
 
-        let signals = sqlx::query_as::<_, WebRTCSignal>(query)
+        let rows = sqlx::query(query)
             .bind(room_id)
-            .bind(user_id)
+            .bind(user_id.to_string())
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        let signals = rows
+            .into_iter()
+            .map(|row| Self::parse_webrtc_signal_row(row))
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Mark as delivered
         if !signals.is_empty() {
@@ -518,7 +531,7 @@ impl VideoConsultationService {
 
             let mut query_builder = sqlx::query(&update_query);
             for id in signal_ids {
-                query_builder = query_builder.bind(id);
+                query_builder = query_builder.bind(id.to_string());
             }
 
             query_builder
@@ -554,8 +567,8 @@ impl VideoConsultationService {
 
         let now = Utc::now();
         sqlx::query(query)
-            .bind(recording_id)
-            .bind(consultation_id)
+            .bind(recording_id.to_string())
+            .bind(consultation_id.to_string())
             .bind(now)
             .bind(now)
             .execute(db)
@@ -584,7 +597,7 @@ impl VideoConsultationService {
             .bind(file_size)
             .bind(duration)
             .bind(Utc::now())
-            .bind(recording_id)
+            .bind(recording_id.to_string())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -604,14 +617,16 @@ impl VideoConsultationService {
             SELECT * FROM video_recordings WHERE id = ?
         "#;
 
-        sqlx::query_as::<_, VideoRecording>(query)
-            .bind(recording_id)
+        let row = sqlx::query(query)
+            .bind(recording_id.to_string())
             .fetch_one(db)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("录制记录不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
-            })
+            })?;
+
+        Self::parse_recording_row(row)
     }
 
     pub async fn get_consultation_recordings(
@@ -624,11 +639,15 @@ impl VideoConsultationService {
             ORDER BY started_at DESC
         "#;
 
-        sqlx::query_as::<_, VideoRecording>(query)
-            .bind(consultation_id)
+        let rows = sqlx::query(query)
+            .bind(consultation_id.to_string())
             .fetch_all(db)
             .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        rows.into_iter()
+            .map(|row| Self::parse_recording_row(row))
+            .collect::<Result<Vec<_>, _>>()
     }
 
     // Template Management
@@ -648,8 +667,8 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(template_id)
-            .bind(doctor_id)
+            .bind(template_id.to_string())
+            .bind(doctor_id.to_string())
             .bind(&dto.name)
             .bind(&dto.chief_complaint)
             .bind(&dto.diagnosis)
@@ -672,14 +691,16 @@ impl VideoConsultationService {
             SELECT * FROM video_consultation_templates WHERE id = ?
         "#;
 
-        sqlx::query_as::<_, VideoConsultationTemplate>(query)
-            .bind(template_id)
+        let row = sqlx::query(query)
+            .bind(template_id.to_string())
             .fetch_one(db)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("模板不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
-            })
+            })?;
+
+        Self::parse_template_row(row)
     }
 
     pub async fn list_doctor_templates(
@@ -692,11 +713,15 @@ impl VideoConsultationService {
             ORDER BY usage_count DESC, created_at DESC
         "#;
 
-        sqlx::query_as::<_, VideoConsultationTemplate>(query)
-            .bind(doctor_id)
+        let rows = sqlx::query(query)
+            .bind(doctor_id.to_string())
             .fetch_all(db)
             .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        rows.into_iter()
+            .map(|row| Self::parse_template_row(row))
+            .collect::<Result<Vec<_>, _>>()
     }
 
     pub async fn use_template(
@@ -718,7 +743,7 @@ impl VideoConsultationService {
 
         sqlx::query(query)
             .bind(Utc::now())
-            .bind(template_id)
+            .bind(template_id.to_string())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -747,7 +772,7 @@ impl VideoConsultationService {
                     WHERE doctor_id = ? AND status != 'cancelled'
                     "#
                 )
-                .bind(doc_id)
+                .bind(doc_id.to_string())
             },
             (None, None, None) => {
                 sqlx::query(
@@ -802,17 +827,206 @@ impl VideoConsultationService {
     // Helper methods
     async fn get_appointment(db: &DbPool, appointment_id: Uuid) -> Result<Appointment, AppError> {
         let query = r#"
-            SELECT * FROM appointments WHERE id = ?
+            SELECT id, patient_id, doctor_id, appointment_date, time_slot, visit_type, 
+                   symptoms, has_visited_before, status, created_at, updated_at
+            FROM appointments WHERE id = ?
         "#;
 
-        sqlx::query_as::<_, Appointment>(query)
-            .bind(appointment_id)
+        let row = sqlx::query(query)
+            .bind(appointment_id.to_string())
             .fetch_one(db)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("预约不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
+            })?;
+
+        use sqlx::Row;
+        let visit_type_str: String = row.get("visit_type");
+        let visit_type = match visit_type_str.as_str() {
+            "online_video" => VisitType::OnlineVideo,
+            "offline" => VisitType::Offline,
+            _ => return Err(AppError::BadRequest("Invalid visit type".to_string())),
+        };
+
+        let status_str: String = row.get("status");
+        let status = match status_str.as_str() {
+            "pending" => AppointmentStatus::Pending,
+            "confirmed" => AppointmentStatus::Confirmed,
+            "completed" => AppointmentStatus::Completed,
+            "cancelled" => AppointmentStatus::Cancelled,
+            _ => {
+                return Err(AppError::BadRequest(
+                    "Invalid appointment status".to_string(),
+                ))
+            }
+        };
+
+        Ok(Appointment {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            patient_id: Uuid::parse_str(row.get("patient_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            doctor_id: Uuid::parse_str(row.get("doctor_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            appointment_date: row.get("appointment_date"),
+            time_slot: row.get("time_slot"),
+            visit_type,
+            symptoms: row.get("symptoms"),
+            has_visited_before: row.get("has_visited_before"),
+            status,
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
+    }
+
+    fn parse_consultation_row(row: sqlx::mysql::MySqlRow) -> Result<VideoConsultation, AppError> {
+        use sqlx::Row;
+
+        let status_str: String = row.get("status");
+        let status = match status_str.as_str() {
+            "waiting" => ConsultationStatus::Waiting,
+            "in_progress" => ConsultationStatus::InProgress,
+            "completed" => ConsultationStatus::Completed,
+            "cancelled" => ConsultationStatus::Cancelled,
+            "no_show" => ConsultationStatus::NoShow,
+            _ => {
+                return Err(AppError::BadRequest(
+                    "Invalid consultation status".to_string(),
+                ))
+            }
+        };
+
+        let connection_quality = if let Some(quality_str) = row
+            .try_get::<Option<String>, _>("connection_quality")
+            .ok()
+            .flatten()
+        {
+            Some(match quality_str.as_str() {
+                "excellent" => ConnectionQuality::Excellent,
+                "good" => ConnectionQuality::Good,
+                "fair" => ConnectionQuality::Fair,
+                "poor" => ConnectionQuality::Poor,
+                _ => {
+                    return Err(AppError::BadRequest(
+                        "Invalid connection quality".to_string(),
+                    ))
+                }
             })
+        } else {
+            None
+        };
+
+        Ok(VideoConsultation {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            appointment_id: Uuid::parse_str(row.get("appointment_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            doctor_id: Uuid::parse_str(row.get("doctor_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            patient_id: Uuid::parse_str(row.get("patient_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            room_id: row.get("room_id"),
+            status,
+            scheduled_start_time: row.get("scheduled_start_time"),
+            actual_start_time: row.get("actual_start_time"),
+            end_time: row.get("end_time"),
+            duration: row.get("duration"),
+            doctor_token: row.get("doctor_token"),
+            patient_token: row.get("patient_token"),
+            ice_servers: row.get("ice_servers"),
+            chief_complaint: row.get("chief_complaint"),
+            diagnosis: row.get("diagnosis"),
+            treatment_plan: row.get("treatment_plan"),
+            notes: row.get("notes"),
+            connection_quality,
+            patient_rating: row.get("patient_rating"),
+            patient_feedback: row.get("patient_feedback"),
+            metadata: row.get("metadata"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
+    }
+
+    fn parse_recording_row(row: sqlx::mysql::MySqlRow) -> Result<VideoRecording, AppError> {
+        use sqlx::Row;
+
+        let status_str: String = row.get("status");
+        let status = match status_str.as_str() {
+            "recording" => RecordingStatus::Recording,
+            "processing" => RecordingStatus::Processing,
+            "completed" => RecordingStatus::Completed,
+            "failed" => RecordingStatus::Failed,
+            _ => return Err(AppError::BadRequest("Invalid recording status".to_string())),
+        };
+
+        Ok(VideoRecording {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            consultation_id: Uuid::parse_str(row.get("consultation_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            recording_url: row.get("recording_url"),
+            thumbnail_url: row.get("thumbnail_url"),
+            file_size: row.get("file_size"),
+            duration: row.get("duration"),
+            format: row.get("format"),
+            status,
+            error_message: row.get("error_message"),
+            started_at: row.get("started_at"),
+            completed_at: row.get("completed_at"),
+            expires_at: row.get("expires_at"),
+            created_at: row.get("created_at"),
+        })
+    }
+
+    fn parse_webrtc_signal_row(row: sqlx::mysql::MySqlRow) -> Result<WebRTCSignal, AppError> {
+        use sqlx::Row;
+
+        let signal_type_str: String = row.get("signal_type");
+        let signal_type = match signal_type_str.as_str() {
+            "offer" => SignalType::Offer,
+            "answer" => SignalType::Answer,
+            "ice_candidate" => SignalType::IceCandidate,
+            "join" => SignalType::Join,
+            "leave" => SignalType::Leave,
+            "error" => SignalType::Error,
+            _ => return Err(AppError::BadRequest("Invalid signal type".to_string())),
+        };
+
+        Ok(WebRTCSignal {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            room_id: row.get("room_id"),
+            from_user_id: Uuid::parse_str(row.get("from_user_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            to_user_id: Uuid::parse_str(row.get("to_user_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            signal_type,
+            payload: row.get("payload"),
+            delivered: row.get("delivered"),
+            created_at: row.get("created_at"),
+        })
+    }
+
+    fn parse_template_row(
+        row: sqlx::mysql::MySqlRow,
+    ) -> Result<VideoConsultationTemplate, AppError> {
+        use sqlx::Row;
+
+        Ok(VideoConsultationTemplate {
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            doctor_id: Uuid::parse_str(row.get("doctor_id"))
+                .map_err(|_| AppError::BadRequest("Invalid UUID".to_string()))?,
+            name: row.get("name"),
+            chief_complaint: row.get("chief_complaint"),
+            diagnosis: row.get("diagnosis"),
+            treatment_plan: row.get("treatment_plan"),
+            notes: row.get("notes"),
+            usage_count: row.get("usage_count"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
     }
 
     async fn log_event(db: &DbPool, dto: LogEventDto, user_id: Uuid) -> Result<(), AppError> {
@@ -825,9 +1039,9 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(event_id)
-            .bind(dto.consultation_id)
-            .bind(user_id)
+            .bind(event_id.to_string())
+            .bind(dto.consultation_id.to_string())
+            .bind(user_id.to_string())
             .bind(&dto.event_type)
             .bind(&dto.event_data)
             .bind(Utc::now())
@@ -852,9 +1066,9 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(event_id)
-            .bind(dto.consultation_id)
-            .bind(user_id)
+            .bind(event_id.to_string())
+            .bind(dto.consultation_id.to_string())
+            .bind(user_id.to_string())
             .bind(&dto.event_type)
             .bind(&dto.event_data)
             .bind(Utc::now())

@@ -17,6 +17,10 @@ export TEST_DATABASE_URL="mysql://tcm_user:tcm_pass123@localhost:3307/tcm_teleme
 export JWT_SECRET="test_jwt_secret_key"
 export JWT_EXPIRATION="3600"
 
+# Seed test database
+echo "Seeding test database..."
+DATABASE_URL="$TEST_DATABASE_URL" cargo run --bin seed
+
 cargo test --all-features -- --test-threads=1
 
 # Check formatting

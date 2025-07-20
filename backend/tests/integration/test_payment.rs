@@ -44,8 +44,9 @@ async fn test_create_order() {
 
     assert_eq!(status, StatusCode::CREATED);
     assert!(body["success"].as_bool().unwrap());
+
     assert!(body["data"]["order_no"].as_str().is_some());
-    assert_eq!(body["data"]["amount"].as_str().unwrap(), "30");
+    assert_eq!(body["data"]["amount"].as_f64().unwrap(), 30.0);
     assert_eq!(body["data"]["status"].as_str().unwrap(), "pending");
 }
 
@@ -210,7 +211,7 @@ async fn test_get_price_config() {
         body["data"]["service_type"].as_str().unwrap(),
         "consultation"
     );
-    assert_eq!(body["data"]["price"].as_str().unwrap(), "20");
+    assert_eq!(body["data"]["price"].as_f64().unwrap(), 20.0);
 }
 
 #[tokio::test]
@@ -253,7 +254,7 @@ async fn test_create_refund() {
     sqlx::query(
         "UPDATE payment_orders SET status = 'paid', payment_method = 'alipay', payment_time = NOW() WHERE id = ?"
     )
-    .bind(order_id)
+    .bind(order_id.to_string())
     .execute(&app.pool)
     .await
     .unwrap();
@@ -268,9 +269,9 @@ async fn test_create_refund() {
         ) VALUES (?, ?, ?, 'alipay', 'payment', ?, 'success', NOW(), NOW())
         "#,
     )
-    .bind(transaction_id)
+    .bind(transaction_id.to_string())
     .bind(format!("TXN{}", chrono::Utc::now().timestamp()))
-    .bind(order_id)
+    .bind(order_id.to_string())
     .bind(amount)
     .execute(&app.pool)
     .await
@@ -309,8 +310,8 @@ async fn test_get_user_balance() {
         ) VALUES (?, ?, 100.00, 0, 100.00, 0, NOW(), NOW())
         "#,
     )
-    .bind(balance_id)
-    .bind(patient_user_id)
+    .bind(balance_id.to_string())
+    .bind(patient_user_id.to_string())
     .execute(&app.pool)
     .await
     .unwrap();
@@ -325,7 +326,7 @@ async fn test_get_user_balance() {
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
-    assert_eq!(body["data"]["balance"].as_str().unwrap(), "100");
+    assert_eq!(body["data"]["balance"].as_f64().unwrap(), 100.0);
 }
 
 #[tokio::test]
@@ -350,9 +351,9 @@ async fn test_admin_review_refund() {
         ) VALUES (?, ?, ?, 'consultation', 30.00, 'CNY', 'paid', 'alipay', NOW(), DATE_ADD(NOW(), INTERVAL 2 HOUR), NOW(), NOW())
         "#
     )
-    .bind(order_id)
+    .bind(order_id.to_string())
     .bind(order_no)
-    .bind(patient_user_id)
+    .bind(patient_user_id.to_string())
     .execute(&app.pool)
     .await
     .unwrap();
@@ -367,9 +368,9 @@ async fn test_admin_review_refund() {
         ) VALUES (?, ?, ?, 'alipay', 'payment', 30.00, 'success', NOW(), NOW())
         "#,
     )
-    .bind(transaction_id)
+    .bind(transaction_id.to_string())
     .bind(format!("TXN{}", chrono::Utc::now().timestamp()))
-    .bind(order_id)
+    .bind(order_id.to_string())
     .execute(&app.pool)
     .await
     .unwrap();
@@ -384,11 +385,11 @@ async fn test_admin_review_refund() {
         ) VALUES (?, ?, ?, ?, ?, 30.00, '服务未提供', 'pending', NOW(), NOW())
         "#,
     )
-    .bind(refund_id)
+    .bind(refund_id.to_string())
     .bind(format!("RFD{}", chrono::Utc::now().timestamp()))
-    .bind(order_id)
-    .bind(transaction_id)
-    .bind(patient_user_id)
+    .bind(order_id.to_string())
+    .bind(transaction_id.to_string())
+    .bind(patient_user_id.to_string())
     .execute(&app.pool)
     .await
     .unwrap();
@@ -399,7 +400,7 @@ async fn test_admin_review_refund() {
         review_notes: Some("同意退款".to_string()),
     };
 
-    let (status, _) = app
+    let (status, _body) = app
         .put_with_auth(
             &format!("/api/v1/payment/admin/refunds/{}/review", refund_id),
             review_dto,
@@ -434,9 +435,9 @@ async fn test_payment_statistics() {
             ) VALUES (?, ?, ?, 'consultation', ?, 'CNY', ?, DATE_ADD(NOW(), INTERVAL 2 HOUR), NOW(), NOW())
             "#
         )
-        .bind(order_id)
+        .bind(order_id.to_string())
         .bind(format!("ORD{}{}", chrono::Utc::now().timestamp(), i))
-        .bind(patient_user_id)
+        .bind(patient_user_id.to_string())
         .bind(Decimal::from(30 + i * 10))
         .bind(status)
         .execute(&app.pool)
@@ -462,7 +463,7 @@ async fn test_unauthorized_access() {
         create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
     let (_other_user_id, other_account, other_password) =
-        create_test_user(&app.pool, "patient2").await;
+        create_test_user(&app.pool, "patient").await;
     let other_token = get_auth_token(&mut app, &other_account, &other_password).await;
 
     // Create order for patient1

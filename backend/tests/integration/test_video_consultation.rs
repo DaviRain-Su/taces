@@ -72,6 +72,12 @@ async fn test_create_video_consultation() {
         .post_with_auth("/api/v1/video-consultations", create_dto, &doctor_token)
         .await;
 
+    if status != StatusCode::CREATED {
+        println!(
+            "Create video consultation failed: status={:?}, body={:?}",
+            status, body
+        );
+    }
     assert_eq!(status, StatusCode::CREATED);
     assert!(body["success"].as_bool().unwrap());
     assert_eq!(body["data"]["status"].as_str().unwrap(), "waiting");
@@ -90,9 +96,34 @@ async fn test_get_video_consultation() {
         create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
 
-    // Create consultation directly in database
-    let consultation_id = uuid::Uuid::new_v4();
+    // Create an appointment first
     let appointment_id = uuid::Uuid::new_v4();
+    let now = Utc::now();
+    let appointment_date = now + Duration::days(1);
+
+    let appointment_query = r#"
+        INSERT INTO appointments (
+            id, patient_id, doctor_id, appointment_date, time_slot,
+            visit_type, symptoms, has_visited_before, status,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'offline', ?, false, 'pending', ?, ?)
+    "#;
+
+    sqlx::query(appointment_query)
+        .bind(appointment_id.to_string())
+        .bind(patient_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(appointment_date)
+        .bind("09:00-10:00")
+        .bind("头痛")
+        .bind(now)
+        .bind(now)
+        .execute(&app.pool)
+        .await
+        .unwrap();
+
+    // Create consultation with the appointment
+    let consultation_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
     let query = r#"
@@ -103,14 +134,13 @@ async fn test_get_video_consultation() {
         ) VALUES (?, ?, ?, ?, ?, 'waiting', ?, ?, ?, ?)
     "#;
 
-    let now = Utc::now();
     sqlx::query(query)
-        .bind(consultation_id)
-        .bind(appointment_id)
-        .bind(doctor_id)
-        .bind(patient_id)
+        .bind(consultation_id.to_string())
+        .bind(appointment_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(patient_id.to_string())
         .bind(&room_id)
-        .bind(now + Duration::hours(1))
+        .bind(appointment_date)
         .bind("头痛")
         .bind(now)
         .bind(now)
@@ -149,9 +179,34 @@ async fn test_join_room() {
         create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
 
+    // Create an appointment first
+    let appointment_id = uuid::Uuid::new_v4();
+    let now = Utc::now();
+    let scheduled_time = now + Duration::hours(1);
+
+    let appointment_query = r#"
+        INSERT INTO appointments (
+            id, patient_id, doctor_id, appointment_date, time_slot,
+            visit_type, symptoms, has_visited_before, status,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'online_video', ?, false, 'confirmed', ?, ?)
+    "#;
+
+    sqlx::query(appointment_query)
+        .bind(appointment_id.to_string())
+        .bind(patient_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(scheduled_time.naive_utc())
+        .bind("09:00-10:00")
+        .bind("test symptoms")
+        .bind(now)
+        .bind(now)
+        .execute(&app.pool)
+        .await
+        .unwrap();
+
     // Create consultation
     let consultation_id = uuid::Uuid::new_v4();
-    let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
     let query = r#"
@@ -161,14 +216,13 @@ async fn test_join_room() {
         ) VALUES (?, ?, ?, ?, ?, 'waiting', ?, ?, ?)
     "#;
 
-    let now = Utc::now();
     sqlx::query(query)
-        .bind(consultation_id)
-        .bind(appointment_id)
-        .bind(doctor_id)
-        .bind(patient_id)
+        .bind(consultation_id.to_string())
+        .bind(appointment_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(patient_id.to_string())
         .bind(&room_id)
-        .bind(now + Duration::hours(1))
+        .bind(scheduled_time)
         .bind(now)
         .bind(now)
         .execute(&app.pool)
@@ -206,9 +260,33 @@ async fn test_start_consultation() {
         create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
 
+    // Create an appointment first
+    let appointment_id = uuid::Uuid::new_v4();
+    let now = Utc::now();
+
+    let appointment_query = r#"
+        INSERT INTO appointments (
+            id, patient_id, doctor_id, appointment_date, time_slot,
+            visit_type, symptoms, has_visited_before, status,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'online_video', ?, false, 'confirmed', ?, ?)
+    "#;
+
+    sqlx::query(appointment_query)
+        .bind(appointment_id.to_string())
+        .bind(patient_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(now.naive_utc())
+        .bind("09:00-10:00")
+        .bind("test symptoms")
+        .bind(now)
+        .bind(now)
+        .execute(&app.pool)
+        .await
+        .unwrap();
+
     // Create consultation
     let consultation_id = uuid::Uuid::new_v4();
-    let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
     let query = r#"
@@ -218,12 +296,11 @@ async fn test_start_consultation() {
         ) VALUES (?, ?, ?, ?, ?, 'waiting', ?, ?, ?)
     "#;
 
-    let now = Utc::now();
     sqlx::query(query)
-        .bind(consultation_id)
-        .bind(appointment_id)
-        .bind(doctor_id)
-        .bind(patient_id)
+        .bind(consultation_id.to_string())
+        .bind(appointment_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(patient_id.to_string())
         .bind(&room_id)
         .bind(now)
         .bind(now)
@@ -257,7 +334,7 @@ async fn test_start_consultation() {
     }
 
     let result: ConsultationStatus = sqlx::query_as(check_query)
-        .bind(consultation_id)
+        .bind(consultation_id.to_string())
         .fetch_one(&app.pool)
         .await
         .unwrap();
@@ -278,9 +355,34 @@ async fn test_end_consultation() {
         create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
 
+    // Create an appointment first
+    let appointment_id = uuid::Uuid::new_v4();
+    let now = Utc::now();
+    let scheduled_time = now - Duration::minutes(30);
+
+    let appointment_query = r#"
+        INSERT INTO appointments (
+            id, patient_id, doctor_id, appointment_date, time_slot,
+            visit_type, symptoms, has_visited_before, status,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'online_video', ?, false, 'confirmed', ?, ?)
+    "#;
+
+    sqlx::query(appointment_query)
+        .bind(appointment_id.to_string())
+        .bind(patient_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(scheduled_time.naive_utc())
+        .bind("09:00-10:00")
+        .bind("test symptoms")
+        .bind(now)
+        .bind(now)
+        .execute(&app.pool)
+        .await
+        .unwrap();
+
     // Create consultation in progress
     let consultation_id = uuid::Uuid::new_v4();
-    let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
     let query = r#"
@@ -290,14 +392,13 @@ async fn test_end_consultation() {
         ) VALUES (?, ?, ?, ?, ?, 'in_progress', ?, ?, ?, ?)
     "#;
 
-    let now = Utc::now();
     sqlx::query(query)
-        .bind(consultation_id)
-        .bind(appointment_id)
-        .bind(doctor_id)
-        .bind(patient_id)
+        .bind(consultation_id.to_string())
+        .bind(appointment_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(patient_id.to_string())
         .bind(&room_id)
-        .bind(now - Duration::minutes(30))
+        .bind(scheduled_time)
         .bind(now - Duration::minutes(25))
         .bind(now)
         .bind(now)
@@ -341,7 +442,7 @@ async fn test_end_consultation() {
     }
 
     let result: ConsultationResult = sqlx::query_as(check_query)
-        .bind(consultation_id)
+        .bind(consultation_id.to_string())
         .fetch_one(&app.pool)
         .await
         .unwrap();
@@ -363,9 +464,34 @@ async fn test_rate_consultation() {
         create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
 
+    // Create an appointment first
+    let appointment_id = uuid::Uuid::new_v4();
+    let now = Utc::now();
+    let scheduled_time = now - Duration::hours(2);
+
+    let appointment_query = r#"
+        INSERT INTO appointments (
+            id, patient_id, doctor_id, appointment_date, time_slot,
+            visit_type, symptoms, has_visited_before, status,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'online_video', ?, false, 'completed', ?, ?)
+    "#;
+
+    sqlx::query(appointment_query)
+        .bind(appointment_id.to_string())
+        .bind(patient_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(scheduled_time.naive_utc())
+        .bind("09:00-10:00")
+        .bind("test symptoms")
+        .bind(now)
+        .bind(now)
+        .execute(&app.pool)
+        .await
+        .unwrap();
+
     // Create completed consultation
     let consultation_id = uuid::Uuid::new_v4();
-    let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
     let query = r#"
@@ -376,15 +502,14 @@ async fn test_rate_consultation() {
         ) VALUES (?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?)
     "#;
 
-    let now = Utc::now();
     sqlx::query(query)
-        .bind(consultation_id)
-        .bind(appointment_id)
-        .bind(doctor_id)
-        .bind(patient_id)
+        .bind(consultation_id.to_string())
+        .bind(appointment_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(patient_id.to_string())
         .bind(&room_id)
-        .bind(now - Duration::hours(2))
-        .bind(now - Duration::hours(2))
+        .bind(scheduled_time)
+        .bind(scheduled_time)
         .bind(now - Duration::minutes(90))
         .bind(1800)
         .bind("头痛症")
@@ -424,7 +549,7 @@ async fn test_rate_consultation() {
     }
 
     let result: ConsultationRating = sqlx::query_as(check_query)
-        .bind(consultation_id)
+        .bind(consultation_id.to_string())
         .fetch_one(&app.pool)
         .await
         .unwrap();
@@ -445,9 +570,33 @@ async fn test_webrtc_signaling() {
         create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
 
+    // Create an appointment first
+    let appointment_id = uuid::Uuid::new_v4();
+    let now = Utc::now();
+
+    let appointment_query = r#"
+        INSERT INTO appointments (
+            id, patient_id, doctor_id, appointment_date, time_slot,
+            visit_type, symptoms, has_visited_before, status,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'online_video', ?, false, 'confirmed', ?, ?)
+    "#;
+
+    sqlx::query(appointment_query)
+        .bind(appointment_id.to_string())
+        .bind(patient_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(now.naive_utc())
+        .bind("09:00-10:00")
+        .bind("test symptoms")
+        .bind(now)
+        .bind(now)
+        .execute(&app.pool)
+        .await
+        .unwrap();
+
     // Create consultation
     let consultation_id = uuid::Uuid::new_v4();
-    let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
     let query = r#"
@@ -457,12 +606,11 @@ async fn test_webrtc_signaling() {
         ) VALUES (?, ?, ?, ?, ?, 'in_progress', ?, ?, ?)
     "#;
 
-    let now = Utc::now();
     sqlx::query(query)
-        .bind(consultation_id)
-        .bind(appointment_id)
-        .bind(doctor_id)
-        .bind(patient_id)
+        .bind(consultation_id.to_string())
+        .bind(appointment_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(patient_id.to_string())
         .bind(&room_id)
         .bind(now)
         .bind(now)
@@ -579,7 +727,7 @@ async fn test_consultation_templates() {
     }
 
     let result: TemplateUsage = sqlx::query_as(check_query)
-        .bind(uuid::Uuid::parse_str(template_id).unwrap())
+        .bind(uuid::Uuid::parse_str(template_id).unwrap().to_string())
         .fetch_one(&app.pool)
         .await
         .unwrap();
@@ -601,6 +749,34 @@ async fn test_consultation_statistics() {
     // Create some consultations with different statuses
     let now = Utc::now();
 
+    // Create patient for first consultation
+    let (patient1_id, _, _) = create_test_user(&app.pool, "patient").await;
+
+    // Create appointment and completed consultation
+    let appointment1_id = uuid::Uuid::new_v4();
+    let scheduled_time1 = now - Duration::days(1);
+
+    let appointment_query = r#"
+        INSERT INTO appointments (
+            id, patient_id, doctor_id, appointment_date, time_slot,
+            visit_type, symptoms, has_visited_before, status,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'online_video', ?, false, 'completed', ?, ?)
+    "#;
+
+    sqlx::query(appointment_query)
+        .bind(appointment1_id.to_string())
+        .bind(patient1_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(scheduled_time1.naive_utc())
+        .bind("09:00-10:00")
+        .bind("test symptoms")
+        .bind(now)
+        .bind(now)
+        .execute(&app.pool)
+        .await
+        .unwrap();
+
     // Completed consultation
     let query = r#"
         INSERT INTO video_consultations (
@@ -611,17 +787,37 @@ async fn test_consultation_statistics() {
     "#;
 
     sqlx::query(query)
-        .bind(uuid::Uuid::new_v4())
-        .bind(uuid::Uuid::new_v4())
-        .bind(doctor_id)
-        .bind(uuid::Uuid::new_v4())
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(appointment1_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(patient1_id.to_string())
         .bind(format!(
             "room_{}",
             uuid::Uuid::new_v4().to_string().replace("-", "")
         ))
-        .bind(now - Duration::days(1))
+        .bind(scheduled_time1)
         .bind(1800)
         .bind(5)
+        .bind(now)
+        .bind(now)
+        .execute(&app.pool)
+        .await
+        .unwrap();
+
+    // Create patient for second consultation
+    let (patient2_id, _, _) = create_test_user(&app.pool, "patient").await;
+
+    // Create appointment and no-show consultation
+    let appointment2_id = uuid::Uuid::new_v4();
+    let scheduled_time2 = now - Duration::days(2);
+
+    sqlx::query(appointment_query)
+        .bind(appointment2_id.to_string())
+        .bind(patient2_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(scheduled_time2.naive_utc())
+        .bind("10:00-11:00")
+        .bind("test symptoms")
         .bind(now)
         .bind(now)
         .execute(&app.pool)
@@ -637,15 +833,15 @@ async fn test_consultation_statistics() {
         ) VALUES (?, ?, ?, ?, ?, 'no_show', ?, NULL, NULL, ?, ?)
     "#;
     sqlx::query(no_show_query)
-        .bind(uuid::Uuid::new_v4())
-        .bind(uuid::Uuid::new_v4())
-        .bind(doctor_id)
-        .bind(uuid::Uuid::new_v4())
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(appointment2_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(patient2_id.to_string())
         .bind(format!(
             "room_{}",
             uuid::Uuid::new_v4().to_string().replace("-", "")
         ))
-        .bind(now - Duration::days(2))
+        .bind(scheduled_time2)
         .bind(now)
         .bind(now)
         .execute(&app.pool)
@@ -680,9 +876,36 @@ async fn test_authorization() {
         create_test_user(&app.pool, "doctor").await;
     let (_doctor2_id, _) = create_test_doctor(&app.pool, doctor2_user_id).await;
 
+    // Create patient for the consultation
+    let (patient_id, _, _) = create_test_user(&app.pool, "patient").await;
+
+    // Create an appointment first
+    let appointment_id = uuid::Uuid::new_v4();
+    let now = Utc::now();
+
+    let appointment_query = r#"
+        INSERT INTO appointments (
+            id, patient_id, doctor_id, appointment_date, time_slot,
+            visit_type, symptoms, has_visited_before, status,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'online_video', ?, false, 'confirmed', ?, ?)
+    "#;
+
+    sqlx::query(appointment_query)
+        .bind(appointment_id.to_string())
+        .bind(patient_id.to_string())
+        .bind(doctor1_id.to_string())
+        .bind(now.naive_utc())
+        .bind("09:00-10:00")
+        .bind("test symptoms")
+        .bind(now)
+        .bind(now)
+        .execute(&app.pool)
+        .await
+        .unwrap();
+
     // Create consultation for doctor1
     let consultation_id = uuid::Uuid::new_v4();
-    let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
     let query = r#"
@@ -692,12 +915,11 @@ async fn test_authorization() {
         ) VALUES (?, ?, ?, ?, ?, 'waiting', ?, ?, ?)
     "#;
 
-    let now = Utc::now();
     sqlx::query(query)
-        .bind(consultation_id)
-        .bind(appointment_id)
-        .bind(doctor1_id)
-        .bind(uuid::Uuid::new_v4())
+        .bind(consultation_id.to_string())
+        .bind(appointment_id.to_string())
+        .bind(doctor1_id.to_string())
+        .bind(patient_id.to_string())
         .bind(&room_id)
         .bind(now)
         .bind(now)

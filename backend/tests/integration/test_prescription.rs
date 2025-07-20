@@ -107,8 +107,8 @@ async fn test_list_prescriptions() {
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["success"], true);
-    assert!(body["data"]["items"].is_array());
-    assert!(body["data"]["items"].as_array().unwrap().len() >= 3);
+    assert!(body["data"].is_array());
+    assert!(body["data"].as_array().unwrap().len() >= 3);
 }
 
 #[tokio::test]
@@ -268,8 +268,8 @@ async fn test_get_doctor_prescriptions() {
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["success"], true);
-    assert!(body["data"]["items"].is_array());
-    assert_eq!(body["data"]["items"].as_array().unwrap().len(), 3);
+    assert!(body["data"].is_array());
+    assert_eq!(body["data"].as_array().unwrap().len(), 3);
 }
 
 #[tokio::test]
@@ -277,14 +277,16 @@ async fn test_get_patient_prescriptions() {
     let mut app = TestApp::new().await;
 
     // Create doctor and patient
-    let (doctor_user_id, _, _) = create_test_user(&app.pool, "doctor").await;
+    let (doctor_user_id, doctor_account, doctor_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
     let (patient_user_id, patient_account, patient_password) =
         create_test_user(&app.pool, "patient").await;
 
+    let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
-    // Create prescriptions for the patient
+    // Create prescriptions for the patient (using doctor token)
     for i in 0..2 {
         let prescription_dto = CreatePrescriptionDto {
             doctor_id,
@@ -301,9 +303,10 @@ async fn test_get_patient_prescriptions() {
             instructions: "".to_string(),
         };
 
-        let _ = app
-            .post_with_auth("/api/v1/prescriptions", prescription_dto, &patient_token)
+        let (create_status, _) = app
+            .post_with_auth("/api/v1/prescriptions", prescription_dto, &doctor_token)
             .await;
+        assert_eq!(create_status, StatusCode::OK);
     }
 
     // Get patient's prescriptions
@@ -319,8 +322,8 @@ async fn test_get_patient_prescriptions() {
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["success"], true);
-    assert!(body["data"]["items"].is_array());
-    assert_eq!(body["data"]["items"].as_array().unwrap().len(), 2);
+    assert!(body["data"].is_array());
+    assert_eq!(body["data"].as_array().unwrap().len(), 2);
 }
 
 #[tokio::test]
@@ -361,7 +364,7 @@ async fn test_prescription_authorization() {
 
     let prescription_id = create_body["data"]["id"].as_str().unwrap();
 
-    // Doctor 2 tries to access doctor 1's prescription (should succeed - doctors can view all prescriptions)
+    // Doctor 2 tries to access doctor 1's prescription (should fail - only the creating doctor can view)
     let (status, body) = app
         .get_with_auth(
             &format!("/api/v1/prescriptions/{}", prescription_id),
@@ -369,8 +372,8 @@ async fn test_prescription_authorization() {
         )
         .await;
 
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(body["success"], true);
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(body["success"], false);
 }
 
 #[tokio::test]

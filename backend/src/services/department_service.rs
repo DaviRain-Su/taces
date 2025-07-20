@@ -129,8 +129,9 @@ pub async fn update_department(
         bindings.push(contact_phone.clone());
     }
 
-    if dto.description.is_some() {
+    if let Some(description) = &dto.description {
         update_fields.push("description = ?");
+        bindings.push(description.clone());
     }
 
     if let Some(status) = &dto.status {
@@ -157,10 +158,6 @@ pub async fn update_department(
 
     for binding in bindings {
         query_builder = query_builder.bind(binding);
-    }
-
-    if dto.description.is_some() {
-        query_builder = query_builder.bind(dto.description);
     }
 
     query_builder = query_builder.bind(Utc::now());

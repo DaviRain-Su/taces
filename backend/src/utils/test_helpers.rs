@@ -18,6 +18,10 @@ pub async fn setup_test_db(pool: &Pool<MySql>) {
         .execute(pool)
         .await
         .unwrap();
+    sqlx::query("DELETE FROM video_consultations")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
     sqlx::query("DELETE FROM appointments")
         .execute(pool)
         .await
@@ -79,6 +83,26 @@ pub async fn setup_test_db(pool: &Pool<MySql>) {
         .await
         .unwrap();
     sqlx::query("DELETE FROM departments")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM balance_transactions")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM refund_records")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM payment_transactions")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM payment_orders")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM user_balances")
         .execute(pool)
         .await
         .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
