@@ -233,8 +233,8 @@ pub struct PaymentResponse {
     pub order_id: Uuid,
     pub order_no: String,
     pub payment_method: PaymentMethod,
-    pub payment_url: Option<String>,      // For redirect payments
-    pub qr_code: Option<String>,          // For QR code payments
+    pub payment_url: Option<String>, // For redirect payments
+    pub qr_code: Option<String>,     // For QR code payments
     pub prepay_data: Option<serde_json::Value>, // For SDK payments
 }
 
@@ -292,7 +292,7 @@ pub struct WechatPrepayRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WechatAmount {
-    pub total: i32,  // Amount in cents
+    pub total: i32, // Amount in cents
     pub currency: String,
 }
 

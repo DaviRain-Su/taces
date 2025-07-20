@@ -5,5 +5,8 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/register", post(auth_controller::register))
         .route("/login", post(auth_controller::login))
-        .route("/logout", post(auth_controller::logout).layer(axum::middleware::from_fn(auth_middleware)))
+        .route(
+            "/logout",
+            post(auth_controller::logout).layer(axum::middleware::from_fn(auth_middleware)),
+        )
 }

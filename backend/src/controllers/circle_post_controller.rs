@@ -1,7 +1,7 @@
-use crate::AppState;
 use crate::middleware::auth::AuthUser;
 use crate::models::{ApiResponse, CreateCirclePostDto, CreateCommentDto, UpdateCirclePostDto};
 use crate::services::circle_post_service::CirclePostService;
+use crate::AppState;
 use axum::{
     extract::{Extension, Path, Query, State},
     http::StatusCode,
@@ -50,7 +50,9 @@ pub async fn create_post(
             } else if e.to_string().contains("must be a member") {
                 (
                     StatusCode::FORBIDDEN,
-                    Json(ApiResponse::error("You must be a member of the circle to post")),
+                    Json(ApiResponse::error(
+                        "You must be a member of the circle to post",
+                    )),
                 )
             } else {
                 (
@@ -194,10 +196,7 @@ pub async fn delete_post(
             }
         })?;
 
-    Ok(Json(ApiResponse::success(
-        "Post deleted successfully",
-        (),
-    )))
+    Ok(Json(ApiResponse::success("Post deleted successfully", ())))
 }
 
 pub async fn get_user_posts(
@@ -209,19 +208,17 @@ pub async fn get_user_posts(
     let page = query.page.unwrap_or(1).max(1);
     let page_size = query.page_size.unwrap_or(10).min(100);
 
-    let (posts, total) = CirclePostService::get_user_posts(
-        &state.pool,
-        user_id,
-        page,
-        page_size,
-    )
-    .await
-    .map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(&format!("Failed to get user posts: {}", e))),
-        )
-    })?;
+    let (posts, total) = CirclePostService::get_user_posts(&state.pool, user_id, page, page_size)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(&format!(
+                    "Failed to get user posts: {}",
+                    e
+                ))),
+            )
+        })?;
 
     Ok(Json(ApiResponse::success(
         "User posts retrieved successfully",
@@ -257,7 +254,10 @@ pub async fn get_circle_posts(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(&format!("Failed to get circle posts: {}", e))),
+            Json(ApiResponse::error(&format!(
+                "Failed to get circle posts: {}",
+                e
+            ))),
         )
     })?;
 
@@ -291,7 +291,11 @@ pub async fn toggle_like(
         })?;
 
     Ok(Json(ApiResponse::success(
-        if liked { "Post liked successfully" } else { "Post unliked successfully" },
+        if liked {
+            "Post liked successfully"
+        } else {
+            "Post unliked successfully"
+        },
         serde_json::json!({ "liked": liked }),
     )))
 }
@@ -322,7 +326,10 @@ pub async fn create_comment(
             } else {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to create comment: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to create comment: {}",
+                        e
+                    ))),
                 )
             }
         })?;
@@ -346,7 +353,10 @@ pub async fn get_comments(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(&format!("Failed to get comments: {}", e))),
+                Json(ApiResponse::error(&format!(
+                    "Failed to get comments: {}",
+                    e
+                ))),
             )
         })?;
 
@@ -386,7 +396,10 @@ pub async fn delete_comment(
             } else {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to delete comment: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to delete comment: {}",
+                        e
+                    ))),
                 )
             }
         })?;

@@ -38,7 +38,10 @@ pub fn create_routes() -> Router<AppState> {
         .nest("/notifications", notification::routes())
         .nest("/statistics", statistics::routes())
         .nest("/payment", payment::routes())
-        .nest("/video-consultations", video_consultation::video_consultation_routes())
+        .nest(
+            "/video-consultations",
+            video_consultation::video_consultation_routes(),
+        )
         .nest("/files", file_upload::file_upload_routes())
         .nest("/", payment::public_routes())
         .nest("/", live_stream::routes())

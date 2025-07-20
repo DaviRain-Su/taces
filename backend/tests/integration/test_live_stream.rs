@@ -24,8 +24,7 @@ async fn test_live_stream_crud() {
 
     // Create users
     let (_admin_id, admin_account, admin_password) = create_test_user(&app.pool, "admin").await;
-    let (doctor_id, doctor_account, doctor_password) =
-        create_test_user(&app.pool, "doctor").await;
+    let (doctor_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
     let (_patient_id, patient_account, patient_password) =
         create_test_user(&app.pool, "patient").await;
     let (_doctor_record_id, _) = create_test_doctor(&app.pool, doctor_id).await;
@@ -232,8 +231,7 @@ async fn test_live_stream_status_transitions() {
     let mut app = TestApp::new().await;
 
     // Create doctor
-    let (doctor_id, doctor_account, doctor_password) =
-        create_test_user(&app.pool, "doctor").await;
+    let (doctor_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
     let (_doctor_record_id, _) = create_test_doctor(&app.pool, doctor_id).await;
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
 
@@ -339,8 +337,7 @@ async fn test_upcoming_live_streams() {
     let mut app = TestApp::new().await;
 
     // Create doctor
-    let (doctor_id, doctor_account, doctor_password) =
-        create_test_user(&app.pool, "doctor").await;
+    let (doctor_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
     let (_doctor_record_id, _) = create_test_doctor(&app.pool, doctor_id).await;
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
 

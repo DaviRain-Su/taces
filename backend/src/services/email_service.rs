@@ -1,7 +1,4 @@
-use crate::{
-    config::database::DbPool,
-    utils::errors::AppError,
-};
+use crate::{config::database::DbPool, utils::errors::AppError};
 use chrono::Utc;
 use handlebars::Handlebars;
 use lettre::{
@@ -28,10 +25,7 @@ impl EmailConfig {
     pub fn from_env() -> Option<Self> {
         Some(Self {
             smtp_host: std::env::var("SMTP_HOST").ok()?,
-            smtp_port: std::env::var("SMTP_PORT")
-                .ok()?
-                .parse()
-                .unwrap_or(587),
+            smtp_port: std::env::var("SMTP_PORT").ok()?.parse().unwrap_or(587),
             smtp_username: std::env::var("SMTP_USERNAME").ok()?,
             smtp_password: std::env::var("SMTP_PASSWORD").ok()?,
             from_email: std::env::var("SMTP_FROM_EMAIL")
@@ -84,26 +78,28 @@ impl EmailService {
         } else {
             AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)
         }
-        .map_err(|e| AppError::InternalServerError(format!("Failed to create SMTP transport: {}", e)))?
+        .map_err(|e| {
+            AppError::InternalServerError(format!("Failed to create SMTP transport: {}", e))
+        })?
         .port(config.smtp_port)
         .credentials(Credentials::new(
             config.smtp_username.clone(),
             config.smtp_password.clone(),
         ))
         .build();
-        
+
         // Get email template
         let template = Self::get_email_template(&message.template_name)?;
-        
+
         // Render email content
         let html_content = Self::render_template(&template.html_template, &message.template_data)?;
         let text_content = Self::render_template(&template.text_template, &message.template_data)?;
-        
+
         // Build email
         let from_mailbox: Mailbox = format!("{} <{}>", config.from_name, config.from_email)
             .parse()
             .map_err(|e| AppError::InternalServerError(format!("Invalid from email: {}", e)))?;
-        
+
         let to_mailbox: Mailbox = if let Some(name) = &message.to_name {
             format!("{} <{}>", name, message.to_email)
         } else {
@@ -111,7 +107,7 @@ impl EmailService {
         }
         .parse()
         .map_err(|e| AppError::InternalServerError(format!("Invalid to email: {}", e)))?;
-        
+
         let email = Message::builder()
             .from(from_mailbox)
             .to(to_mailbox)
@@ -130,7 +126,7 @@ impl EmailService {
                     ),
             )
             .map_err(|e| AppError::InternalServerError(format!("Failed to build email: {}", e)))?;
-        
+
         // Send email
         match smtp_transport.send(email).await {
             Ok(response) => Ok(EmailSendResult {
@@ -145,7 +141,7 @@ impl EmailService {
             }),
         }
     }
-    
+
     /// Send appointment reminder email
     pub async fn send_appointment_reminder(
         config: &EmailConfig,
@@ -160,7 +156,7 @@ impl EmailService {
         template_data.insert("doctor_name".to_string(), doctor_name.to_string());
         template_data.insert("appointment_time".to_string(), appointment_time.to_string());
         template_data.insert("clinic_address".to_string(), clinic_address.to_string());
-        
+
         let message = EmailMessage {
             to_email: to_email.to_string(),
             to_name: Some(patient_name.to_string()),
@@ -168,10 +164,10 @@ impl EmailService {
             template_name: "appointment_reminder".to_string(),
             template_data,
         };
-        
+
         Self::send_email(config, message).await
     }
-    
+
     /// Send prescription ready email
     pub async fn send_prescription_ready(
         config: &EmailConfig,
@@ -182,9 +178,12 @@ impl EmailService {
     ) -> Result<EmailSendResult, AppError> {
         let mut template_data = HashMap::new();
         template_data.insert("patient_name".to_string(), patient_name.to_string());
-        template_data.insert("prescription_code".to_string(), prescription_code.to_string());
+        template_data.insert(
+            "prescription_code".to_string(),
+            prescription_code.to_string(),
+        );
         template_data.insert("doctor_name".to_string(), doctor_name.to_string());
-        
+
         let message = EmailMessage {
             to_email: to_email.to_string(),
             to_name: Some(patient_name.to_string()),
@@ -192,10 +191,10 @@ impl EmailService {
             template_name: "prescription_ready".to_string(),
             template_data,
         };
-        
+
         Self::send_email(config, message).await
     }
-    
+
     /// Send welcome email
     pub async fn send_welcome_email(
         config: &EmailConfig,
@@ -204,7 +203,7 @@ impl EmailService {
     ) -> Result<EmailSendResult, AppError> {
         let mut template_data = HashMap::new();
         template_data.insert("user_name".to_string(), user_name.to_string());
-        
+
         let message = EmailMessage {
             to_email: to_email.to_string(),
             to_name: Some(user_name.to_string()),
@@ -212,10 +211,10 @@ impl EmailService {
             template_name: "welcome".to_string(),
             template_data,
         };
-        
+
         Self::send_email(config, message).await
     }
-    
+
     /// Send password reset email
     pub async fn send_password_reset(
         config: &EmailConfig,
@@ -226,7 +225,7 @@ impl EmailService {
         let mut template_data = HashMap::new();
         template_data.insert("user_name".to_string(), user_name.to_string());
         template_data.insert("reset_link".to_string(), reset_link.to_string());
-        
+
         let message = EmailMessage {
             to_email: to_email.to_string(),
             to_name: Some(user_name.to_string()),
@@ -234,10 +233,10 @@ impl EmailService {
             template_name: "password_reset".to_string(),
             template_data,
         };
-        
+
         Self::send_email(config, message).await
     }
-    
+
     /// Get email template
     fn get_email_template(template_name: &str) -> Result<EmailTemplate, AppError> {
         match template_name {
@@ -273,7 +272,7 @@ impl EmailService {
 香河香草中医诊所
                 "#.to_string(),
             }),
-            
+
             "prescription_ready" => Ok(EmailTemplate {
                 name: template_name.to_string(),
                 subject: "处方已开具".to_string(),
@@ -306,7 +305,7 @@ impl EmailService {
 香河香草中医诊所
                 "#.to_string(),
             }),
-            
+
             "welcome" => Ok(EmailTemplate {
                 name: template_name.to_string(),
                 subject: "欢迎加入".to_string(),
@@ -346,7 +345,7 @@ impl EmailService {
 香河香草中医诊所
                 "#.to_string(),
             }),
-            
+
             "password_reset" => Ok(EmailTemplate {
                 name: template_name.to_string(),
                 subject: "密码重置".to_string(),
@@ -381,24 +380,24 @@ impl EmailService {
 香河香草中医诊所
                 "#.to_string(),
             }),
-            
             _ => Err(AppError::NotFound(format!("Email template '{}' not found", template_name))),
         }
     }
-    
+
     /// Render template with data
-    fn render_template(
-        template: &str,
-        data: &HashMap<String, String>,
-    ) -> Result<String, AppError> {
+    fn render_template(template: &str, data: &HashMap<String, String>) -> Result<String, AppError> {
         let mut handlebars = Handlebars::new();
-        handlebars.register_template_string("template", template)
-            .map_err(|e| AppError::InternalServerError(format!("Failed to register template: {}", e)))?;
-        
-        handlebars.render("template", data)
+        handlebars
+            .register_template_string("template", template)
+            .map_err(|e| {
+                AppError::InternalServerError(format!("Failed to register template: {}", e))
+            })?;
+
+        handlebars
+            .render("template", data)
             .map_err(|e| AppError::InternalServerError(format!("Failed to render template: {}", e)))
     }
-    
+
     /// Store email record in database
     pub async fn store_email_record(
         db: &DbPool,
@@ -409,12 +408,12 @@ impl EmailService {
     ) -> Result<(), AppError> {
         let query = r#"
             INSERT INTO email_records (
-                id, to_email, subject, template_name, 
+                id, to_email, subject, template_name,
                 status, message_id, error_message, sent_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         "#;
-        
+
         sqlx::query(query)
             .bind(Uuid::new_v4().to_string())
             .bind(to_email)
@@ -426,8 +425,10 @@ impl EmailService {
             .bind(Utc::now())
             .execute(db)
             .await
-            .map_err(|e| AppError::InternalServerError(format!("Failed to store email record: {}", e)))?;
-        
+            .map_err(|e| {
+                AppError::InternalServerError(format!("Failed to store email record: {}", e))
+            })?;
+
         Ok(())
     }
 }

@@ -1,7 +1,4 @@
-use crate::{
-    config::database::DbPool,
-    models::live_stream::*,
-};
+use crate::{config::database::DbPool, models::live_stream::*};
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use uuid::Uuid;

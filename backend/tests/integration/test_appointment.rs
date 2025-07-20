@@ -256,7 +256,10 @@ async fn test_get_doctor_appointments() {
     // Get doctor's appointments
     let (status, body) = app
         .get_with_auth(
-            &format!("/api/v1/appointments/doctor/{}?page=1&page_size=10", doctor_id),
+            &format!(
+                "/api/v1/appointments/doctor/{}?page=1&page_size=10",
+                doctor_id
+            ),
             &doctor_token,
         )
         .await;
@@ -299,7 +302,10 @@ async fn test_get_patient_appointments() {
     // Get patient's appointments
     let (status, body) = app
         .get_with_auth(
-            &format!("/api/v1/appointments/patient/{}?page=1&page_size=10", patient_user_id),
+            &format!(
+                "/api/v1/appointments/patient/{}?page=1&page_size=10",
+                patient_user_id
+            ),
             &patient_token,
         )
         .await;
@@ -436,7 +442,11 @@ async fn test_appointment_conflict() {
     };
 
     let (status, body) = app
-        .post_with_auth("/api/v1/appointments", conflicting_appointment, &patient_token)
+        .post_with_auth(
+            "/api/v1/appointments",
+            conflicting_appointment,
+            &patient_token,
+        )
         .await;
 
     assert_eq!(status, StatusCode::BAD_REQUEST);

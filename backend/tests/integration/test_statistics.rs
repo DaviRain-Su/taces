@@ -22,7 +22,7 @@ async fn setup_test_data(app: &mut TestApp) {
     // Create some test data for statistics
     let (doctor_user_id, _, _) = create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
-    
+
     let (patient_user_id, _, _) = create_test_user(&app.pool, "patient").await;
 
     // Create appointments
@@ -86,7 +86,7 @@ async fn test_dashboard_stats() {
     // Non-admin cannot access
     let (_, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
-    
+
     let (status, _) = app
         .get_with_auth("/api/v1/statistics/dashboard", &patient_token)
         .await;
@@ -98,7 +98,7 @@ async fn test_doctor_statistics() {
     let mut app = TestApp::new().await;
 
     // Create doctor
-    let (doctor_user_id, doctor_account, doctor_password) = 
+    let (doctor_user_id, doctor_account, doctor_password) =
         create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
@@ -124,7 +124,10 @@ async fn test_doctor_statistics() {
 
     // Doctor can access their own stats
     let (status, body) = app
-        .get_with_auth(&format!("/api/v1/statistics/doctor/{}", doctor_id), &doctor_token)
+        .get_with_auth(
+            &format!("/api/v1/statistics/doctor/{}", doctor_id),
+            &doctor_token,
+        )
         .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["data"]["total_appointments"], 3);
@@ -132,9 +135,12 @@ async fn test_doctor_statistics() {
     // Doctor cannot access other doctor's stats
     let (other_doctor_user_id, _, _) = create_test_user(&app.pool, "doctor").await;
     let (other_doctor_id, _) = create_test_doctor(&app.pool, other_doctor_user_id).await;
-    
+
     let (status, _) = app
-        .get_with_auth(&format!("/api/v1/statistics/doctor/{}", other_doctor_id), &doctor_token)
+        .get_with_auth(
+            &format!("/api/v1/statistics/doctor/{}", other_doctor_id),
+            &doctor_token,
+        )
         .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 }
@@ -144,7 +150,7 @@ async fn test_patient_statistics() {
     let mut app = TestApp::new().await;
 
     // Create patient
-    let (patient_user_id, patient_account, patient_password) = 
+    let (patient_user_id, patient_account, patient_password) =
         create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
@@ -181,7 +187,7 @@ async fn test_patient_statistics() {
     // Non-patient cannot access
     let (_, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
-    
+
     let (status, _) = app
         .get_with_auth("/api/v1/statistics/patient", &doctor_token)
         .await;
@@ -200,12 +206,14 @@ async fn test_appointment_trends() {
     // Get appointment trends
     let end_date = Local::now().naive_local().date();
     let start_date = end_date - Duration::days(7);
-    
+
     let (status, body) = app
         .get_with_auth(
-            &format!("/api/v1/statistics/appointment-trends?start_date={}&end_date={}", 
-                     start_date, end_date),
-            &admin_token
+            &format!(
+                "/api/v1/statistics/appointment-trends?start_date={}&end_date={}",
+                start_date, end_date
+            ),
+            &admin_token,
         )
         .await;
     assert_eq!(status, StatusCode::OK);
@@ -240,7 +248,7 @@ async fn test_admin_only_statistics() {
     // Create admin and patient
     let (_, admin_account, admin_password) = create_test_user(&app.pool, "admin").await;
     let admin_token = get_auth_token(&mut app, &admin_account, &admin_password).await;
-    
+
     let (_, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
@@ -278,7 +286,7 @@ async fn test_export_data() {
     let (status, body) = app
         .get_with_auth(
             "/api/v1/statistics/export?export_type=Appointments&format=CSV",
-            &admin_token
+            &admin_token,
         )
         .await;
     assert_eq!(status, StatusCode::OK);
@@ -288,11 +296,11 @@ async fn test_export_data() {
     // Non-admin cannot export
     let (_, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
-    
+
     let (status, _) = app
         .get_with_auth(
             "/api/v1/statistics/export?export_type=Appointments&format=CSV",
-            &patient_token
+            &patient_token,
         )
         .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
@@ -310,7 +318,7 @@ async fn test_user_growth_statistics() {
     for i in 0..5 {
         let created_at = Local::now() - Duration::days(i);
         let role = if i % 2 == 0 { "patient" } else { "doctor" };
-        
+
         sqlx::query(
             r#"
             INSERT INTO users (id, account, name, password, gender, phone, email, role, status, created_at)
@@ -331,12 +339,14 @@ async fn test_user_growth_statistics() {
     // Get user growth stats
     let end_date = Local::now().naive_local().date();
     let start_date = end_date - Duration::days(7);
-    
+
     let (status, body) = app
         .get_with_auth(
-            &format!("/api/v1/statistics/user-growth?start_date={}&end_date={}", 
-                     start_date, end_date),
-            &admin_token
+            &format!(
+                "/api/v1/statistics/user-growth?start_date={}&end_date={}",
+                start_date, end_date
+            ),
+            &admin_token,
         )
         .await;
     assert_eq!(status, StatusCode::OK);

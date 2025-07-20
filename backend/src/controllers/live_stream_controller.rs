@@ -182,8 +182,7 @@ pub async fn end_live_stream(
 ) -> Result<Json<ApiResponse<LiveStream>>, (StatusCode, Json<ApiResponse<()>>)> {
     let is_admin = auth_user.role == "admin";
 
-    match live_stream_service::end_live_stream(&state.pool, id, auth_user.user_id, is_admin).await
-    {
+    match live_stream_service::end_live_stream(&state.pool, id, auth_user.user_id, is_admin).await {
         Ok(stream) => Ok(Json(ApiResponse::success(
             "Live stream ended successfully",
             stream,

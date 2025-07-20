@@ -8,9 +8,9 @@ pub mod utils;
 
 pub use config::{database, redis, storage, Config};
 
-use std::sync::Arc;
-use services::websocket_service::WebSocketManager;
 use aws_sdk_s3::Client as S3Client;
+use services::websocket_service::WebSocketManager;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {

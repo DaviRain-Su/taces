@@ -2,16 +2,17 @@ use crate::config::database::DbPool;
 use crate::models::file_upload::*;
 use crate::utils::errors::AppError;
 use chrono::{Duration, Utc};
-use sqlx::{MySql, Transaction, Row};
-use uuid::Uuid;
+use sqlx::{MySql, Row, Transaction};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 pub struct FileUploadService;
 
 impl FileUploadService {
     fn parse_system_config_from_row(row: &sqlx::mysql::MySqlRow) -> Result<SystemConfig, AppError> {
         Ok(SystemConfig {
-            id: Uuid::parse_str(row.get("id")).map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
             category: row.get("category"),
             config_key: row.get("config_key"),
             config_value: row.get("config_value"),
@@ -22,11 +23,13 @@ impl FileUploadService {
             updated_at: row.get("updated_at"),
         })
     }
-    
+
     fn parse_file_upload_from_row(row: &sqlx::mysql::MySqlRow) -> Result<FileUpload, AppError> {
         Ok(FileUpload {
-            id: Uuid::parse_str(row.get("id")).map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
-            user_id: Uuid::parse_str(row.get("user_id")).map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
+            id: Uuid::parse_str(row.get("id"))
+                .map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
+            user_id: Uuid::parse_str(row.get("user_id"))
+                .map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
             file_type: row.get("file_type"),
             file_name: row.get("file_name"),
             file_path: row.get("file_path"),
@@ -34,7 +37,8 @@ impl FileUploadService {
             file_size: row.get("file_size"),
             mime_type: row.get("mime_type"),
             related_type: row.get("related_type"),
-            related_id: row.get::<Option<String>, _>("related_id")
+            related_id: row
+                .get::<Option<String>, _>("related_id")
                 .map(|s| Uuid::parse_str(&s).ok())
                 .flatten(),
             width: row.get("width"),
@@ -65,7 +69,7 @@ impl FileUploadService {
         let expires_at = now + Duration::minutes(30);
 
         // Generate upload URL and path
-        let (file_path, upload_url, upload_method, upload_headers) = 
+        let (file_path, upload_url, upload_method, upload_headers) =
             Self::generate_upload_url(&upload_id, &dto).await?;
 
         let query = r#"
@@ -106,7 +110,9 @@ impl FileUploadService {
         user_id: Uuid,
         dto: CompleteUploadDto,
     ) -> Result<FileUpload, AppError> {
-        let mut tx = db.begin().await
+        let mut tx = db
+            .begin()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         // Verify ownership
@@ -141,16 +147,14 @@ impl FileUploadService {
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Self::get_file(db, upload_id).await
     }
 
-    pub async fn get_file(
-        db: &DbPool,
-        file_id: Uuid,
-    ) -> Result<FileUpload, AppError> {
+    pub async fn get_file(db: &DbPool, file_id: Uuid) -> Result<FileUpload, AppError> {
         let query = r#"
             SELECT * FROM file_uploads WHERE id = ?
         "#;
@@ -163,7 +167,7 @@ impl FileUploadService {
                 sqlx::Error::RowNotFound => AppError::NotFound("文件不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
             })?;
-        
+
         Self::parse_file_upload_from_row(&row)
     }
 
@@ -183,7 +187,7 @@ impl FileUploadService {
                 sqlx::Error::RowNotFound => AppError::NotFound("文件不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
             })?;
-        
+
         Self::parse_file_upload_from_row(&row)
     }
 
@@ -195,9 +199,7 @@ impl FileUploadService {
         let page_size = query_params.page_size.unwrap_or(20).min(100);
         let offset = (page - 1) * page_size;
 
-        let mut query = String::from(
-            "SELECT * FROM file_uploads WHERE deleted_at IS NULL"
-        );
+        let mut query = String::from("SELECT * FROM file_uploads WHERE deleted_at IS NULL");
         let mut count_query = String::from(
             "SELECT COUNT(*) as count, SUM(file_size) as total_size FROM file_uploads WHERE deleted_at IS NULL"
         );
@@ -234,7 +236,7 @@ impl FileUploadService {
 
         // Get total count and size
         let mut count_builder = sqlx::query(&count_query);
-        
+
         if let Some(user_id) = &query_params.user_id {
             count_builder = count_builder.bind(user_id.to_string());
         }
@@ -266,7 +268,7 @@ impl FileUploadService {
         query.push_str(" ORDER BY uploaded_at DESC LIMIT ? OFFSET ?");
 
         let mut query_builder = sqlx::query(&query);
-        
+
         if let Some(user_id) = &query_params.user_id {
             query_builder = query_builder.bind(user_id.to_string());
         }
@@ -292,7 +294,7 @@ impl FileUploadService {
             .fetch_all(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
-        
+
         let mut files = Vec::new();
         for row in rows {
             files.push(Self::parse_file_upload_from_row(&row)?);
@@ -400,76 +402,91 @@ impl FileUploadService {
     }
 
     // System Configuration
-    pub async fn get_upload_config(
-        db: &DbPool,
-    ) -> Result<UploadConfig, AppError> {
+    pub async fn get_upload_config(db: &DbPool) -> Result<UploadConfig, AppError> {
         let configs = Self::get_system_configs(db, "file_upload").await?;
 
         Ok(UploadConfig {
-            max_file_size: configs.get("max_file_size")
+            max_file_size: configs
+                .get("max_file_size")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(104857600), // 100MB default
-            allowed_mime_types: configs.get("allowed_mime_types")
+            allowed_mime_types: configs
+                .get("allowed_mime_types")
                 .and_then(|v| serde_json::from_str(v).ok())
                 .unwrap_or_else(|| vec![]),
-            storage_backend: configs.get("storage_backend")
+            storage_backend: configs
+                .get("storage_backend")
                 .unwrap_or(&"oss".to_string())
                 .clone(),
             cdn_base_url: configs.get("cdn_base_url").cloned(),
-            enable_compression: configs.get("enable_compression")
+            enable_compression: configs
+                .get("enable_compression")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(true),
-            enable_thumbnail: configs.get("enable_thumbnail")
+            enable_thumbnail: configs
+                .get("enable_thumbnail")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(true),
         })
     }
 
-    pub async fn get_image_config(
-        db: &DbPool,
-    ) -> Result<ImageConfig, AppError> {
+    pub async fn get_image_config(db: &DbPool) -> Result<ImageConfig, AppError> {
         let configs = Self::get_system_configs(db, "file_upload").await?;
 
         Ok(ImageConfig {
-            max_width: configs.get("max_image_width")
+            max_width: configs
+                .get("max_image_width")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(4096),
-            max_height: configs.get("max_image_height")
+            max_height: configs
+                .get("max_image_height")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(4096),
-            thumbnail_width: configs.get("thumbnail_width")
+            thumbnail_width: configs
+                .get("thumbnail_width")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(200),
-            thumbnail_height: configs.get("thumbnail_height")
+            thumbnail_height: configs
+                .get("thumbnail_height")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(200),
-            compression_quality: configs.get("image_compression_quality")
+            compression_quality: configs
+                .get("image_compression_quality")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(85),
-            allowed_formats: configs.get("allowed_image_types")
+            allowed_formats: configs
+                .get("allowed_image_types")
                 .and_then(|v| serde_json::from_str(v).ok())
-                .unwrap_or_else(|| vec!["jpg".to_string(), "jpeg".to_string(), 
-                    "png".to_string(), "gif".to_string(), "webp".to_string()]),
+                .unwrap_or_else(|| {
+                    vec![
+                        "jpg".to_string(),
+                        "jpeg".to_string(),
+                        "png".to_string(),
+                        "gif".to_string(),
+                        "webp".to_string(),
+                    ]
+                }),
         })
     }
 
-    pub async fn get_video_config(
-        db: &DbPool,
-    ) -> Result<VideoConfig, AppError> {
+    pub async fn get_video_config(db: &DbPool) -> Result<VideoConfig, AppError> {
         let configs = Self::get_system_configs(db, "file_upload").await?;
 
         Ok(VideoConfig {
-            max_duration: configs.get("max_video_duration")
+            max_duration: configs
+                .get("max_video_duration")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(3600), // 1 hour default
-            max_file_size: configs.get("max_video_size")
+            max_file_size: configs
+                .get("max_video_size")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(104857600), // 100MB default
-            allowed_formats: configs.get("allowed_video_types")
+            allowed_formats: configs
+                .get("allowed_video_types")
                 .and_then(|v| serde_json::from_str(v).ok())
-                .unwrap_or_else(|| vec!["mp4".to_string(), "webm".to_string(), 
-                    "mov".to_string()]),
-            enable_transcoding: configs.get("enable_video_transcoding")
+                .unwrap_or_else(|| vec!["mp4".to_string(), "webm".to_string(), "mov".to_string()]),
+            enable_transcoding: configs
+                .get("enable_video_transcoding")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(false),
         })
@@ -508,11 +525,11 @@ impl FileUploadService {
     async fn validate_upload(dto: &CreateFileUploadDto) -> Result<(), AppError> {
         // Validate file size based on type
         let max_size = match &dto.file_type {
-            FileType::Image => 10 * 1024 * 1024,      // 10MB
-            FileType::Video => 100 * 1024 * 1024,     // 100MB
-            FileType::Document => 20 * 1024 * 1024,   // 20MB
-            FileType::Audio => 50 * 1024 * 1024,      // 50MB
-            FileType::Other => 10 * 1024 * 1024,      // 10MB
+            FileType::Image => 10 * 1024 * 1024,    // 10MB
+            FileType::Video => 100 * 1024 * 1024,   // 100MB
+            FileType::Document => 20 * 1024 * 1024, // 20MB
+            FileType::Audio => 50 * 1024 * 1024,    // 50MB
+            FileType::Other => 10 * 1024 * 1024,    // 10MB
         };
 
         if dto.file_size > max_size {
@@ -527,8 +544,11 @@ impl FileUploadService {
             let allowed_types = match &dto.file_type {
                 FileType::Image => vec!["image/jpeg", "image/png", "image/gif", "image/webp"],
                 FileType::Video => vec!["video/mp4", "video/webm", "video/quicktime"],
-                FileType::Document => vec!["application/pdf", "application/msword", 
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+                FileType::Document => vec![
+                    "application/pdf",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ],
                 FileType::Audio => vec!["audio/mpeg", "audio/wav", "audio/ogg"],
                 FileType::Other => vec![], // Allow any for other
             };
@@ -615,7 +635,7 @@ impl FileUploadService {
                 sqlx::Error::RowNotFound => AppError::NotFound("配置项不存在".to_string()),
                 _ => AppError::DatabaseError(e.to_string()),
             })?;
-        
+
         Self::parse_system_config_from_row(&row)
     }
 
@@ -652,8 +672,9 @@ impl FileUploadService {
         let mut deleted_count = 0;
         for file in files {
             let file_id_str: String = file.get("id");
-            let file_id = Uuid::parse_str(&file_id_str).map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?;
-            
+            let file_id = Uuid::parse_str(&file_id_str)
+                .map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?;
+
             // TODO: Delete from OSS/S3
             // let file_path: String = file.get("file_path")?;
             // oss_client.delete_object(&file_path).await?;

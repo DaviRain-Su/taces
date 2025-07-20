@@ -27,6 +27,6 @@ pub mod video_consultation_service;
 pub mod websocket_service;
 // pub mod wechat_pay_service;
 // pub mod alipay_service;
-pub mod sms_service;
 pub mod email_service;
 pub mod push_notification_service;
+pub mod sms_service;

@@ -1,9 +1,9 @@
-use crate::AppState;
 use crate::middleware::auth::AuthUser;
 use crate::models::video_consultation::*;
 use crate::models::ApiResponse;
 use crate::services::video_consultation_service::VideoConsultationService;
 use crate::utils::errors::AppError;
+use crate::AppState;
 use axum::{
     extract::{Extension, Path, Query, State},
     http::StatusCode,
@@ -36,12 +36,14 @@ pub async fn get_consultation(
     Extension(auth_user): Extension<AuthUser>,
     Path(consultation_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let consultation = VideoConsultationService::get_consultation(&state.pool, consultation_id).await?;
+    let consultation =
+        VideoConsultationService::get_consultation(&state.pool, consultation_id).await?;
 
     // Check authorization
-    if auth_user.role != "admin" 
-        && auth_user.user_id != consultation.doctor_id 
-        && auth_user.user_id != consultation.patient_id {
+    if auth_user.role != "admin"
+        && auth_user.user_id != consultation.doctor_id
+        && auth_user.user_id != consultation.patient_id
+    {
         return Err(AppError::Forbidden);
     }
 
@@ -62,7 +64,8 @@ pub async fn list_consultations(
         query_params.patient_id = Some(auth_user.user_id);
     }
 
-    let consultations = VideoConsultationService::list_consultations(&state.pool, query_params).await?;
+    let consultations =
+        VideoConsultationService::list_consultations(&state.pool, query_params).await?;
 
     Ok((
         StatusCode::OK,
@@ -75,7 +78,8 @@ pub async fn join_room(
     Extension(auth_user): Extension<AuthUser>,
     Path(room_id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let response = VideoConsultationService::join_room(&state.pool, &room_id, auth_user.user_id).await?;
+    let response =
+        VideoConsultationService::join_room(&state.pool, &room_id, auth_user.user_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -93,7 +97,8 @@ pub async fn start_consultation(
         return Err(AppError::Forbidden);
     }
 
-    VideoConsultationService::start_consultation(&state.pool, consultation_id, auth_user.user_id).await?;
+    VideoConsultationService::start_consultation(&state.pool, consultation_id, auth_user.user_id)
+        .await?;
 
     Ok((
         StatusCode::OK,
@@ -112,7 +117,13 @@ pub async fn end_consultation(
         return Err(AppError::Forbidden);
     }
 
-    VideoConsultationService::end_consultation(&state.pool, consultation_id, auth_user.user_id, dto).await?;
+    VideoConsultationService::end_consultation(
+        &state.pool,
+        consultation_id,
+        auth_user.user_id,
+        dto,
+    )
+    .await?;
 
     Ok((
         StatusCode::OK,
@@ -131,7 +142,13 @@ pub async fn update_consultation(
         return Err(AppError::Forbidden);
     }
 
-    VideoConsultationService::update_consultation(&state.pool, consultation_id, auth_user.user_id, dto).await?;
+    VideoConsultationService::update_consultation(
+        &state.pool,
+        consultation_id,
+        auth_user.user_id,
+        dto,
+    )
+    .await?;
 
     Ok((
         StatusCode::OK,
@@ -150,7 +167,13 @@ pub async fn rate_consultation(
         return Err(AppError::Forbidden);
     }
 
-    VideoConsultationService::rate_consultation(&state.pool, consultation_id, auth_user.user_id, dto).await?;
+    VideoConsultationService::rate_consultation(
+        &state.pool,
+        consultation_id,
+        auth_user.user_id,
+        dto,
+    )
+    .await?;
 
     Ok((
         StatusCode::OK,
@@ -177,7 +200,8 @@ pub async fn receive_signals(
     Extension(auth_user): Extension<AuthUser>,
     Path(room_id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let signals = VideoConsultationService::receive_signals(&state.pool, &room_id, auth_user.user_id).await?;
+    let signals =
+        VideoConsultationService::receive_signals(&state.pool, &room_id, auth_user.user_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -219,7 +243,14 @@ pub async fn complete_recording(
     let file_size = dto["file_size"].as_i64().unwrap_or(0);
     let duration = dto["duration"].as_i64().unwrap_or(0) as i32;
 
-    VideoConsultationService::complete_recording(&state.pool, recording_id, recording_url, file_size, duration).await?;
+    VideoConsultationService::complete_recording(
+        &state.pool,
+        recording_id,
+        recording_url,
+        file_size,
+        duration,
+    )
+    .await?;
 
     Ok((
         StatusCode::OK,
@@ -235,11 +266,13 @@ pub async fn get_recording(
     let recording = VideoConsultationService::get_recording(&state.pool, recording_id).await?;
 
     // Get consultation to check authorization
-    let consultation = VideoConsultationService::get_consultation(&state.pool, recording.consultation_id).await?;
-    
-    if auth_user.role != "admin" 
-        && auth_user.user_id != consultation.doctor_id 
-        && auth_user.user_id != consultation.patient_id {
+    let consultation =
+        VideoConsultationService::get_consultation(&state.pool, recording.consultation_id).await?;
+
+    if auth_user.role != "admin"
+        && auth_user.user_id != consultation.doctor_id
+        && auth_user.user_id != consultation.patient_id
+    {
         return Err(AppError::Forbidden);
     }
 
@@ -255,15 +288,18 @@ pub async fn get_consultation_recordings(
     Path(consultation_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     // Check authorization
-    let consultation = VideoConsultationService::get_consultation(&state.pool, consultation_id).await?;
-    
-    if auth_user.role != "admin" 
-        && auth_user.user_id != consultation.doctor_id 
-        && auth_user.user_id != consultation.patient_id {
+    let consultation =
+        VideoConsultationService::get_consultation(&state.pool, consultation_id).await?;
+
+    if auth_user.role != "admin"
+        && auth_user.user_id != consultation.doctor_id
+        && auth_user.user_id != consultation.patient_id
+    {
         return Err(AppError::Forbidden);
     }
 
-    let recordings = VideoConsultationService::get_consultation_recordings(&state.pool, consultation_id).await?;
+    let recordings =
+        VideoConsultationService::get_consultation_recordings(&state.pool, consultation_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -282,7 +318,8 @@ pub async fn create_template(
         return Err(AppError::Forbidden);
     }
 
-    let template = VideoConsultationService::create_template(&state.pool, auth_user.user_id, dto).await?;
+    let template =
+        VideoConsultationService::create_template(&state.pool, auth_user.user_id, dto).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -317,7 +354,8 @@ pub async fn list_doctor_templates(
         return Err(AppError::Forbidden);
     }
 
-    let templates = VideoConsultationService::list_doctor_templates(&state.pool, auth_user.user_id).await?;
+    let templates =
+        VideoConsultationService::list_doctor_templates(&state.pool, auth_user.user_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -335,7 +373,8 @@ pub async fn use_template(
         return Err(AppError::Forbidden);
     }
 
-    let template = VideoConsultationService::use_template(&state.pool, template_id, auth_user.user_id).await?;
+    let template =
+        VideoConsultationService::use_template(&state.pool, template_id, auth_user.user_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -352,20 +391,30 @@ pub async fn get_consultation_statistics(
     let doctor_id = if auth_user.role == "doctor" {
         Some(auth_user.user_id)
     } else if auth_user.role == "admin" {
-        params["doctor_id"].as_str().and_then(|s| Uuid::parse_str(s).ok())
+        params["doctor_id"]
+            .as_str()
+            .and_then(|s| Uuid::parse_str(s).ok())
     } else {
         return Err(AppError::Forbidden);
     };
 
-    let start_date = params["start_date"].as_str()
+    let start_date = params["start_date"]
+        .as_str()
         .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&chrono::Utc));
 
-    let end_date = params["end_date"].as_str()
+    let end_date = params["end_date"]
+        .as_str()
         .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&chrono::Utc));
 
-    let stats = VideoConsultationService::get_consultation_statistics(&state.pool, doctor_id, start_date, end_date).await?;
+    let stats = VideoConsultationService::get_consultation_statistics(
+        &state.pool,
+        doctor_id,
+        start_date,
+        end_date,
+    )
+    .await?;
 
     Ok((
         StatusCode::OK,

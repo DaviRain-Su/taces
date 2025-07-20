@@ -1,4 +1,6 @@
-use backend::{config::database, routes, AppState, Config, services::websocket_service::WebSocketManager};
+use backend::{
+    config::database, routes, services::websocket_service::WebSocketManager, AppState, Config,
+};
 
 use axum::Router;
 use std::sync::Arc;
@@ -10,8 +12,8 @@ async fn main() {
     let pool = database::create_pool().await.unwrap();
     let config = Config::from_env().unwrap();
 
-    let state = AppState { 
-        config, 
+    let state = AppState {
+        config,
         pool,
         redis: None,
         s3_client: None,

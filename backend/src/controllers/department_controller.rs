@@ -56,7 +56,9 @@ pub async fn get_department(
     State(app_state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ApiResponse<Department>>, (StatusCode, Json<ApiResponse<()>>)> {
-    match department_service::get_department_by_id_cached(&app_state.pool, &app_state.redis, id).await {
+    match department_service::get_department_by_id_cached(&app_state.pool, &app_state.redis, id)
+        .await
+    {
         Ok(department) => Ok(Json(ApiResponse::success(
             "Department retrieved successfully",
             department,
@@ -72,7 +74,13 @@ pub async fn get_department_by_code(
     State(app_state): State<AppState>,
     Path(code): Path<String>,
 ) -> Result<Json<ApiResponse<Department>>, (StatusCode, Json<ApiResponse<()>>)> {
-    match department_service::get_department_by_code_cached(&app_state.pool, &app_state.redis, &code).await {
+    match department_service::get_department_by_code_cached(
+        &app_state.pool,
+        &app_state.redis,
+        &code,
+    )
+    .await
+    {
         Ok(department) => Ok(Json(ApiResponse::success(
             "Department retrieved successfully",
             department,
@@ -104,7 +112,8 @@ pub async fn create_department(
         )
     })?;
 
-    match department_service::create_department_cached(&app_state.pool, &app_state.redis, dto).await {
+    match department_service::create_department_cached(&app_state.pool, &app_state.redis, dto).await
+    {
         Ok(department) => Ok(Json(ApiResponse::success(
             "Department created successfully",
             department,
@@ -149,7 +158,9 @@ pub async fn update_department(
         )
     })?;
 
-    match department_service::update_department_cached(&app_state.pool, &app_state.redis, id, dto).await {
+    match department_service::update_department_cached(&app_state.pool, &app_state.redis, id, dto)
+        .await
+    {
         Ok(department) => Ok(Json(ApiResponse::success(
             "Department updated successfully",
             department,
@@ -177,7 +188,8 @@ pub async fn delete_department(
         ));
     }
 
-    match department_service::delete_department_cached(&app_state.pool, &app_state.redis, id).await {
+    match department_service::delete_department_cached(&app_state.pool, &app_state.redis, id).await
+    {
         Ok(_) => Ok(Json(ApiResponse::success(
             "Department deleted successfully",
             (),

@@ -117,18 +117,18 @@ pub async fn get_user_by_email(pool: &DbPool, email: &str) -> Result<User> {
 pub async fn create_user(pool: &DbPool, dto: CreateUserDto) -> Result<User> {
     let user_id = Uuid::new_v4();
     let hashed_password = crate::utils::password::hash_password(&dto.password)?;
-    
+
     let query = r#"
         INSERT INTO users (id, account, name, password, gender, phone, email, birthday, role, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     "#;
-    
+
     let role_str = match dto.role {
         UserRole::Admin => "admin",
         UserRole::Doctor => "doctor",
         UserRole::Patient => "patient",
     };
-    
+
     sqlx::query(query)
         .bind(user_id.to_string())
         .bind(&dto.account)
@@ -143,7 +143,7 @@ pub async fn create_user(pool: &DbPool, dto: CreateUserDto) -> Result<User> {
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to create user: {}", e))?;
-    
+
     get_user_by_id(pool, user_id).await
 }
 

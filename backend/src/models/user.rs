@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use uuid::Uuid;
 use validator::Validate;
-use std::fmt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {

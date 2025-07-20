@@ -1,8 +1,4 @@
-use crate::{
-    services::session_service::SessionService,
-    utils::jwt::decode_token,
-    AppState,
-};
+use crate::{services::session_service::SessionService, utils::jwt::decode_token, AppState};
 use axum::{
     extract::{Request, State},
     http::{header, StatusCode},
@@ -49,10 +45,10 @@ pub async fn auth_middleware_cached(
             user_id: session.user_id,
             role: session.role,
         };
-        
+
         // Extend session TTL
         let _ = SessionService::extend_session(&app_state.redis, token).await;
-        
+
         req.extensions_mut().insert(auth_user);
         return Ok(next.run(req).await);
     }
@@ -64,7 +60,7 @@ pub async fn auth_middleware_cached(
                 user_id: claims.sub,
                 role: claims.role,
             };
-            
+
             // Try to create session for valid JWT
             if SessionService::is_session_valid(&app_state.redis, token).await {
                 req.extensions_mut().insert(auth_user);
@@ -92,7 +88,9 @@ type BoxedFuture = std::pin::Pin<
     >,
 >;
 
-pub fn require_role_cached(allowed_roles: Vec<String>) -> impl Fn(Request, Next) -> BoxedFuture + Clone {
+pub fn require_role_cached(
+    allowed_roles: Vec<String>,
+) -> impl Fn(Request, Next) -> BoxedFuture + Clone {
     move |req: Request, next: Next| {
         let allowed_roles = allowed_roles.clone();
         Box::pin(async move {

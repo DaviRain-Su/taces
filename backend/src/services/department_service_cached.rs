@@ -1,7 +1,7 @@
 use crate::{
     config::{database::DbPool, redis::RedisPool},
     models::department::*,
-    services::cache_service::{CacheService, CacheKeys, CacheDurations},
+    services::cache_service::{CacheDurations, CacheKeys, CacheService},
 };
 use anyhow::{anyhow, Result};
 use chrono::Utc;
@@ -21,8 +21,13 @@ pub async fn list_departments_cached(
     }
 
     // Try to get from cache for default listing
-    let cache_key = format!("{}:page{}:size{}", CacheKeys::department_list(), page, per_page);
-    
+    let cache_key = format!(
+        "{}:page{}:size{}",
+        CacheKeys::department_list(),
+        page,
+        per_page
+    );
+
     if let Some(departments) = CacheService::get::<Vec<Department>>(redis, &cache_key).await {
         tracing::debug!("Cache hit for departments list");
         return Ok(departments);
@@ -30,9 +35,10 @@ pub async fn list_departments_cached(
 
     // Cache miss, fetch from database
     let departments = list_departments_uncached(pool, page, per_page, None, None).await?;
-    
+
     // Store in cache
-    if let Err(e) = CacheService::set(redis, &cache_key, &departments, CacheDurations::MEDIUM).await {
+    if let Err(e) = CacheService::set(redis, &cache_key, &departments, CacheDurations::MEDIUM).await
+    {
         tracing::warn!("Failed to cache departments: {}", e);
     }
 
@@ -45,7 +51,7 @@ pub async fn get_department_by_id_cached(
     id: Uuid,
 ) -> Result<Department> {
     let cache_key = format!("department:{}", id);
-    
+
     // Try cache first
     if let Some(department) = CacheService::get::<Department>(redis, &cache_key).await {
         tracing::debug!("Cache hit for department {}", id);
@@ -54,7 +60,7 @@ pub async fn get_department_by_id_cached(
 
     // Cache miss, fetch from database
     let department = get_department_by_id_uncached(pool, id).await?;
-    
+
     // Store in cache
     if let Err(e) = CacheService::set(redis, &cache_key, &department, CacheDurations::LONG).await {
         tracing::warn!("Failed to cache department: {}", e);
@@ -69,7 +75,7 @@ pub async fn get_department_by_code_cached(
     code: &str,
 ) -> Result<Department> {
     let cache_key = format!("department:code:{}", code);
-    
+
     // Try cache first
     if let Some(department) = CacheService::get::<Department>(redis, &cache_key).await {
         tracing::debug!("Cache hit for department code {}", code);
@@ -78,7 +84,7 @@ pub async fn get_department_by_code_cached(
 
     // Cache miss, fetch from database
     let department = get_department_by_code_uncached(pool, code).await?;
-    
+
     // Store in cache
     if let Err(e) = CacheService::set(redis, &cache_key, &department, CacheDurations::LONG).await {
         tracing::warn!("Failed to cache department: {}", e);
@@ -93,9 +99,11 @@ pub async fn create_department_cached(
     input: CreateDepartmentDto,
 ) -> Result<Department> {
     let department = create_department_uncached(pool, input).await?;
-    
+
     // Invalidate department list cache
-    if let Err(e) = CacheService::delete_pattern(redis, &format!("{}:*", CacheKeys::department_list())).await {
+    if let Err(e) =
+        CacheService::delete_pattern(redis, &format!("{}:*", CacheKeys::department_list())).await
+    {
         tracing::warn!("Failed to invalidate department list cache: {}", e);
     }
 
@@ -109,14 +117,16 @@ pub async fn update_department_cached(
     input: UpdateDepartmentDto,
 ) -> Result<Department> {
     let department = update_department_uncached(pool, id, input).await?;
-    
+
     // Invalidate caches
     let cache_key = format!("department:{}", id);
     if let Err(e) = CacheService::delete(redis, &cache_key).await {
         tracing::warn!("Failed to invalidate department cache: {}", e);
     }
-    
-    if let Err(e) = CacheService::delete_pattern(redis, &format!("{}:*", CacheKeys::department_list())).await {
+
+    if let Err(e) =
+        CacheService::delete_pattern(redis, &format!("{}:*", CacheKeys::department_list())).await
+    {
         tracing::warn!("Failed to invalidate department list cache: {}", e);
     }
 
@@ -129,14 +139,16 @@ pub async fn delete_department_cached(
     id: Uuid,
 ) -> Result<()> {
     delete_department_uncached(pool, id).await?;
-    
+
     // Invalidate caches
     let cache_key = format!("department:{}", id);
     if let Err(e) = CacheService::delete(redis, &cache_key).await {
         tracing::warn!("Failed to invalidate department cache: {}", e);
     }
-    
-    if let Err(e) = CacheService::delete_pattern(redis, &format!("{}:*", CacheKeys::department_list())).await {
+
+    if let Err(e) =
+        CacheService::delete_pattern(redis, &format!("{}:*", CacheKeys::department_list())).await
+    {
         tracing::warn!("Failed to invalidate department list cache: {}", e);
     }
 
@@ -296,7 +308,7 @@ async fn delete_department_uncached(pool: &DbPool, id: Uuid) -> Result<()> {
 
 fn parse_department_from_row(row: &sqlx::mysql::MySqlRow) -> Result<Department> {
     use sqlx::Row;
-    
+
     Ok(Department {
         id: Uuid::parse_str(row.get("id")).map_err(|e| anyhow!("Invalid UUID: {}", e))?,
         name: row.get("name"),

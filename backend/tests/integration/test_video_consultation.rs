@@ -11,7 +11,7 @@ async fn get_auth_token(app: &mut TestApp, account: &str, password: &str) -> Str
         "account": account,
         "password": password
     });
-    
+
     let (_, body) = app.post("/api/v1/auth/login", login_data).await;
     body["data"]["token"].as_str().unwrap().to_string()
 }
@@ -20,12 +20,14 @@ async fn get_auth_token(app: &mut TestApp, account: &str, password: &str) -> Str
 //#[serial]
 async fn test_create_video_consultation() {
     let mut app = TestApp::new().await;
-    
+
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) = create_test_user(&app.pool, "patient").await;
-    let (doctor_user_id, doctor_email, doctor_password) = create_test_user(&app.pool, "doctor").await;
+    let (patient_id, patient_email, patient_password) =
+        create_test_user(&app.pool, "patient").await;
+    let (doctor_user_id, doctor_email, doctor_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
-    
+
     // Create appointment
     let appointment_id = Uuid::new_v4();
     sqlx::query(
@@ -43,7 +45,7 @@ async fn test_create_video_consultation() {
     .execute(&app.pool)
     .await
     .unwrap();
-    
+
     // Update appointment to confirmed status
     let update_query = r#"
         UPDATE appointments SET status = 'confirmed' WHERE id = ?
@@ -53,10 +55,10 @@ async fn test_create_video_consultation() {
         .execute(&app.pool)
         .await
         .unwrap();
-    
+
     // Login as doctor
     let doctor_token = get_auth_token(&mut app, &doctor_email, &doctor_password).await;
-    
+
     // Create video consultation
     let create_dto = json!({
         "appointment_id": appointment_id,
@@ -65,9 +67,11 @@ async fn test_create_video_consultation() {
         "scheduled_start_time": (Utc::now() + Duration::hours(1)).to_rfc3339(),
         "chief_complaint": "头痛、失眠"
     });
-    
-    let (status, body) = app.post_with_auth("/api/v1/video-consultations", create_dto, &doctor_token).await;
-    
+
+    let (status, body) = app
+        .post_with_auth("/api/v1/video-consultations", create_dto, &doctor_token)
+        .await;
+
     assert_eq!(status, StatusCode::CREATED);
     assert!(body["success"].as_bool().unwrap());
     assert_eq!(body["data"]["status"].as_str().unwrap(), "waiting");
@@ -78,17 +82,19 @@ async fn test_create_video_consultation() {
 //#[serial]
 async fn test_get_video_consultation() {
     let mut app = TestApp::new().await;
-    
+
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) = create_test_user(&app.pool, "patient").await;
-    let (doctor_user_id, doctor_email, doctor_password) = create_test_user(&app.pool, "doctor").await;
+    let (patient_id, patient_email, patient_password) =
+        create_test_user(&app.pool, "patient").await;
+    let (doctor_user_id, doctor_email, doctor_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
-    
+
     // Create consultation directly in database
     let consultation_id = uuid::Uuid::new_v4();
     let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
-    
+
     let query = r#"
         INSERT INTO video_consultations (
             id, appointment_id, doctor_id, patient_id, room_id,
@@ -96,7 +102,7 @@ async fn test_get_video_consultation() {
             created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'waiting', ?, ?, ?, ?)
     "#;
-    
+
     let now = Utc::now();
     sqlx::query(query)
         .bind(&consultation_id)
@@ -111,15 +117,23 @@ async fn test_get_video_consultation() {
         .execute(&app.pool)
         .await
         .unwrap();
-    
+
     // Login as doctor and get consultation
     let doctor_token = get_auth_token(&mut app, &doctor_email, &doctor_password).await;
-    
-    let (status, body) = app.get_with_auth(&format!("/api/v1/video-consultations/{}", consultation_id), &doctor_token).await;
-    
+
+    let (status, body) = app
+        .get_with_auth(
+            &format!("/api/v1/video-consultations/{}", consultation_id),
+            &doctor_token,
+        )
+        .await;
+
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
-    assert_eq!(body["data"]["id"].as_str().unwrap(), consultation_id.to_string());
+    assert_eq!(
+        body["data"]["id"].as_str().unwrap(),
+        consultation_id.to_string()
+    );
     assert_eq!(body["data"]["room_id"].as_str().unwrap(), room_id);
 }
 
@@ -127,24 +141,26 @@ async fn test_get_video_consultation() {
 //#[serial]
 async fn test_join_room() {
     let mut app = TestApp::new().await;
-    
+
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) = create_test_user(&app.pool, "patient").await;
-    let (doctor_user_id, doctor_email, doctor_password) = create_test_user(&app.pool, "doctor").await;
+    let (patient_id, patient_email, patient_password) =
+        create_test_user(&app.pool, "patient").await;
+    let (doctor_user_id, doctor_email, doctor_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
-    
+
     // Create consultation
     let consultation_id = uuid::Uuid::new_v4();
     let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
-    
+
     let query = r#"
         INSERT INTO video_consultations (
             id, appointment_id, doctor_id, patient_id, room_id,
             status, scheduled_start_time, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'waiting', ?, ?, ?)
     "#;
-    
+
     let now = Utc::now();
     sqlx::query(query)
         .bind(&consultation_id)
@@ -158,16 +174,18 @@ async fn test_join_room() {
         .execute(&app.pool)
         .await
         .unwrap();
-    
+
     // Doctor joins room
     let doctor_token = get_auth_token(&mut app, &doctor_email, &doctor_password).await;
-    
-    let (status, body) = app.post_with_auth(
-        &format!("/api/v1/video-consultations/room/{}/join", room_id),
-        json!({}),
-        &doctor_token
-    ).await;
-    
+
+    let (status, body) = app
+        .post_with_auth(
+            &format!("/api/v1/video-consultations/room/{}/join", room_id),
+            json!({}),
+            &doctor_token,
+        )
+        .await;
+
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
     assert_eq!(body["data"]["room_id"].as_str().unwrap(), room_id);
@@ -180,24 +198,26 @@ async fn test_join_room() {
 //#[serial]
 async fn test_start_consultation() {
     let mut app = TestApp::new().await;
-    
+
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) = create_test_user(&app.pool, "patient").await;
-    let (doctor_user_id, doctor_email, doctor_password) = create_test_user(&app.pool, "doctor").await;
+    let (patient_id, patient_email, patient_password) =
+        create_test_user(&app.pool, "patient").await;
+    let (doctor_user_id, doctor_email, doctor_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
-    
+
     // Create consultation
     let consultation_id = uuid::Uuid::new_v4();
     let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
-    
+
     let query = r#"
         INSERT INTO video_consultations (
             id, appointment_id, doctor_id, patient_id, room_id,
             status, scheduled_start_time, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'waiting', ?, ?, ?)
     "#;
-    
+
     let now = Utc::now();
     sqlx::query(query)
         .bind(&consultation_id)
@@ -211,35 +231,37 @@ async fn test_start_consultation() {
         .execute(&app.pool)
         .await
         .unwrap();
-    
+
     // Doctor starts consultation
     let doctor_token = get_auth_token(&mut app, &doctor_email, &doctor_password).await;
-    
-    let (status, _) = app.put_with_auth(
-        &format!("/api/v1/video-consultations/{}/start", consultation_id),
-        json!({}),
-        &doctor_token
-    ).await;
-    
+
+    let (status, _) = app
+        .put_with_auth(
+            &format!("/api/v1/video-consultations/{}/start", consultation_id),
+            json!({}),
+            &doctor_token,
+        )
+        .await;
+
     assert_eq!(status, StatusCode::OK);
-    
+
     // Verify consultation status updated
     let check_query = r#"
         SELECT status, actual_start_time FROM video_consultations WHERE id = ?
     "#;
-    
+
     #[derive(sqlx::FromRow)]
     struct ConsultationStatus {
         status: String,
         actual_start_time: Option<chrono::DateTime<chrono::Utc>>,
     }
-    
+
     let result: ConsultationStatus = sqlx::query_as(check_query)
         .bind(&consultation_id)
         .fetch_one(&app.pool)
         .await
         .unwrap();
-    
+
     assert_eq!(result.status, "in_progress");
     assert!(result.actual_start_time.is_some());
 }
@@ -248,24 +270,26 @@ async fn test_start_consultation() {
 //#[serial]
 async fn test_end_consultation() {
     let mut app = TestApp::new().await;
-    
+
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) = create_test_user(&app.pool, "patient").await;
-    let (doctor_user_id, doctor_email, doctor_password) = create_test_user(&app.pool, "doctor").await;
+    let (patient_id, patient_email, patient_password) =
+        create_test_user(&app.pool, "patient").await;
+    let (doctor_user_id, doctor_email, doctor_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
-    
+
     // Create consultation in progress
     let consultation_id = uuid::Uuid::new_v4();
     let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
-    
+
     let query = r#"
         INSERT INTO video_consultations (
             id, appointment_id, doctor_id, patient_id, room_id,
             status, scheduled_start_time, actual_start_time, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'in_progress', ?, ?, ?, ?)
     "#;
-    
+
     let now = Utc::now();
     sqlx::query(query)
         .bind(&consultation_id)
@@ -280,29 +304,31 @@ async fn test_end_consultation() {
         .execute(&app.pool)
         .await
         .unwrap();
-    
+
     // Doctor ends consultation
     let doctor_token = get_auth_token(&mut app, &doctor_email, &doctor_password).await;
-    
+
     let end_dto = json!({
         "diagnosis": "神经性头痛，失眠症",
         "treatment_plan": "中药调理，针灸治疗",
         "notes": "患者症状明显，建议坚持治疗"
     });
-    
-    let (status, _) = app.put_with_auth(
-        &format!("/api/v1/video-consultations/{}/end", consultation_id),
-        end_dto,
-        &doctor_token
-    ).await;
-    
+
+    let (status, _) = app
+        .put_with_auth(
+            &format!("/api/v1/video-consultations/{}/end", consultation_id),
+            end_dto,
+            &doctor_token,
+        )
+        .await;
+
     assert_eq!(status, StatusCode::OK);
-    
+
     // Verify consultation completed
     let check_query = r#"
         SELECT status, diagnosis, treatment_plan, notes, duration FROM video_consultations WHERE id = ?
     "#;
-    
+
     #[derive(sqlx::FromRow)]
     struct ConsultationResult {
         status: String,
@@ -311,13 +337,13 @@ async fn test_end_consultation() {
         notes: String,
         duration: Option<i32>,
     }
-    
+
     let result: ConsultationResult = sqlx::query_as(check_query)
         .bind(&consultation_id)
         .fetch_one(&app.pool)
         .await
         .unwrap();
-    
+
     assert_eq!(result.status, "completed");
     assert_eq!(result.diagnosis, "神经性头痛，失眠症");
     assert!(result.duration.is_some());
@@ -327,17 +353,19 @@ async fn test_end_consultation() {
 //#[serial]
 async fn test_rate_consultation() {
     let mut app = TestApp::new().await;
-    
+
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) = create_test_user(&app.pool, "patient").await;
-    let (doctor_user_id, doctor_email, doctor_password) = create_test_user(&app.pool, "doctor").await;
+    let (patient_id, patient_email, patient_password) =
+        create_test_user(&app.pool, "patient").await;
+    let (doctor_user_id, doctor_email, doctor_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
-    
+
     // Create completed consultation
     let consultation_id = uuid::Uuid::new_v4();
     let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
-    
+
     let query = r#"
         INSERT INTO video_consultations (
             id, appointment_id, doctor_id, patient_id, room_id,
@@ -345,7 +373,7 @@ async fn test_rate_consultation() {
             duration, diagnosis, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?)
     "#;
-    
+
     let now = Utc::now();
     sqlx::query(query)
         .bind(&consultation_id)
@@ -363,40 +391,42 @@ async fn test_rate_consultation() {
         .execute(&app.pool)
         .await
         .unwrap();
-    
+
     // Patient rates consultation
     let patient_token = get_auth_token(&mut app, &patient_email, &patient_password).await;
-    
+
     let rate_dto = json!({
         "rating": 5,
         "feedback": "医生很专业，解答详细"
     });
-    
-    let (status, _) = app.post_with_auth(
-        &format!("/api/v1/video-consultations/{}/rate", consultation_id),
-        rate_dto,
-        &patient_token
-    ).await;
-    
+
+    let (status, _) = app
+        .post_with_auth(
+            &format!("/api/v1/video-consultations/{}/rate", consultation_id),
+            rate_dto,
+            &patient_token,
+        )
+        .await;
+
     assert_eq!(status, StatusCode::OK);
-    
+
     // Verify rating saved
     let check_query = r#"
         SELECT patient_rating, patient_feedback FROM video_consultations WHERE id = ?
     "#;
-    
+
     #[derive(sqlx::FromRow)]
     struct ConsultationRating {
         patient_rating: i32,
         patient_feedback: String,
     }
-    
+
     let result: ConsultationRating = sqlx::query_as(check_query)
         .bind(&consultation_id)
         .fetch_one(&app.pool)
         .await
         .unwrap();
-    
+
     assert_eq!(result.patient_rating, 5);
     assert_eq!(result.patient_feedback, "医生很专业，解答详细");
 }
@@ -405,24 +435,26 @@ async fn test_rate_consultation() {
 //#[serial]
 async fn test_webrtc_signaling() {
     let mut app = TestApp::new().await;
-    
+
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) = create_test_user(&app.pool, "patient").await;
-    let (doctor_user_id, doctor_email, doctor_password) = create_test_user(&app.pool, "doctor").await;
+    let (patient_id, patient_email, patient_password) =
+        create_test_user(&app.pool, "patient").await;
+    let (doctor_user_id, doctor_email, doctor_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
-    
+
     // Create consultation
     let consultation_id = uuid::Uuid::new_v4();
     let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
-    
+
     let query = r#"
         INSERT INTO video_consultations (
             id, appointment_id, doctor_id, patient_id, room_id,
             status, scheduled_start_time, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'in_progress', ?, ?, ?)
     "#;
-    
+
     let now = Utc::now();
     sqlx::query(query)
         .bind(&consultation_id)
@@ -436,10 +468,10 @@ async fn test_webrtc_signaling() {
         .execute(&app.pool)
         .await
         .unwrap();
-    
+
     // Doctor sends signal
     let doctor_token = get_auth_token(&mut app, &doctor_email, &doctor_password).await;
-    
+
     let signal_dto = json!({
         "room_id": room_id,
         "to_user_id": patient_id,
@@ -448,35 +480,50 @@ async fn test_webrtc_signaling() {
             "sdp": "v=0\r\no=- 123456789 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n..."
         }
     });
-    
-    let (status, _) = app.post_with_auth("/api/v1/video-consultations/signal", signal_dto, &doctor_token).await;
-    
+
+    let (status, _) = app
+        .post_with_auth(
+            "/api/v1/video-consultations/signal",
+            signal_dto,
+            &doctor_token,
+        )
+        .await;
+
     assert_eq!(status, StatusCode::OK);
-    
+
     // Patient receives signals
     let patient_token = get_auth_token(&mut app, &patient_email, &patient_password).await;
-    
-    let (status, body) = app.get_with_auth(&format!("/api/v1/video-consultations/signal/{}", room_id), &patient_token).await;
-    
+
+    let (status, body) = app
+        .get_with_auth(
+            &format!("/api/v1/video-consultations/signal/{}", room_id),
+            &patient_token,
+        )
+        .await;
+
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
-    
+
     let signals = body["data"].as_array().unwrap();
     assert_eq!(signals.len(), 1);
     assert_eq!(signals[0]["signal_type"].as_str().unwrap(), "offer");
-    assert_eq!(signals[0]["from_user_id"].as_str().unwrap(), doctor_user_id.to_string());
+    assert_eq!(
+        signals[0]["from_user_id"].as_str().unwrap(),
+        doctor_user_id.to_string()
+    );
 }
 
 #[tokio::test]
 //#[serial]
 async fn test_consultation_templates() {
     let mut app = TestApp::new().await;
-    
+
     // Create doctor
-    let (doctor_user_id, doctor_email, doctor_password) = create_test_user(&app.pool, "doctor").await;
+    let (doctor_user_id, doctor_email, doctor_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
     let doctor_token = get_auth_token(&mut app, &doctor_email, &doctor_password).await;
-    
+
     // Create template
     let template_dto = json!({
         "name": "失眠症常规诊断",
@@ -485,46 +532,56 @@ async fn test_consultation_templates() {
         "treatment_plan": "安神补脑液，酸枣仁汤加减",
         "notes": "注意作息规律，避免熬夜"
     });
-    
-    let (status, body) = app.post_with_auth("/api/v1/video-consultations/templates", template_dto, &doctor_token).await;
-    
+
+    let (status, body) = app
+        .post_with_auth(
+            "/api/v1/video-consultations/templates",
+            template_dto,
+            &doctor_token,
+        )
+        .await;
+
     assert_eq!(status, StatusCode::CREATED);
-    
+
     let template_id = body["data"]["id"].as_str().unwrap();
-    
+
     // List templates
-    let (status, body) = app.get_with_auth("/api/v1/video-consultations/templates", &doctor_token).await;
-    
+    let (status, body) = app
+        .get_with_auth("/api/v1/video-consultations/templates", &doctor_token)
+        .await;
+
     assert_eq!(status, StatusCode::OK);
-    
+
     let templates = body["data"].as_array().unwrap();
     assert!(!templates.is_empty());
-    
+
     // Use template
-    let (status, _) = app.post_with_auth(
-        &format!("/api/v1/video-consultations/templates/{}/use", template_id),
-        json!({}),
-        &doctor_token
-    ).await;
-    
+    let (status, _) = app
+        .post_with_auth(
+            &format!("/api/v1/video-consultations/templates/{}/use", template_id),
+            json!({}),
+            &doctor_token,
+        )
+        .await;
+
     assert_eq!(status, StatusCode::OK);
-    
+
     // Verify usage count increased
     let check_query = r#"
         SELECT usage_count FROM video_consultation_templates WHERE id = ?
     "#;
-    
+
     #[derive(sqlx::FromRow)]
     struct TemplateUsage {
         usage_count: i32,
     }
-    
+
     let result: TemplateUsage = sqlx::query_as(check_query)
         .bind(uuid::Uuid::parse_str(template_id).unwrap())
         .fetch_one(&app.pool)
         .await
         .unwrap();
-    
+
     assert_eq!(result.usage_count, 1);
 }
 
@@ -532,15 +589,16 @@ async fn test_consultation_templates() {
 //#[serial]
 async fn test_consultation_statistics() {
     let mut app = TestApp::new().await;
-    
+
     // Create doctor
-    let (doctor_user_id, doctor_email, doctor_password) = create_test_user(&app.pool, "doctor").await;
+    let (doctor_user_id, doctor_email, doctor_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
     let doctor_token = get_auth_token(&mut app, &doctor_email, &doctor_password).await;
-    
+
     // Create some consultations with different statuses
     let now = Utc::now();
-    
+
     // Completed consultation
     let query = r#"
         INSERT INTO video_consultations (
@@ -549,13 +607,16 @@ async fn test_consultation_statistics() {
             created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?)
     "#;
-    
+
     sqlx::query(query)
         .bind(&uuid::Uuid::new_v4())
         .bind(&uuid::Uuid::new_v4())
         .bind(&doctor_id)
         .bind(&uuid::Uuid::new_v4())
-        .bind(&format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", "")))
+        .bind(&format!(
+            "room_{}",
+            uuid::Uuid::new_v4().to_string().replace("-", "")
+        ))
         .bind(&(now - Duration::days(1)))
         .bind(1800)
         .bind(5)
@@ -564,7 +625,7 @@ async fn test_consultation_statistics() {
         .execute(&app.pool)
         .await
         .unwrap();
-    
+
     // No-show consultation
     let no_show_query = r#"
         INSERT INTO video_consultations (
@@ -578,21 +639,26 @@ async fn test_consultation_statistics() {
         .bind(&uuid::Uuid::new_v4())
         .bind(&doctor_id)
         .bind(&uuid::Uuid::new_v4())
-        .bind(&format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", "")))
+        .bind(&format!(
+            "room_{}",
+            uuid::Uuid::new_v4().to_string().replace("-", "")
+        ))
         .bind(&(now - Duration::days(2)))
         .bind(&now)
         .bind(&now)
         .execute(&app.pool)
         .await
         .unwrap();
-    
+
     // Get statistics
-    let (status, body) = app.get_with_auth("/api/v1/video-consultations/statistics", &doctor_token).await;
-    
+    let (status, body) = app
+        .get_with_auth("/api/v1/video-consultations/statistics", &doctor_token)
+        .await;
+
     assert_eq!(status, StatusCode::OK);
-    
+
     let stats = &body["data"];
-    
+
     assert!(stats["total_consultations"].as_i64().unwrap() >= 2);
     assert!(stats["completed_consultations"].as_i64().unwrap() >= 1);
     assert!(stats["average_duration"].as_f64().is_some());
@@ -604,25 +670,26 @@ async fn test_consultation_statistics() {
 //#[serial]
 async fn test_authorization() {
     let mut app = TestApp::new().await;
-    
+
     // Create two doctors
     let (doctor1_user_id, _, _) = create_test_user(&app.pool, "doctor").await;
     let (doctor1_id, _) = create_test_doctor(&app.pool, doctor1_user_id).await;
-    let (doctor2_user_id, doctor2_email, doctor2_password) = create_test_user(&app.pool, "doctor").await;
+    let (doctor2_user_id, doctor2_email, doctor2_password) =
+        create_test_user(&app.pool, "doctor").await;
     let (_doctor2_id, _) = create_test_doctor(&app.pool, doctor2_user_id).await;
-    
+
     // Create consultation for doctor1
     let consultation_id = uuid::Uuid::new_v4();
     let appointment_id = uuid::Uuid::new_v4();
     let room_id = format!("room_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
-    
+
     let query = r#"
         INSERT INTO video_consultations (
             id, appointment_id, doctor_id, patient_id, room_id,
             status, scheduled_start_time, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'waiting', ?, ?, ?)
     "#;
-    
+
     let now = Utc::now();
     sqlx::query(query)
         .bind(&consultation_id)
@@ -636,11 +703,16 @@ async fn test_authorization() {
         .execute(&app.pool)
         .await
         .unwrap();
-    
+
     // Doctor2 tries to access doctor1's consultation
     let doctor2_token = get_auth_token(&mut app, &doctor2_email, &doctor2_password).await;
-    
-    let (status, _) = app.get_with_auth(&format!("/api/v1/video-consultations/{}", consultation_id), &doctor2_token).await;
-    
+
+    let (status, _) = app
+        .get_with_auth(
+            &format!("/api/v1/video-consultations/{}", consultation_id),
+            &doctor2_token,
+        )
+        .await;
+
     assert_eq!(status, StatusCode::FORBIDDEN);
 }

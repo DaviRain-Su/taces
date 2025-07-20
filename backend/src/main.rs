@@ -5,7 +5,7 @@ use tower_http::cors::CorsLayer;
 
 use backend::{
     config::{database, redis, storage, Config},
-    routes, 
+    routes,
     services::websocket_service::WebSocketManager,
     AppState,
 };
@@ -32,10 +32,10 @@ async fn main() {
 
     // Create Redis connection (optional)
     let redis_pool = redis::create_redis_pool_optional().await;
-    
+
     // Create S3 client (optional)
     let s3_client = storage::create_s3_client_optional().await;
-    
+
     // Create WebSocket manager
     let ws_manager = Arc::new(WebSocketManager::new());
 
@@ -55,13 +55,19 @@ async fn main() {
 }
 
 async fn create_app(
-    config: Config, 
-    pool: database::DbPool, 
-    redis: Option<redis::RedisPool>, 
+    config: Config,
+    pool: database::DbPool,
+    redis: Option<redis::RedisPool>,
     ws_manager: Arc<WebSocketManager>,
     s3_client: Option<aws_sdk_s3::Client>,
 ) -> Router {
-    let state = AppState { config, pool, redis, ws_manager, s3_client };
+    let state = AppState {
+        config,
+        pool,
+        redis,
+        ws_manager,
+        s3_client,
+    };
 
     Router::new()
         .route("/", get(root))

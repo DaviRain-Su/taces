@@ -1,10 +1,10 @@
-use crate::AppState;
 use crate::middleware::auth::AuthUser;
 use crate::models::{
-    ApiResponse, CreateCommonPhraseDto, CreatePrescriptionTemplateDto,
-    TemplateQuery, UpdateCommonPhraseDto, UpdatePrescriptionTemplateDto,
+    ApiResponse, CreateCommonPhraseDto, CreatePrescriptionTemplateDto, TemplateQuery,
+    UpdateCommonPhraseDto, UpdatePrescriptionTemplateDto,
 };
 use crate::services::template_service::TemplateService;
+use crate::AppState;
 use axum::{
     extract::{Extension, Path, Query, State},
     http::StatusCode,
@@ -51,7 +51,10 @@ pub async fn create_common_phrase(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(&format!("Failed to create phrase: {}", e))),
+                Json(ApiResponse::error(&format!(
+                    "Failed to create phrase: {}",
+                    e
+                ))),
             )
         })?;
 
@@ -194,7 +197,10 @@ pub async fn update_common_phrase(
             } else {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to update phrase: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to update phrase: {}",
+                        e
+                    ))),
                 )
             }
         })?;
@@ -238,7 +244,10 @@ pub async fn delete_common_phrase(
             } else {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to delete phrase: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to delete phrase: {}",
+                        e
+                    ))),
                 )
             }
         })?;
@@ -267,7 +276,10 @@ pub async fn use_common_phrase(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(&format!("Failed to update usage: {}", e))),
+                Json(ApiResponse::error(&format!(
+                    "Failed to update usage: {}",
+                    e
+                ))),
             )
         })?;
 
@@ -288,7 +300,9 @@ pub async fn create_prescription_template(
     if auth_user.role != "doctor" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only doctors can create prescription templates")),
+            Json(ApiResponse::error(
+                "Only doctors can create prescription templates",
+            )),
         ));
     }
 
@@ -314,7 +328,10 @@ pub async fn create_prescription_template(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(&format!("Failed to create template: {}", e))),
+                Json(ApiResponse::error(&format!(
+                    "Failed to create template: {}",
+                    e
+                ))),
             )
         })?;
 
@@ -333,7 +350,9 @@ pub async fn get_prescription_templates(
     if auth_user.role != "doctor" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only doctors can view prescription templates")),
+            Json(ApiResponse::error(
+                "Only doctors can view prescription templates",
+            )),
         ));
     }
 
@@ -361,7 +380,10 @@ pub async fn get_prescription_templates(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(&format!("Failed to get templates: {}", e))),
+            Json(ApiResponse::error(&format!(
+                "Failed to get templates: {}",
+                e
+            ))),
         )
     })?;
 
@@ -388,7 +410,9 @@ pub async fn get_prescription_template_by_id(
     if auth_user.role != "doctor" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only doctors can view prescription templates")),
+            Json(ApiResponse::error(
+                "Only doctors can view prescription templates",
+            )),
         ));
     }
 
@@ -403,7 +427,10 @@ pub async fn get_prescription_template_by_id(
             } else {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to get template: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to get template: {}",
+                        e
+                    ))),
                 )
             }
         })?;
@@ -424,7 +451,9 @@ pub async fn update_prescription_template(
     if auth_user.role != "doctor" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only doctors can update prescription templates")),
+            Json(ApiResponse::error(
+                "Only doctors can update prescription templates",
+            )),
         ));
     }
 
@@ -456,7 +485,10 @@ pub async fn update_prescription_template(
             } else {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to update template: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to update template: {}",
+                        e
+                    ))),
                 )
             }
         })?;
@@ -476,7 +508,9 @@ pub async fn delete_prescription_template(
     if auth_user.role != "doctor" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only doctors can delete prescription templates")),
+            Json(ApiResponse::error(
+                "Only doctors can delete prescription templates",
+            )),
         ));
     }
 
@@ -500,7 +534,10 @@ pub async fn delete_prescription_template(
             } else {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to delete template: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to delete template: {}",
+                        e
+                    ))),
                 )
             }
         })?;
@@ -520,7 +557,9 @@ pub async fn use_prescription_template(
     if auth_user.role != "doctor" {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("Only doctors can use prescription templates")),
+            Json(ApiResponse::error(
+                "Only doctors can use prescription templates",
+            )),
         ));
     }
 
@@ -529,7 +568,10 @@ pub async fn use_prescription_template(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(&format!("Failed to update usage: {}", e))),
+                Json(ApiResponse::error(&format!(
+                    "Failed to update usage: {}",
+                    e
+                ))),
             )
         })?;
 

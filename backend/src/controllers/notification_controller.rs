@@ -1,7 +1,7 @@
 use crate::{
+    middleware::auth::AuthUser,
     models::{notification::*, ApiResponse},
     services::notification_service::NotificationService,
-    middleware::auth::AuthUser,
     AppState,
 };
 use axum::{
@@ -37,7 +37,7 @@ pub async fn get_user_notifications(
 ) -> impl IntoResponse {
     let page = query.page.unwrap_or(1).max(1);
     let page_size = query.page_size.unwrap_or(20).min(100);
-    
+
     // 解析状态参数
     let status = match query.status.as_deref() {
         Some("unread") => Some(NotificationStatus::Unread),
@@ -61,7 +61,7 @@ pub async fn get_user_notifications(
                 page,
                 page_size,
             };
-            
+
             Json(ApiResponse::success("获取通知列表成功", response)).into_response()
         }
         Err(e) => {
@@ -109,7 +109,11 @@ pub async fn mark_notification_as_read(
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
     match NotificationService::mark_as_read(&state.pool, id, auth_user.user_id).await {
-        Ok(true) => Json(ApiResponse::success("标记已读成功", json!({ "success": true }))).into_response(),
+        Ok(true) => Json(ApiResponse::success(
+            "标记已读成功",
+            json!({ "success": true }),
+        ))
+        .into_response(),
         Ok(false) => (
             StatusCode::NOT_FOUND,
             Json(ApiResponse::<()>::error("通知不存在或已读")),
@@ -155,7 +159,11 @@ pub async fn delete_notification(
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
     match NotificationService::delete_notification(&state.pool, id, auth_user.user_id).await {
-        Ok(true) => Json(ApiResponse::success("删除通知成功", json!({ "success": true }))).into_response(),
+        Ok(true) => Json(ApiResponse::success(
+            "删除通知成功",
+            json!({ "success": true }),
+        ))
+        .into_response(),
         Ok(false) => (
             StatusCode::NOT_FOUND,
             Json(ApiResponse::<()>::error("通知不存在")),
@@ -195,7 +203,8 @@ pub async fn get_notification_settings(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
-    match NotificationService::get_user_notification_settings(&state.pool, auth_user.user_id).await {
+    match NotificationService::get_user_notification_settings(&state.pool, auth_user.user_id).await
+    {
         Ok(settings) => Json(ApiResponse::success("获取通知设置成功", settings)).into_response(),
         Err(e) => {
             eprintln!("获取通知设置失败: {:?}", e);
@@ -214,7 +223,9 @@ pub async fn update_notification_settings(
     Extension(auth_user): Extension<AuthUser>,
     Json(dto): Json<UpdateNotificationSettingsDto>,
 ) -> impl IntoResponse {
-    match NotificationService::update_notification_settings(&state.pool, auth_user.user_id, dto).await {
+    match NotificationService::update_notification_settings(&state.pool, auth_user.user_id, dto)
+        .await
+    {
         Ok(settings) => Json(ApiResponse::success("更新通知设置成功", settings)).into_response(),
         Err(e) => {
             eprintln!("更新通知设置失败: {:?}", e);
@@ -262,22 +273,21 @@ pub async fn send_system_announcement(
     }
 
     // 获取所有用户ID
-    let user_ids_result = sqlx::query(
-        "SELECT id FROM users WHERE status = 'active'"
-    )
-    .fetch_all(&state.pool)
-    .await;
+    let user_ids_result = sqlx::query("SELECT id FROM users WHERE status = 'active'")
+        .fetch_all(&state.pool)
+        .await;
 
     match user_ids_result {
         Ok(rows) => {
             use sqlx::Row;
-            let user_ids: Vec<Uuid> = rows.into_iter()
+            let user_ids: Vec<Uuid> = rows
+                .into_iter()
                 .filter_map(|row| {
                     let id_str: String = row.get("id");
                     Uuid::parse_str(&id_str).ok()
                 })
                 .collect();
-            
+
             match NotificationService::create_bulk_notifications(
                 &state.pool,
                 user_ids,

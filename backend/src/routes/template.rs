@@ -17,12 +17,27 @@ pub fn routes() -> Router<AppState> {
         .route("/common-phrases/:id", delete(delete_common_phrase))
         .route("/common-phrases/:id/use", post(use_common_phrase))
         // 处方模板路由
-        .route("/prescription-templates", post(create_prescription_template))
+        .route(
+            "/prescription-templates",
+            post(create_prescription_template),
+        )
         .route("/prescription-templates", get(get_prescription_templates))
-        .route("/prescription-templates/:id", get(get_prescription_template_by_id))
-        .route("/prescription-templates/:id", put(update_prescription_template))
-        .route("/prescription-templates/:id", delete(delete_prescription_template))
-        .route("/prescription-templates/:id/use", post(use_prescription_template))
+        .route(
+            "/prescription-templates/:id",
+            get(get_prescription_template_by_id),
+        )
+        .route(
+            "/prescription-templates/:id",
+            put(update_prescription_template),
+        )
+        .route(
+            "/prescription-templates/:id",
+            delete(delete_prescription_template),
+        )
+        .route(
+            "/prescription-templates/:id/use",
+            post(use_prescription_template),
+        )
         // 所有路由都需要认证
         .layer(middleware::from_fn(auth_middleware))
 }

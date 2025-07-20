@@ -8,9 +8,9 @@ use validator::Validate;
 #[sqlx(type_name = "phrase_category", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum PhraseCategory {
-    Diagnosis,  // 诊断
-    Advice,     // 医嘱
-    Symptom,    // 症状描述
+    Diagnosis, // 诊断
+    Advice,    // 医嘱
+    Symptom,   // 症状描述
 }
 
 // 常用语

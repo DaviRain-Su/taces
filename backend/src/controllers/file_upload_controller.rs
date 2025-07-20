@@ -1,9 +1,9 @@
-use crate::AppState;
 use crate::middleware::auth::AuthUser;
 use crate::models::file_upload::*;
 use crate::models::ApiResponse;
 use crate::services::file_upload_service::FileUploadService;
 use crate::utils::errors::AppError;
+use crate::AppState;
 use axum::{
     extract::{Extension, Path, Query, State},
     http::StatusCode,
@@ -32,7 +32,8 @@ pub async fn complete_upload(
     Path(upload_id): Path<Uuid>,
     Json(dto): Json<CompleteUploadDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    let file = FileUploadService::complete_upload(&state.pool, upload_id, auth_user.user_id, dto).await?;
+    let file =
+        FileUploadService::complete_upload(&state.pool, upload_id, auth_user.user_id, dto).await?;
 
     Ok((
         StatusCode::OK,

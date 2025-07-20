@@ -24,7 +24,5 @@ pub fn routes() -> Router<AppState> {
         .route("/tags", post(create_tag))
         .layer(middleware::from_fn(auth_middleware));
 
-    Router::new()
-        .merge(public_routes)
-        .merge(protected_routes)
+    Router::new().merge(public_routes).merge(protected_routes)
 }

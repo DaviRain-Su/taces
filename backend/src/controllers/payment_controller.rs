@@ -168,7 +168,8 @@ pub async fn payment_callback(
         _ => return Err(AppError::BadRequest("不支持的支付方式".to_string())),
     };
 
-    PaymentService::handle_payment_callback(&state.pool, payment_method.clone(), callback_data).await?;
+    PaymentService::handle_payment_callback(&state.pool, payment_method.clone(), callback_data)
+        .await?;
 
     // Return success response for payment gateway
     match payment_method {
@@ -275,7 +276,10 @@ pub async fn get_balance_transactions(
     let transactions =
         PaymentService::get_balance_transactions(&state.pool, user_id, page, page_size).await?;
 
-    Ok(Json(ApiResponse::success("获取余额变动记录成功", transactions)))
+    Ok(Json(ApiResponse::success(
+        "获取余额变动记录成功",
+        transactions,
+    )))
 }
 
 // Price configuration endpoints
@@ -295,9 +299,7 @@ pub async fn list_price_configs(
     State(state): State<AppState>,
     Query(query): Query<std::collections::HashMap<String, String>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let is_active = query
-        .get("is_active")
-        .and_then(|v| v.parse::<bool>().ok());
+    let is_active = query.get("is_active").and_then(|v| v.parse::<bool>().ok());
 
     let configs = PaymentService::list_price_configs(&state.pool, is_active).await?;
 

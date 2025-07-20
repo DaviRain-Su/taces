@@ -1,10 +1,7 @@
 use crate::common::TestApp;
 use axum::http::StatusCode;
 use backend::{
-    models::{
-        payment::*,
-        user::LoginDto,
-    },
+    models::{payment::*, user::LoginDto},
     utils::test_helpers::create_test_user,
 };
 use chrono;
@@ -27,7 +24,8 @@ async fn get_auth_token(app: &mut TestApp, account: &str, password: &str) -> Str
 #[tokio::test]
 async fn test_create_order() {
     let mut app = TestApp::new().await;
-    let (patient_user_id, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
+    let (patient_user_id, patient_account, patient_password) =
+        create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
     // Create order
@@ -40,7 +38,9 @@ async fn test_create_order() {
         metadata: None,
     };
 
-    let (status, body) = app.post_with_auth("/api/v1/payment/orders", order_dto, &patient_token).await;
+    let (status, body) = app
+        .post_with_auth("/api/v1/payment/orders", order_dto, &patient_token)
+        .await;
 
     assert_eq!(status, StatusCode::CREATED);
     assert!(body["success"].as_bool().unwrap());
@@ -52,7 +52,8 @@ async fn test_create_order() {
 #[tokio::test]
 async fn test_get_order() {
     let mut app = TestApp::new().await;
-    let (patient_user_id, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
+    let (patient_user_id, patient_account, patient_password) =
+        create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
     // Create order first
@@ -65,11 +66,18 @@ async fn test_get_order() {
         metadata: None,
     };
 
-    let (_, create_body) = app.post_with_auth("/api/v1/payment/orders", order_dto, &patient_token).await;
+    let (_, create_body) = app
+        .post_with_auth("/api/v1/payment/orders", order_dto, &patient_token)
+        .await;
     let order_id = create_body["data"]["id"].as_str().unwrap();
 
     // Get order
-    let (status, body) = app.get_with_auth(&format!("/api/v1/payment/orders/{}", order_id), &patient_token).await;
+    let (status, body) = app
+        .get_with_auth(
+            &format!("/api/v1/payment/orders/{}", order_id),
+            &patient_token,
+        )
+        .await;
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
@@ -79,7 +87,8 @@ async fn test_get_order() {
 #[tokio::test]
 async fn test_list_orders() {
     let mut app = TestApp::new().await;
-    let (patient_user_id, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
+    let (patient_user_id, patient_account, patient_password) =
+        create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
     // Create multiple orders
@@ -93,11 +102,14 @@ async fn test_list_orders() {
             metadata: None,
         };
 
-        app.post_with_auth("/api/v1/payment/orders", order_dto, &patient_token).await;
+        app.post_with_auth("/api/v1/payment/orders", order_dto, &patient_token)
+            .await;
     }
 
     // List orders
-    let (status, body) = app.get_with_auth("/api/v1/payment/orders", &patient_token).await;
+    let (status, body) = app
+        .get_with_auth("/api/v1/payment/orders", &patient_token)
+        .await;
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
@@ -108,7 +120,8 @@ async fn test_list_orders() {
 #[tokio::test]
 async fn test_cancel_order() {
     let mut app = TestApp::new().await;
-    let (patient_user_id, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
+    let (patient_user_id, patient_account, patient_password) =
+        create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
     // Create order
@@ -121,22 +134,36 @@ async fn test_cancel_order() {
         metadata: None,
     };
 
-    let (_, create_body) = app.post_with_auth("/api/v1/payment/orders", order_dto, &patient_token).await;
+    let (_, create_body) = app
+        .post_with_auth("/api/v1/payment/orders", order_dto, &patient_token)
+        .await;
     let order_id = create_body["data"]["id"].as_str().unwrap();
 
     // Cancel order
-    let (status, _) = app.put_with_auth(&format!("/api/v1/payment/orders/{}/cancel", order_id), json!({}), &patient_token).await;
+    let (status, _) = app
+        .put_with_auth(
+            &format!("/api/v1/payment/orders/{}/cancel", order_id),
+            json!({}),
+            &patient_token,
+        )
+        .await;
     assert_eq!(status, StatusCode::OK);
 
     // Verify order is cancelled
-    let (_, get_body) = app.get_with_auth(&format!("/api/v1/payment/orders/{}", order_id), &patient_token).await;
+    let (_, get_body) = app
+        .get_with_auth(
+            &format!("/api/v1/payment/orders/{}", order_id),
+            &patient_token,
+        )
+        .await;
     assert_eq!(get_body["data"]["status"].as_str().unwrap(), "cancelled");
 }
 
 #[tokio::test]
 async fn test_initiate_payment() {
     let mut app = TestApp::new().await;
-    let (patient_user_id, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
+    let (patient_user_id, patient_account, patient_password) =
+        create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
     // Create order first
@@ -149,7 +176,9 @@ async fn test_initiate_payment() {
         metadata: None,
     };
 
-    let (_, create_body) = app.post_with_auth("/api/v1/payment/orders", order_dto, &patient_token).await;
+    let (_, create_body) = app
+        .post_with_auth("/api/v1/payment/orders", order_dto, &patient_token)
+        .await;
     let order_id = Uuid::parse_str(create_body["data"]["id"].as_str().unwrap()).unwrap();
 
     // Initiate payment
@@ -159,7 +188,9 @@ async fn test_initiate_payment() {
         return_url: Some("https://example.com/return".to_string()),
     };
 
-    let (status, body) = app.post_with_auth("/api/v1/payment/pay", payment_dto, &patient_token).await;
+    let (status, body) = app
+        .post_with_auth("/api/v1/payment/pay", payment_dto, &patient_token)
+        .await;
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
@@ -175,7 +206,10 @@ async fn test_get_price_config() {
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
-    assert_eq!(body["data"]["service_type"].as_str().unwrap(), "consultation");
+    assert_eq!(
+        body["data"]["service_type"].as_str().unwrap(),
+        "consultation"
+    );
     assert_eq!(body["data"]["price"].as_str().unwrap(), "20");
 }
 
@@ -195,7 +229,8 @@ async fn test_list_price_configs() {
 #[tokio::test]
 async fn test_create_refund() {
     let mut app = TestApp::new().await;
-    let (patient_user_id, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
+    let (patient_user_id, patient_account, patient_password) =
+        create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
     // Create and pay an order first (simulated)
@@ -209,7 +244,9 @@ async fn test_create_refund() {
         metadata: None,
     };
 
-    let (_, create_body) = app.post_with_auth("/api/v1/payment/orders", order_dto, &patient_token).await;
+    let (_, create_body) = app
+        .post_with_auth("/api/v1/payment/orders", order_dto, &patient_token)
+        .await;
     let order_id = Uuid::parse_str(create_body["data"]["id"].as_str().unwrap()).unwrap();
 
     // Manually update order to paid status (simulating successful payment)
@@ -229,7 +266,7 @@ async fn test_create_refund() {
             id, transaction_no, order_id, payment_method, 
             transaction_type, amount, status, initiated_at, completed_at
         ) VALUES (?, ?, ?, 'alipay', 'payment', ?, 'success', NOW(), NOW())
-        "#
+        "#,
     )
     .bind(transaction_id)
     .bind(format!("TXN{}", chrono::Utc::now().timestamp()))
@@ -246,7 +283,9 @@ async fn test_create_refund() {
         refund_reason: "服务未提供".to_string(),
     };
 
-    let (status, body) = app.post_with_auth("/api/v1/payment/refunds", refund_dto, &patient_token).await;
+    let (status, body) = app
+        .post_with_auth("/api/v1/payment/refunds", refund_dto, &patient_token)
+        .await;
 
     assert_eq!(status, StatusCode::CREATED);
     assert!(body["success"].as_bool().unwrap());
@@ -256,7 +295,8 @@ async fn test_create_refund() {
 #[tokio::test]
 async fn test_get_user_balance() {
     let mut app = TestApp::new().await;
-    let (patient_user_id, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
+    let (patient_user_id, patient_account, patient_password) =
+        create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
     // Create user balance first
@@ -267,7 +307,7 @@ async fn test_get_user_balance() {
             id, user_id, balance, frozen_balance, 
             total_income, total_expense, created_at, updated_at
         ) VALUES (?, ?, 100.00, 0, 100.00, 0, NOW(), NOW())
-        "#
+        "#,
     )
     .bind(balance_id)
     .bind(patient_user_id)
@@ -276,7 +316,12 @@ async fn test_get_user_balance() {
     .unwrap();
 
     // Get balance
-    let (status, body) = app.get_with_auth(&format!("/api/v1/payment/balance/{}", patient_user_id), &patient_token).await;
+    let (status, body) = app
+        .get_with_auth(
+            &format!("/api/v1/payment/balance/{}", patient_user_id),
+            &patient_token,
+        )
+        .await;
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
@@ -286,15 +331,17 @@ async fn test_get_user_balance() {
 #[tokio::test]
 async fn test_admin_review_refund() {
     let mut app = TestApp::new().await;
-    let (_admin_user_id, admin_account, admin_password) = create_test_user(&app.pool, "admin").await;
+    let (_admin_user_id, admin_account, admin_password) =
+        create_test_user(&app.pool, "admin").await;
     let admin_token = get_auth_token(&mut app, &admin_account, &admin_password).await;
-    let (patient_user_id, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
+    let (patient_user_id, patient_account, patient_password) =
+        create_test_user(&app.pool, "patient").await;
     let _patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
     // Create paid order and refund request
     let order_id = Uuid::new_v4();
     let order_no = format!("ORD{}", chrono::Utc::now().timestamp());
-    
+
     sqlx::query(
         r#"
         INSERT INTO payment_orders (
@@ -318,7 +365,7 @@ async fn test_admin_review_refund() {
             id, transaction_no, order_id, payment_method, 
             transaction_type, amount, status, initiated_at, completed_at
         ) VALUES (?, ?, ?, 'alipay', 'payment', 30.00, 'success', NOW(), NOW())
-        "#
+        "#,
     )
     .bind(transaction_id)
     .bind(format!("TXN{}", chrono::Utc::now().timestamp()))
@@ -335,7 +382,7 @@ async fn test_admin_review_refund() {
             id, refund_no, order_id, transaction_id, user_id,
             refund_amount, refund_reason, status, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 30.00, '服务未提供', 'pending', NOW(), NOW())
-        "#
+        "#,
     )
     .bind(refund_id)
     .bind(format!("RFD{}", chrono::Utc::now().timestamp()))
@@ -352,7 +399,13 @@ async fn test_admin_review_refund() {
         review_notes: Some("同意退款".to_string()),
     };
 
-    let (status, _) = app.put_with_auth(&format!("/api/v1/payment/admin/refunds/{}/review", refund_id), review_dto, &admin_token).await;
+    let (status, _) = app
+        .put_with_auth(
+            &format!("/api/v1/payment/admin/refunds/{}/review", refund_id),
+            review_dto,
+            &admin_token,
+        )
+        .await;
 
     assert_eq!(status, StatusCode::OK);
 }
@@ -360,7 +413,8 @@ async fn test_admin_review_refund() {
 #[tokio::test]
 async fn test_payment_statistics() {
     let mut app = TestApp::new().await;
-    let (patient_user_id, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
+    let (patient_user_id, patient_account, patient_password) =
+        create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
 
     // Create some orders with different statuses
@@ -371,7 +425,7 @@ async fn test_payment_statistics() {
             1 => "paid",
             _ => "pending",
         };
-        
+
         sqlx::query(
             r#"
             INSERT INTO payment_orders (
@@ -391,7 +445,9 @@ async fn test_payment_statistics() {
     }
 
     // Get statistics
-    let (status, body) = app.get_with_auth("/api/v1/payment/statistics", &patient_token).await;
+    let (status, body) = app
+        .get_with_auth("/api/v1/payment/statistics", &patient_token)
+        .await;
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
@@ -402,9 +458,11 @@ async fn test_payment_statistics() {
 #[tokio::test]
 async fn test_unauthorized_access() {
     let mut app = TestApp::new().await;
-    let (patient_user_id, patient_account, patient_password) = create_test_user(&app.pool, "patient").await;
+    let (patient_user_id, patient_account, patient_password) =
+        create_test_user(&app.pool, "patient").await;
     let patient_token = get_auth_token(&mut app, &patient_account, &patient_password).await;
-    let (_other_user_id, other_account, other_password) = create_test_user(&app.pool, "patient2").await;
+    let (_other_user_id, other_account, other_password) =
+        create_test_user(&app.pool, "patient2").await;
     let other_token = get_auth_token(&mut app, &other_account, &other_password).await;
 
     // Create order for patient1
@@ -417,11 +475,18 @@ async fn test_unauthorized_access() {
         metadata: None,
     };
 
-    let (_, create_body) = app.post_with_auth("/api/v1/payment/orders", order_dto, &patient_token).await;
+    let (_, create_body) = app
+        .post_with_auth("/api/v1/payment/orders", order_dto, &patient_token)
+        .await;
     let order_id = create_body["data"]["id"].as_str().unwrap();
 
     // Try to access with other user's token
-    let (status, _) = app.get_with_auth(&format!("/api/v1/payment/orders/{}", order_id), &other_token).await;
+    let (status, _) = app
+        .get_with_auth(
+            &format!("/api/v1/payment/orders/{}", order_id),
+            &other_token,
+        )
+        .await;
 
     assert_eq!(status, StatusCode::FORBIDDEN);
 }

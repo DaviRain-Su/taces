@@ -258,7 +258,10 @@ async fn test_get_doctor_prescriptions() {
     // Get doctor's prescriptions
     let (status, body) = app
         .get_with_auth(
-            &format!("/api/v1/prescriptions/doctor/{}?page=1&page_size=10", doctor_id),
+            &format!(
+                "/api/v1/prescriptions/doctor/{}?page=1&page_size=10",
+                doctor_id
+            ),
             &doctor_token,
         )
         .await;
@@ -306,7 +309,10 @@ async fn test_get_patient_prescriptions() {
     // Get patient's prescriptions
     let (status, body) = app
         .get_with_auth(
-            &format!("/api/v1/prescriptions/patient/{}?page=1&page_size=10", patient_user_id),
+            &format!(
+                "/api/v1/prescriptions/patient/{}?page=1&page_size=10",
+                patient_user_id
+            ),
             &patient_token,
         )
         .await;
@@ -499,7 +505,10 @@ async fn test_prescription_code_uniqueness() {
             .await;
 
         let code = body["data"]["code"].as_str().unwrap().to_string();
-        assert!(!prescription_codes.contains(&code), "Prescription code should be unique");
+        assert!(
+            !prescription_codes.contains(&code),
+            "Prescription code should be unique"
+        );
         prescription_codes.push(code);
     }
 

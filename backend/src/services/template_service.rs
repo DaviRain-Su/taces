@@ -1,7 +1,7 @@
 use crate::config::database::DbPool;
 use crate::models::{
-    CommonPhrase, CreateCommonPhraseDto, CreatePrescriptionTemplateDto,
-    PrescriptionTemplate, UpdateCommonPhraseDto, UpdatePrescriptionTemplateDto,
+    CommonPhrase, CreateCommonPhraseDto, CreatePrescriptionTemplateDto, PrescriptionTemplate,
+    UpdateCommonPhraseDto, UpdatePrescriptionTemplateDto,
 };
 use anyhow::{anyhow, Result};
 use serde_json;
@@ -12,7 +12,7 @@ pub struct TemplateService;
 
 impl TemplateService {
     // ========== 常用语相关方法 ==========
-    
+
     pub async fn create_common_phrase(
         pool: &DbPool,
         doctor_id: Uuid,
@@ -25,7 +25,7 @@ impl TemplateService {
         };
 
         let phrase_id = Uuid::new_v4();
-        
+
         sqlx::query(
             r#"
             INSERT INTO common_phrases (id, doctor_id, category, content)
@@ -54,9 +54,8 @@ impl TemplateService {
         let offset = (page - 1) * page_size;
 
         // 构建查询条件
-        let mut count_query = String::from(
-            "SELECT COUNT(*) FROM common_phrases WHERE doctor_id = ?"
-        );
+        let mut count_query =
+            String::from("SELECT COUNT(*) FROM common_phrases WHERE doctor_id = ?");
         let mut list_query = String::from(
             r#"
             SELECT id, doctor_id, category, content, usage_count, is_active,
@@ -93,10 +92,7 @@ impl TemplateService {
         for param in &params {
             count_query_builder = count_query_builder.bind(param);
         }
-        let total: i64 = count_query_builder
-            .fetch_one(pool)
-            .await?
-            .get::<i64, _>(0);
+        let total: i64 = count_query_builder.fetch_one(pool).await?.get::<i64, _>(0);
 
         // 获取列表
         let mut list_query_builder = sqlx::query(&list_query);
@@ -114,10 +110,7 @@ impl TemplateService {
         Ok((phrases, total))
     }
 
-    pub async fn get_common_phrase_by_id(
-        pool: &DbPool,
-        id: Uuid,
-    ) -> Result<CommonPhrase> {
+    pub async fn get_common_phrase_by_id(pool: &DbPool, id: Uuid) -> Result<CommonPhrase> {
         let row = sqlx::query(
             r#"
             SELECT id, doctor_id, category, content, usage_count, is_active,
@@ -149,48 +142,48 @@ impl TemplateService {
         // 构建动态更新查询
         let mut query = String::from("UPDATE common_phrases SET ");
         let mut first = true;
-        
+
         if dto.content.is_some() {
-            if !first { query.push_str(", "); }
+            if !first {
+                query.push_str(", ");
+            }
             query.push_str("content = ?");
             first = false;
         }
-        
+
         if dto.is_active.is_some() {
-            if !first { query.push_str(", "); }
+            if !first {
+                query.push_str(", ");
+            }
             query.push_str("is_active = ?");
             first = false;
         }
-        
+
         if first {
             return Err(anyhow!("No fields to update"));
         }
-        
+
         query.push_str(", updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-        
+
         // 绑定参数
         let mut query_builder = sqlx::query(&query);
-        
+
         if let Some(content) = dto.content {
             query_builder = query_builder.bind(content);
         }
-        
+
         if let Some(is_active) = dto.is_active {
             query_builder = query_builder.bind(is_active);
         }
-        
+
         query_builder = query_builder.bind(id.to_string());
-        
+
         query_builder.execute(pool).await?;
 
         Self::get_common_phrase_by_id(pool, id).await
     }
 
-    pub async fn delete_common_phrase(
-        pool: &DbPool,
-        id: Uuid,
-        doctor_id: Uuid,
-    ) -> Result<()> {
+    pub async fn delete_common_phrase(pool: &DbPool, id: Uuid, doctor_id: Uuid) -> Result<()> {
         // 验证所有权
         let phrase = Self::get_common_phrase_by_id(pool, id).await?;
         if phrase.doctor_id != doctor_id {
@@ -205,22 +198,17 @@ impl TemplateService {
         Ok(())
     }
 
-    pub async fn increment_phrase_usage(
-        pool: &DbPool,
-        id: Uuid,
-    ) -> Result<()> {
-        sqlx::query(
-            "UPDATE common_phrases SET usage_count = usage_count + 1 WHERE id = ?"
-        )
-        .bind(id.to_string())
-        .execute(pool)
-        .await?;
+    pub async fn increment_phrase_usage(pool: &DbPool, id: Uuid) -> Result<()> {
+        sqlx::query("UPDATE common_phrases SET usage_count = usage_count + 1 WHERE id = ?")
+            .bind(id.to_string())
+            .execute(pool)
+            .await?;
 
         Ok(())
     }
 
     // ========== 处方模板相关方法 ==========
-    
+
     pub async fn create_prescription_template(
         pool: &DbPool,
         doctor_id: Uuid,
@@ -228,7 +216,7 @@ impl TemplateService {
     ) -> Result<PrescriptionTemplate> {
         let template_id = Uuid::new_v4();
         let medicines_json = serde_json::to_string(&dto.medicines)?;
-        
+
         sqlx::query(
             r#"
             INSERT INTO prescription_templates 
@@ -260,9 +248,8 @@ impl TemplateService {
         let offset = (page - 1) * page_size;
 
         // 构建查询条件
-        let mut count_query = String::from(
-            "SELECT COUNT(*) FROM prescription_templates WHERE doctor_id = ?"
-        );
+        let mut count_query =
+            String::from("SELECT COUNT(*) FROM prescription_templates WHERE doctor_id = ?");
         let mut list_query = String::from(
             r#"
             SELECT id, doctor_id, name, description, diagnosis, medicines,
@@ -295,10 +282,7 @@ impl TemplateService {
         for param in &params {
             count_query_builder = count_query_builder.bind(param);
         }
-        let total: i64 = count_query_builder
-            .fetch_one(pool)
-            .await?
-            .get::<i64, _>(0);
+        let total: i64 = count_query_builder.fetch_one(pool).await?.get::<i64, _>(0);
 
         // 获取列表
         let mut list_query_builder = sqlx::query(&list_query);
@@ -351,68 +335,68 @@ impl TemplateService {
         // 构建动态更新查询
         let mut query = String::from("UPDATE prescription_templates SET ");
         let mut updates = vec![];
-        
+
         if dto.name.is_some() {
             updates.push("name = ?");
         }
-        
+
         if dto.description.is_some() {
             updates.push("description = ?");
         }
-        
+
         if dto.diagnosis.is_some() {
             updates.push("diagnosis = ?");
         }
-        
+
         if dto.medicines.is_some() {
             updates.push("medicines = ?");
         }
-        
+
         if dto.instructions.is_some() {
             updates.push("instructions = ?");
         }
-        
+
         if dto.is_active.is_some() {
             updates.push("is_active = ?");
         }
-        
+
         if updates.is_empty() {
             return Err(anyhow!("No fields to update"));
         }
-        
+
         query.push_str(&updates.join(", "));
         query.push_str(", updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-        
+
         // 绑定参数
         let mut query_builder = sqlx::query(&query);
-        
+
         if let Some(name) = dto.name {
             query_builder = query_builder.bind(name);
         }
-        
+
         if let Some(description) = dto.description {
             query_builder = query_builder.bind(description);
         }
-        
+
         if let Some(diagnosis) = dto.diagnosis {
             query_builder = query_builder.bind(diagnosis);
         }
-        
+
         if let Some(medicines) = dto.medicines {
             let medicines_json = serde_json::to_string(&medicines)?;
             query_builder = query_builder.bind(medicines_json);
         }
-        
+
         if let Some(instructions) = dto.instructions {
             query_builder = query_builder.bind(instructions);
         }
-        
+
         if let Some(is_active) = dto.is_active {
             query_builder = query_builder.bind(is_active);
         }
-        
+
         query_builder = query_builder.bind(id.to_string());
-        
+
         query_builder.execute(pool).await?;
 
         Self::get_prescription_template_by_id(pool, id).await
@@ -437,32 +421,22 @@ impl TemplateService {
         Ok(())
     }
 
-    pub async fn increment_template_usage(
-        pool: &DbPool,
-        id: Uuid,
-    ) -> Result<()> {
-        sqlx::query(
-            "UPDATE prescription_templates SET usage_count = usage_count + 1 WHERE id = ?"
-        )
-        .bind(id.to_string())
-        .execute(pool)
-        .await?;
+    pub async fn increment_template_usage(pool: &DbPool, id: Uuid) -> Result<()> {
+        sqlx::query("UPDATE prescription_templates SET usage_count = usage_count + 1 WHERE id = ?")
+            .bind(id.to_string())
+            .execute(pool)
+            .await?;
 
         Ok(())
     }
 
     // 验证医生身份
-    pub async fn verify_doctor_access(
-        pool: &DbPool,
-        user_id: Uuid,
-    ) -> Result<Uuid> {
-        let row = sqlx::query(
-            "SELECT id FROM doctors WHERE user_id = ?"
-        )
-        .bind(user_id.to_string())
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| anyhow!("Doctor profile not found"))?;
+    pub async fn verify_doctor_access(pool: &DbPool, user_id: Uuid) -> Result<Uuid> {
+        let row = sqlx::query("SELECT id FROM doctors WHERE user_id = ?")
+            .bind(user_id.to_string())
+            .fetch_optional(pool)
+            .await?
+            .ok_or_else(|| anyhow!("Doctor profile not found"))?;
 
         let doctor_id_str: String = row.get("id");
         Ok(Uuid::parse_str(&doctor_id_str)?)
@@ -474,7 +448,7 @@ fn parse_common_phrase_row(row: &sqlx::mysql::MySqlRow) -> Result<CommonPhrase> 
     let id_str: String = row.get("id");
     let doctor_id_str: String = row.get("doctor_id");
     let category_str: String = row.get("category");
-    
+
     Ok(CommonPhrase {
         id: Uuid::parse_str(&id_str)?,
         doctor_id: Uuid::parse_str(&doctor_id_str)?,
@@ -497,7 +471,7 @@ fn parse_prescription_template_row(row: &sqlx::mysql::MySqlRow) -> Result<Prescr
     let id_str: String = row.get("id");
     let doctor_id_str: String = row.get("doctor_id");
     let medicines_json: serde_json::Value = row.get("medicines");
-    
+
     Ok(PrescriptionTemplate {
         id: Uuid::parse_str(&id_str)?,
         doctor_id: Uuid::parse_str(&doctor_id_str)?,

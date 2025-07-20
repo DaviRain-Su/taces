@@ -1,6 +1,6 @@
-use crate::AppState;
 use crate::controllers::circle_post_controller::*;
 use crate::middleware::auth::auth_middleware;
+use crate::AppState;
 use axum::{
     middleware,
     routing::{delete, get, post, put},
@@ -17,14 +17,11 @@ pub fn circle_post_routes() -> Router<AppState> {
         .route("/posts/:id", delete(delete_post))
         .route("/users/:user_id/posts", get(get_user_posts))
         .route("/circles/:circle_id/posts", get(get_circle_posts))
-        
         // Like routes
         .route("/posts/:post_id/like", post(toggle_like))
-        
         // Comment routes
         .route("/posts/:post_id/comments", post(create_comment))
         .route("/posts/:post_id/comments", get(get_comments))
         .route("/comments/:comment_id", delete(delete_comment))
-        
         .layer(middleware::from_fn(auth_middleware))
 }

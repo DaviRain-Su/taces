@@ -1,8 +1,8 @@
 use crate::config::database::DbPool;
 use crate::models::{
-    CreateReviewDto, CreateTagDto, DoctorReviewStatistics, PatientReview, 
-    RatingDistribution, ReplyReviewDto, ReviewDetail, ReviewTag, 
-    TagCategory, UpdateReviewDto, UpdateReviewVisibilityDto,
+    CreateReviewDto, CreateTagDto, DoctorReviewStatistics, PatientReview, RatingDistribution,
+    ReplyReviewDto, ReviewDetail, ReviewTag, TagCategory, UpdateReviewDto,
+    UpdateReviewVisibilityDto,
 };
 use anyhow::{anyhow, Result};
 use chrono::Utc;
@@ -13,7 +13,7 @@ pub struct ReviewService;
 
 impl ReviewService {
     // ========== 评价相关方法 ==========
-    
+
     pub async fn create_review(
         pool: &DbPool,
         patient_id: Uuid,
@@ -22,13 +22,12 @@ impl ReviewService {
         let mut tx = pool.begin().await?;
 
         // 验证预约是否存在且属于该患者
-        let appointment = sqlx::query(
-            "SELECT patient_id, doctor_id, status FROM appointments WHERE id = ?"
-        )
-        .bind(dto.appointment_id.to_string())
-        .fetch_optional(&mut *tx)
-        .await?
-        .ok_or_else(|| anyhow!("Appointment not found"))?;
+        let appointment =
+            sqlx::query("SELECT patient_id, doctor_id, status FROM appointments WHERE id = ?")
+                .bind(dto.appointment_id.to_string())
+                .fetch_optional(&mut *tx)
+                .await?
+                .ok_or_else(|| anyhow!("Appointment not found"))?;
 
         let appointment_patient_id: String = appointment.get("patient_id");
         let doctor_id: String = appointment.get("doctor_id");
@@ -43,12 +42,10 @@ impl ReviewService {
         }
 
         // 检查是否已经评价过
-        let existing = sqlx::query(
-            "SELECT id FROM patient_reviews WHERE appointment_id = ?"
-        )
-        .bind(dto.appointment_id.to_string())
-        .fetch_optional(&mut *tx)
-        .await?;
+        let existing = sqlx::query("SELECT id FROM patient_reviews WHERE appointment_id = ?")
+            .bind(dto.appointment_id.to_string())
+            .fetch_optional(&mut *tx)
+            .await?;
 
         if existing.is_some() {
             return Err(anyhow!("This appointment has already been reviewed"));
@@ -57,7 +54,7 @@ impl ReviewService {
         // 创建评价
         let review_id = Uuid::new_v4();
         let is_anonymous = dto.is_anonymous.unwrap_or(false);
-        
+
         sqlx::query(
             r#"
             INSERT INTO patient_reviews 
@@ -83,7 +80,7 @@ impl ReviewService {
         if let Some(tag_ids) = dto.tag_ids {
             for tag_id in tag_ids {
                 sqlx::query(
-                    "INSERT INTO review_tag_relations (id, review_id, tag_id) VALUES (?, ?, ?)"
+                    "INSERT INTO review_tag_relations (id, review_id, tag_id) VALUES (?, ?, ?)",
                 )
                 .bind(Uuid::new_v4().to_string())
                 .bind(review_id.to_string())
@@ -92,12 +89,10 @@ impl ReviewService {
                 .await?;
 
                 // 更新标签使用次数
-                sqlx::query(
-                    "UPDATE review_tags SET usage_count = usage_count + 1 WHERE id = ?"
-                )
-                .bind(tag_id.to_string())
-                .execute(&mut *tx)
-                .await?;
+                sqlx::query("UPDATE review_tags SET usage_count = usage_count + 1 WHERE id = ?")
+                    .bind(tag_id.to_string())
+                    .execute(&mut *tx)
+                    .await?;
             }
         }
 
@@ -123,9 +118,8 @@ impl ReviewService {
         let offset = (page - 1) * page_size;
 
         // 构建查询条件
-        let mut count_query = String::from(
-            "SELECT COUNT(*) FROM patient_reviews pr WHERE pr.is_visible = TRUE"
-        );
+        let mut count_query =
+            String::from("SELECT COUNT(*) FROM patient_reviews pr WHERE pr.is_visible = TRUE");
         let mut list_query = String::from(
             r#"
             SELECT pr.*, 
@@ -195,10 +189,7 @@ impl ReviewService {
         for param in &params {
             count_query_builder = count_query_builder.bind(param);
         }
-        let total: i64 = count_query_builder
-            .fetch_one(pool)
-            .await?
-            .get(0);
+        let total: i64 = count_query_builder.fetch_one(pool).await?.get(0);
 
         // 获取列表
         let mut list_query_builder = sqlx::query(&list_query);
@@ -208,15 +199,15 @@ impl ReviewService {
         list_query_builder = list_query_builder.bind(page_size).bind(offset);
 
         let rows = list_query_builder.fetch_all(pool).await?;
-        
+
         let mut reviews = vec![];
         for row in rows {
             let review_id: String = row.get("id");
             let review_id = Uuid::parse_str(&review_id)?;
-            
+
             // 获取标签
             let tags = Self::get_review_tags(pool, review_id).await?;
-            
+
             let detail = Self::parse_review_detail_row(&row, tags)?;
             reviews.push(detail);
         }
@@ -224,10 +215,7 @@ impl ReviewService {
         Ok((reviews, total))
     }
 
-    pub async fn get_review_by_id(
-        pool: &DbPool,
-        id: Uuid,
-    ) -> Result<PatientReview> {
+    pub async fn get_review_by_id(pool: &DbPool, id: Uuid) -> Result<PatientReview> {
         let row = sqlx::query(
             r#"
             SELECT * FROM patient_reviews WHERE id = ?
@@ -241,10 +229,7 @@ impl ReviewService {
         Self::parse_review_row(&row)
     }
 
-    pub async fn get_review_detail(
-        pool: &DbPool,
-        id: Uuid,
-    ) -> Result<ReviewDetail> {
+    pub async fn get_review_detail(pool: &DbPool, id: Uuid) -> Result<ReviewDetail> {
         let row = sqlx::query(
             r#"
             SELECT pr.*, 
@@ -291,7 +276,7 @@ impl ReviewService {
 
         // 构建动态更新查询
         let mut updates = vec![];
-        
+
         if dto.rating.is_some() {
             updates.push("rating = ?");
         }
@@ -316,9 +301,9 @@ impl ReviewService {
                 "UPDATE patient_reviews SET {}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 updates.join(", ")
             );
-            
+
             let mut query_builder = sqlx::query(&query);
-            
+
             if let Some(r) = dto.rating {
                 query_builder = query_builder.bind(r);
             }
@@ -337,7 +322,7 @@ impl ReviewService {
             if let Some(anon) = dto.is_anonymous {
                 query_builder = query_builder.bind(anon);
             }
-            
+
             query_builder = query_builder.bind(id.to_string());
             query_builder.execute(&mut *tx).await?;
         }
@@ -353,7 +338,7 @@ impl ReviewService {
             // 添加新标签关联
             for tag_id in tag_ids {
                 sqlx::query(
-                    "INSERT INTO review_tag_relations (id, review_id, tag_id) VALUES (?, ?, ?)"
+                    "INSERT INTO review_tag_relations (id, review_id, tag_id) VALUES (?, ?, ?)",
                 )
                 .bind(Uuid::new_v4().to_string())
                 .bind(id.to_string())
@@ -379,14 +364,12 @@ impl ReviewService {
     ) -> Result<PatientReview> {
         // 验证医生身份
         let review = Self::get_review_by_id(pool, id).await?;
-        
-        let doctor_check = sqlx::query(
-            "SELECT user_id FROM doctors WHERE id = ?"
-        )
-        .bind(review.doctor_id.to_string())
-        .fetch_one(pool)
-        .await?;
-        
+
+        let doctor_check = sqlx::query("SELECT user_id FROM doctors WHERE id = ?")
+            .bind(review.doctor_id.to_string())
+            .fetch_one(pool)
+            .await?;
+
         let user_id: String = doctor_check.get::<String, _>("user_id");
         if user_id != doctor_user_id.to_string() {
             return Err(anyhow!("You can only reply to reviews for yourself"));
@@ -394,7 +377,7 @@ impl ReviewService {
 
         // 更新回复
         sqlx::query(
-            "UPDATE patient_reviews SET reply = ?, reply_at = CURRENT_TIMESTAMP WHERE id = ?"
+            "UPDATE patient_reviews SET reply = ?, reply_at = CURRENT_TIMESTAMP WHERE id = ?",
         )
         .bind(&dto.reply)
         .bind(id.to_string())
@@ -415,13 +398,11 @@ impl ReviewService {
         let review = Self::get_review_by_id(pool, id).await?;
 
         // 更新可见性
-        sqlx::query(
-            "UPDATE patient_reviews SET is_visible = ? WHERE id = ?"
-        )
-        .bind(dto.is_visible)
-        .bind(id.to_string())
-        .execute(&mut *tx)
-        .await?;
+        sqlx::query("UPDATE patient_reviews SET is_visible = ? WHERE id = ?")
+            .bind(dto.is_visible)
+            .bind(id.to_string())
+            .execute(&mut *tx)
+            .await?;
 
         // 更新医生统计
         Self::update_doctor_statistics(&mut tx, review.doctor_id).await?;
@@ -432,26 +413,21 @@ impl ReviewService {
     }
 
     // ========== 标签相关方法 ==========
-    
-    pub async fn create_tag(
-        pool: &DbPool,
-        dto: CreateTagDto,
-    ) -> Result<ReviewTag> {
+
+    pub async fn create_tag(pool: &DbPool, dto: CreateTagDto) -> Result<ReviewTag> {
         let category = match dto.category.as_str() {
             "positive" | "negative" => &dto.category,
             _ => return Err(anyhow!("Invalid tag category")),
         };
 
         let tag_id = Uuid::new_v4();
-        
-        sqlx::query(
-            "INSERT INTO review_tags (id, name, category) VALUES (?, ?, ?)"
-        )
-        .bind(tag_id.to_string())
-        .bind(&dto.name)
-        .bind(category)
-        .execute(pool)
-        .await?;
+
+        sqlx::query("INSERT INTO review_tags (id, name, category) VALUES (?, ?, ?)")
+            .bind(tag_id.to_string())
+            .bind(&dto.name)
+            .bind(category)
+            .execute(pool)
+            .await?;
 
         Self::get_tag_by_id(pool, tag_id).await
     }
@@ -461,9 +437,7 @@ impl ReviewService {
         category: Option<String>,
         is_active: Option<bool>,
     ) -> Result<Vec<ReviewTag>> {
-        let mut query = String::from(
-            "SELECT * FROM review_tags WHERE 1=1"
-        );
+        let mut query = String::from("SELECT * FROM review_tags WHERE 1=1");
         let mut params = vec![];
 
         if let Some(cat) = category {
@@ -489,23 +463,18 @@ impl ReviewService {
             .collect()
     }
 
-    pub async fn get_tag_by_id(
-        pool: &DbPool,
-        id: Uuid,
-    ) -> Result<ReviewTag> {
-        let row = sqlx::query(
-            "SELECT * FROM review_tags WHERE id = ?"
-        )
-        .bind(id.to_string())
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| anyhow!("Tag not found"))?;
+    pub async fn get_tag_by_id(pool: &DbPool, id: Uuid) -> Result<ReviewTag> {
+        let row = sqlx::query("SELECT * FROM review_tags WHERE id = ?")
+            .bind(id.to_string())
+            .fetch_optional(pool)
+            .await?
+            .ok_or_else(|| anyhow!("Tag not found"))?;
 
         Self::parse_tag_row(&row)
     }
 
     // ========== 统计相关方法 ==========
-    
+
     pub async fn get_doctor_statistics(
         pool: &DbPool,
         doctor_id: Uuid,
@@ -549,11 +518,8 @@ impl ReviewService {
     }
 
     // ========== 辅助方法 ==========
-    
-    async fn get_review_tags(
-        pool: &DbPool,
-        review_id: Uuid,
-    ) -> Result<Vec<ReviewTag>> {
+
+    async fn get_review_tags(pool: &DbPool, review_id: Uuid) -> Result<Vec<ReviewTag>> {
         let rows = sqlx::query(
             r#"
             SELECT rt.* FROM review_tags rt
@@ -618,7 +584,7 @@ impl ReviewService {
         let appointment_id_str: String = row.get("appointment_id");
         let doctor_id_str: String = row.get("doctor_id");
         let patient_id_str: String = row.get("patient_id");
-        
+
         Ok(PatientReview {
             id: Uuid::parse_str(&id_str)?,
             appointment_id: Uuid::parse_str(&appointment_id_str)?,
@@ -647,14 +613,18 @@ impl ReviewService {
         let doctor_id_str: String = row.get("doctor_id");
         let patient_id_str: String = row.get("patient_id");
         let is_anonymous: bool = row.get("is_anonymous");
-        
+
         Ok(ReviewDetail {
             id: Uuid::parse_str(&id_str)?,
             appointment_id: Uuid::parse_str(&appointment_id_str)?,
             doctor_id: Uuid::parse_str(&doctor_id_str)?,
             doctor_name: row.get("doctor_name"),
             patient_id: Uuid::parse_str(&patient_id_str)?,
-            patient_name: if is_anonymous { "匿名用户".to_string() } else { row.get("patient_name") },
+            patient_name: if is_anonymous {
+                "匿名用户".to_string()
+            } else {
+                row.get("patient_name")
+            },
             rating: row.get("rating"),
             attitude_rating: row.get("attitude_rating"),
             professionalism_rating: row.get("professionalism_rating"),
@@ -672,7 +642,7 @@ impl ReviewService {
     fn parse_tag_row(row: &sqlx::mysql::MySqlRow) -> Result<ReviewTag> {
         let id_str: String = row.get("id");
         let category_str: String = row.get("category");
-        
+
         Ok(ReviewTag {
             id: Uuid::parse_str(&id_str)?,
             name: row.get("name"),

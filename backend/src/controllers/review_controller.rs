@@ -1,10 +1,9 @@
-use crate::AppState;
 use crate::models::{
-    ApiResponse, CreateReviewDto, CreateTagDto, ReplyReviewDto, 
-    ReviewQuery, UpdateReviewDto, UpdateReviewVisibilityDto, 
-    User, UserRole,
+    ApiResponse, CreateReviewDto, CreateTagDto, ReplyReviewDto, ReviewQuery, UpdateReviewDto,
+    UpdateReviewVisibilityDto, User, UserRole,
 };
 use crate::services::review_service::ReviewService;
+use crate::AppState;
 use axum::{
     extract::{Extension, Path, Query, State},
     http::StatusCode,
@@ -25,21 +24,29 @@ pub async fn create_review(
     if user.role != UserRole::Patient {
         return (
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::<serde_json::Value>::error("Only patients can create reviews")),
+            Json(ApiResponse::<serde_json::Value>::error(
+                "Only patients can create reviews",
+            )),
         );
     }
 
     if let Err(e) = dto.validate() {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::<serde_json::Value>::error(&format!("Validation error: {}", e))),
+            Json(ApiResponse::<serde_json::Value>::error(&format!(
+                "Validation error: {}",
+                e
+            ))),
         );
     }
 
     match ReviewService::create_review(&state.pool, user.id, dto).await {
         Ok(review) => (
             StatusCode::CREATED,
-            Json(ApiResponse::success("Review created successfully", serde_json::to_value(review).unwrap())),
+            Json(ApiResponse::success(
+                "Review created successfully",
+                serde_json::to_value(review).unwrap(),
+            )),
         ),
         Err(e) => (
             StatusCode::BAD_REQUEST,
@@ -80,7 +87,10 @@ pub async fn get_reviews(
             });
             (
                 StatusCode::OK,
-                Json(ApiResponse::success("Reviews retrieved successfully", response)),
+                Json(ApiResponse::success(
+                    "Reviews retrieved successfully",
+                    response,
+                )),
             )
         }
         Err(e) => (
@@ -97,7 +107,10 @@ pub async fn get_review_by_id(
     match ReviewService::get_review_detail(&state.pool, id).await {
         Ok(review) => (
             StatusCode::OK,
-            Json(ApiResponse::success("Review retrieved successfully", serde_json::to_value(review).unwrap())),
+            Json(ApiResponse::success(
+                "Review retrieved successfully",
+                serde_json::to_value(review).unwrap(),
+            )),
         ),
         Err(e) => (
             StatusCode::NOT_FOUND,
@@ -116,21 +129,29 @@ pub async fn update_review(
     if user.role != UserRole::Patient {
         return (
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::<serde_json::Value>::error("Only patients can update reviews")),
+            Json(ApiResponse::<serde_json::Value>::error(
+                "Only patients can update reviews",
+            )),
         );
     }
 
     if let Err(e) = dto.validate() {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::<serde_json::Value>::error(&format!("Validation error: {}", e))),
+            Json(ApiResponse::<serde_json::Value>::error(&format!(
+                "Validation error: {}",
+                e
+            ))),
         );
     }
 
     match ReviewService::update_review(&state.pool, id, user.id, dto).await {
         Ok(review) => (
             StatusCode::OK,
-            Json(ApiResponse::success("Review updated successfully", serde_json::to_value(review).unwrap())),
+            Json(ApiResponse::success(
+                "Review updated successfully",
+                serde_json::to_value(review).unwrap(),
+            )),
         ),
         Err(e) => (
             StatusCode::BAD_REQUEST,
@@ -149,21 +170,29 @@ pub async fn reply_to_review(
     if user.role != UserRole::Doctor {
         return (
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::<serde_json::Value>::error("Only doctors can reply to reviews")),
+            Json(ApiResponse::<serde_json::Value>::error(
+                "Only doctors can reply to reviews",
+            )),
         );
     }
 
     if let Err(e) = dto.validate() {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::<serde_json::Value>::error(&format!("Validation error: {}", e))),
+            Json(ApiResponse::<serde_json::Value>::error(&format!(
+                "Validation error: {}",
+                e
+            ))),
         );
     }
 
     match ReviewService::reply_to_review(&state.pool, id, user.id, dto).await {
         Ok(review) => (
             StatusCode::OK,
-            Json(ApiResponse::success("Reply added successfully", serde_json::to_value(review).unwrap())),
+            Json(ApiResponse::success(
+                "Reply added successfully",
+                serde_json::to_value(review).unwrap(),
+            )),
         ),
         Err(e) => (
             StatusCode::BAD_REQUEST,
@@ -182,14 +211,19 @@ pub async fn update_review_visibility(
     if user.role != UserRole::Admin {
         return (
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::<serde_json::Value>::error("Only admins can manage review visibility")),
+            Json(ApiResponse::<serde_json::Value>::error(
+                "Only admins can manage review visibility",
+            )),
         );
     }
 
     match ReviewService::update_review_visibility(&state.pool, id, dto).await {
         Ok(_) => (
             StatusCode::OK,
-            Json(ApiResponse::success("Review visibility updated successfully", serde_json::json!(()))),
+            Json(ApiResponse::success(
+                "Review visibility updated successfully",
+                serde_json::json!(()),
+            )),
         ),
         Err(e) => (
             StatusCode::BAD_REQUEST,
@@ -209,21 +243,29 @@ pub async fn create_tag(
     if user.role != UserRole::Admin {
         return (
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::<serde_json::Value>::error("Only admins can create tags")),
+            Json(ApiResponse::<serde_json::Value>::error(
+                "Only admins can create tags",
+            )),
         );
     }
 
     if let Err(e) = dto.validate() {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::<serde_json::Value>::error(&format!("Validation error: {}", e))),
+            Json(ApiResponse::<serde_json::Value>::error(&format!(
+                "Validation error: {}",
+                e
+            ))),
         );
     }
 
     match ReviewService::create_tag(&state.pool, dto).await {
         Ok(tag) => (
             StatusCode::CREATED,
-            Json(ApiResponse::success("Tag created successfully", serde_json::to_value(tag).unwrap())),
+            Json(ApiResponse::success(
+                "Tag created successfully",
+                serde_json::to_value(tag).unwrap(),
+            )),
         ),
         Err(e) => (
             StatusCode::BAD_REQUEST,
@@ -240,14 +282,15 @@ pub async fn get_tags(
         .get("category")
         .and_then(|v| v.as_str())
         .map(String::from);
-    let is_active = params
-        .get("is_active")
-        .and_then(|v| v.as_bool());
+    let is_active = params.get("is_active").and_then(|v| v.as_bool());
 
     match ReviewService::get_tags(&state.pool, category, is_active).await {
         Ok(tags) => (
             StatusCode::OK,
-            Json(ApiResponse::success("Tags retrieved successfully", serde_json::to_value(tags).unwrap())),
+            Json(ApiResponse::success(
+                "Tags retrieved successfully",
+                serde_json::to_value(tags).unwrap(),
+            )),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -265,7 +308,10 @@ pub async fn get_doctor_statistics(
     match ReviewService::get_doctor_statistics(&state.pool, doctor_id).await {
         Ok(stats) => (
             StatusCode::OK,
-            Json(ApiResponse::success("Statistics retrieved successfully", serde_json::to_value(stats).unwrap())),
+            Json(ApiResponse::success(
+                "Statistics retrieved successfully",
+                serde_json::to_value(stats).unwrap(),
+            )),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -285,8 +331,11 @@ pub async fn get_patient_reviews(
     if user.role != UserRole::Admin && user.id != patient_id {
         return (
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::<serde_json::Value>::error("Cannot view other patient's reviews")),
-        ).into_response();
+            Json(ApiResponse::<serde_json::Value>::error(
+                "Cannot view other patient's reviews",
+            )),
+        )
+            .into_response();
     }
 
     let page = query.page.unwrap_or(1);
@@ -317,14 +366,18 @@ pub async fn get_patient_reviews(
             });
             (
                 StatusCode::OK,
-                Json(ApiResponse::success("Reviews retrieved successfully", response)),
+                Json(ApiResponse::success(
+                    "Reviews retrieved successfully",
+                    response,
+                )),
             )
         }
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::<serde_json::Value>::error(&e.to_string())),
         ),
-    }.into_response()
+    }
+    .into_response()
 }
 
 // 获取医生的评价列表
@@ -361,7 +414,10 @@ pub async fn get_doctor_reviews(
             });
             (
                 StatusCode::OK,
-                Json(ApiResponse::success("Reviews retrieved successfully", response)),
+                Json(ApiResponse::success(
+                    "Reviews retrieved successfully",
+                    response,
+                )),
             )
         }
         Err(e) => (

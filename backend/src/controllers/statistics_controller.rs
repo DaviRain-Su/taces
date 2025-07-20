@@ -1,7 +1,7 @@
 use crate::{
+    middleware::auth::AuthUser,
     models::{statistics::*, ApiResponse},
     services::statistics_service::StatisticsService,
-    middleware::auth::AuthUser,
     AppState,
 };
 use axum::{
@@ -50,12 +50,11 @@ pub async fn get_doctor_statistics(
     // 医生只能查看自己的统计，管理员可以查看所有医生
     if auth_user.role == "doctor" {
         // 获取医生ID
-        let doctor_result: Result<Option<(String,)>, sqlx::Error> = sqlx::query_as(
-            "SELECT id FROM doctors WHERE user_id = ?"
-        )
-        .bind(auth_user.user_id.to_string())
-        .fetch_optional(&state.pool)
-        .await;
+        let doctor_result: Result<Option<(String,)>, sqlx::Error> =
+            sqlx::query_as("SELECT id FROM doctors WHERE user_id = ?")
+                .bind(auth_user.user_id.to_string())
+                .fetch_optional(&state.pool)
+                .await;
 
         match doctor_result {
             Ok(Some((id,))) => {
@@ -139,8 +138,12 @@ pub async fn get_appointment_trends(
     }
 
     // 设置默认日期范围（最近30天）
-    let end_date = date_range.end_date.unwrap_or_else(|| Local::now().naive_local().date());
-    let start_date = date_range.start_date.unwrap_or_else(|| end_date - Duration::days(29));
+    let end_date = date_range
+        .end_date
+        .unwrap_or_else(|| Local::now().naive_local().date());
+    let start_date = date_range
+        .start_date
+        .unwrap_or_else(|| end_date - Duration::days(29));
 
     match StatisticsService::get_appointment_trends(&state.pool, start_date, end_date).await {
         Ok(trends) => Json(ApiResponse::success("获取预约趋势成功", trends)).into_response(),
@@ -289,8 +292,12 @@ pub async fn get_user_growth_statistics(
     }
 
     // 设置默认日期范围（最近30天）
-    let end_date = date_range.end_date.unwrap_or_else(|| Local::now().naive_local().date());
-    let start_date = date_range.start_date.unwrap_or_else(|| end_date - Duration::days(29));
+    let end_date = date_range
+        .end_date
+        .unwrap_or_else(|| Local::now().naive_local().date());
+    let start_date = date_range
+        .start_date
+        .unwrap_or_else(|| end_date - Duration::days(29));
 
     match StatisticsService::get_user_growth_stats(&state.pool, start_date, end_date).await {
         Ok(stats) => Json(ApiResponse::success("获取用户增长统计成功", stats)).into_response(),

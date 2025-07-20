@@ -1,7 +1,7 @@
 use crate::{
     config::redis::RedisPool,
     models::user::User,
-    services::cache_service::{CacheService, CacheKeys, CacheDurations},
+    services::cache_service::{CacheDurations, CacheKeys, CacheService},
     utils::errors::AppError,
 };
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,7 @@ impl SessionService {
         };
 
         let cache_key = CacheKeys::session(token);
-        
+
         CacheService::set(redis, &cache_key, &session_data, CacheDurations::DAY)
             .await
             .map_err(|e| {
@@ -46,19 +46,16 @@ impl SessionService {
     }
 
     /// Get session data
-    pub async fn get_session(
-        redis: &Option<RedisPool>,
-        token: &str,
-    ) -> Option<SessionData> {
+    pub async fn get_session(redis: &Option<RedisPool>, token: &str) -> Option<SessionData> {
         let cache_key = CacheKeys::session(token);
-        
+
         if let Some(mut session) = CacheService::get::<SessionData>(redis, &cache_key).await {
             // Update last accessed time
             session.last_accessed = chrono::Utc::now();
-            
+
             // Update in cache (ignore errors)
             let _ = CacheService::set(redis, &cache_key, &session, CacheDurations::DAY).await;
-            
+
             Some(session)
         } else {
             None
@@ -71,13 +68,11 @@ impl SessionService {
         token: &str,
     ) -> Result<(), AppError> {
         let cache_key = CacheKeys::session(token);
-        
-        CacheService::delete(redis, &cache_key)
-            .await
-            .map_err(|e| {
-                tracing::warn!("Failed to invalidate session: {}", e);
-                AppError::InternalServerError("Failed to invalidate session".to_string())
-            })?;
+
+        CacheService::delete(redis, &cache_key).await.map_err(|e| {
+            tracing::warn!("Failed to invalidate session: {}", e);
+            AppError::InternalServerError("Failed to invalidate session".to_string())
+        })?;
 
         Ok(())
     }
@@ -89,26 +84,23 @@ impl SessionService {
     ) -> Result<u64, AppError> {
         // This would require maintaining a separate index of sessions per user
         // For now, we'll return 0 as this is a more complex implementation
-        tracing::warn!("Invalidating all sessions for user {} not fully implemented", user_id);
+        tracing::warn!(
+            "Invalidating all sessions for user {} not fully implemented",
+            user_id
+        );
         Ok(0)
     }
 
     /// Check if session is valid
-    pub async fn is_session_valid(
-        redis: &Option<RedisPool>,
-        token: &str,
-    ) -> bool {
+    pub async fn is_session_valid(redis: &Option<RedisPool>, token: &str) -> bool {
         CacheService::exists(redis, &CacheKeys::session(token)).await
     }
 
     /// Extend session TTL
-    pub async fn extend_session(
-        redis: &Option<RedisPool>,
-        token: &str,
-    ) -> Result<(), AppError> {
+    pub async fn extend_session(redis: &Option<RedisPool>, token: &str) -> Result<(), AppError> {
         if let Some(session) = Self::get_session(redis, token).await {
             let cache_key = CacheKeys::session(token);
-            
+
             CacheService::set(redis, &cache_key, &session, CacheDurations::DAY)
                 .await
                 .map_err(|e| {

@@ -1,8 +1,4 @@
-use crate::{
-    controllers::live_stream_controller::*,
-    middleware::auth::auth_middleware,
-    AppState,
-};
+use crate::{controllers::live_stream_controller::*, middleware::auth::auth_middleware, AppState};
 use axum::{
     middleware,
     routing::{get, post, put},

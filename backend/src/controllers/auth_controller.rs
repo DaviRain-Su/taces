@@ -42,7 +42,9 @@ pub async fn login(
         )
     })?;
 
-    match auth_service::login_cached(&app_state.pool, &app_state.redis, &app_state.config, dto).await {
+    match auth_service::login_cached(&app_state.pool, &app_state.redis, &app_state.config, dto)
+        .await
+    {
         Ok(response) => Ok(Json(ApiResponse::success("Login successful", response))),
         Err(e) => Err((
             StatusCode::UNAUTHORIZED,
@@ -57,7 +59,7 @@ pub async fn logout(
     TypedHeader(auth_header): TypedHeader<headers::Authorization<headers::authorization::Bearer>>,
 ) -> Result<Json<ApiResponse<()>>, (StatusCode, Json<ApiResponse<()>>)> {
     let token = auth_header.token();
-    
+
     match auth_service::logout_cached(&app_state.redis, token).await {
         Ok(_) => Ok(Json(ApiResponse::success("Logout successful", ()))),
         Err(e) => Err((

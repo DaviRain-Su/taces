@@ -44,7 +44,7 @@ async fn test_notification_lifecycle() {
         r#"
         INSERT INTO notifications (id, user_id, type, title, content, status, created_at)
         VALUES (?, ?, 'appointment_reminder', ?, ?, 'unread', NOW())
-        "#
+        "#,
     )
     .bind(uuid::Uuid::new_v4().to_string())
     .bind(user_id.to_string())
@@ -68,7 +68,10 @@ async fn test_notification_lifecycle() {
 
     // Get notification detail
     let (status, body) = app
-        .get_with_auth(&format!("/api/v1/notifications/{}", notification_id), &token)
+        .get_with_auth(
+            &format!("/api/v1/notifications/{}", notification_id),
+            &token,
+        )
         .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["data"]["title"], "预约提醒");
@@ -94,15 +97,16 @@ async fn test_notification_lifecycle() {
 
     // Delete notification
     let (status, body) = app
-        .delete_with_auth(&format!("/api/v1/notifications/{}", notification_id), &token)
+        .delete_with_auth(
+            &format!("/api/v1/notifications/{}", notification_id),
+            &token,
+        )
         .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["success"], true);
 
     // Verify it's deleted
-    let (status, body) = app
-        .get_with_auth("/api/v1/notifications", &token)
-        .await;
+    let (status, body) = app.get_with_auth("/api/v1/notifications", &token).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["data"]["items"].as_array().unwrap().len(), 0);
 }
@@ -121,7 +125,7 @@ async fn test_notification_stats() {
             r#"
             INSERT INTO notifications (id, user_id, type, title, content, status, created_at)
             VALUES (?, ?, 'system_announcement', ?, ?, ?, NOW())
-            "#
+            "#,
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(user_id.to_string())
@@ -157,7 +161,7 @@ async fn test_mark_all_as_read() {
             r#"
             INSERT INTO notifications (id, user_id, type, title, content, status, created_at)
             VALUES (?, ?, 'system_announcement', ?, ?, 'unread', NOW())
-            "#
+            "#,
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(user_id.to_string())
@@ -272,14 +276,22 @@ async fn test_system_announcement() {
     });
 
     let (status, body) = app
-        .post_with_auth("/api/v1/notifications/announcement", announcement_dto.clone(), &admin_token)
+        .post_with_auth(
+            "/api/v1/notifications/announcement",
+            announcement_dto.clone(),
+            &admin_token,
+        )
         .await;
     assert_eq!(status, StatusCode::OK);
     assert!(body["data"]["count"].as_i64().unwrap() > 0);
 
     // Regular user tries to send announcement (should fail)
     let (status, body) = app
-        .post_with_auth("/api/v1/notifications/announcement", announcement_dto, &user_token)
+        .post_with_auth(
+            "/api/v1/notifications/announcement",
+            announcement_dto,
+            &user_token,
+        )
         .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(body["success"], false);
@@ -299,7 +311,7 @@ async fn test_notification_pagination() {
             r#"
             INSERT INTO notifications (id, user_id, type, title, content, status, created_at)
             VALUES (?, ?, 'system_announcement', ?, ?, 'unread', NOW())
-            "#
+            "#,
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(user_id.to_string())
@@ -354,7 +366,7 @@ async fn test_notification_authorization() {
         r#"
         INSERT INTO notifications (id, user_id, type, title, content, status, created_at)
         VALUES (?, ?, 'appointment_reminder', '预约提醒', '您有新的预约', 'unread', NOW())
-        "#
+        "#,
     )
     .bind(notification_id.to_string())
     .bind(user1_id.to_string())
@@ -364,13 +376,19 @@ async fn test_notification_authorization() {
 
     // User1 can access their notification
     let (status, _) = app
-        .get_with_auth(&format!("/api/v1/notifications/{}", notification_id), &token1)
+        .get_with_auth(
+            &format!("/api/v1/notifications/{}", notification_id),
+            &token1,
+        )
         .await;
     assert_eq!(status, StatusCode::OK);
 
     // User2 cannot access user1's notification
     let (status, body) = app
-        .get_with_auth(&format!("/api/v1/notifications/{}", notification_id), &token2)
+        .get_with_auth(
+            &format!("/api/v1/notifications/{}", notification_id),
+            &token2,
+        )
         .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(body["success"], false);
@@ -388,7 +406,10 @@ async fn test_notification_authorization() {
 
     // User2 cannot delete user1's notification
     let (status, body) = app
-        .delete_with_auth(&format!("/api/v1/notifications/{}", notification_id), &token2)
+        .delete_with_auth(
+            &format!("/api/v1/notifications/{}", notification_id),
+            &token2,
+        )
         .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(body["success"], false);

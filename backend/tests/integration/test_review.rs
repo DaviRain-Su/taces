@@ -59,7 +59,7 @@ async fn create_doctor_profile(app: &mut TestApp, user_id: Uuid) -> Uuid {
         .fetch_one(&app.pool)
         .await
         .unwrap();
-    
+
     let doctor_id: String = row.try_get("id").unwrap();
     Uuid::parse_str(&doctor_id).unwrap()
 }
@@ -67,10 +67,12 @@ async fn create_doctor_profile(app: &mut TestApp, user_id: Uuid) -> Uuid {
 #[tokio::test]
 async fn test_create_review() {
     let mut app = TestApp::new().await;
-    
+
     // 创建患者和医生
-    let (patient_id, patient_token) = create_test_user_with_token(&mut app, "patient1", UserRole::Patient).await;
-    let (doctor_user_id, _doctor_token) = create_test_user_with_token(&mut app, "doctor1", UserRole::Doctor).await;
+    let (patient_id, patient_token) =
+        create_test_user_with_token(&mut app, "patient1", UserRole::Patient).await;
+    let (doctor_user_id, _doctor_token) =
+        create_test_user_with_token(&mut app, "doctor1", UserRole::Doctor).await;
     let doctor_id = create_doctor_profile(&mut app, doctor_user_id).await;
 
     // 创建一个已完成的预约
@@ -99,22 +101,29 @@ async fn test_create_review() {
         "is_anonymous": false
     });
 
-    let (status, body) = app.post_with_auth("/api/v1/reviews", create_review, &patient_token).await;
-    
+    let (status, body) = app
+        .post_with_auth("/api/v1/reviews", create_review, &patient_token)
+        .await;
+
     assert_eq!(status, StatusCode::CREATED);
     assert!(body["success"].as_bool().unwrap());
     assert_eq!(body["data"]["rating"].as_i64().unwrap(), 5);
-    assert_eq!(body["data"]["comment"].as_str().unwrap(), "董医生医术精湛，态度友好！");
+    assert_eq!(
+        body["data"]["comment"].as_str().unwrap(),
+        "董医生医术精湛，态度友好！"
+    );
 }
 
 #[tokio::test]
 async fn test_create_review_with_tags() {
     let mut app = TestApp::new().await;
 
-    let (patient_id, patient_token) = create_test_user_with_token(&mut app, "patient2", UserRole::Patient).await;
-    let (doctor_user_id, _doctor_token) = create_test_user_with_token(&mut app, "doctor2", UserRole::Doctor).await;
+    let (patient_id, patient_token) =
+        create_test_user_with_token(&mut app, "patient2", UserRole::Patient).await;
+    let (doctor_user_id, _doctor_token) =
+        create_test_user_with_token(&mut app, "doctor2", UserRole::Doctor).await;
     let doctor_id = create_doctor_profile(&mut app, doctor_user_id).await;
-    
+
     // 创建预约
     let appointment_id = Uuid::new_v4();
     sqlx::query(
@@ -131,12 +140,14 @@ async fn test_create_review_with_tags() {
     .unwrap();
 
     // 获取标签ID
-    let tag_rows = sqlx::query("SELECT id FROM review_tags WHERE name IN ('医术精湛', '态度友好') LIMIT 2")
-        .fetch_all(&app.pool)
-        .await
-        .unwrap();
-    
-    let tag_ids: Vec<String> = tag_rows.iter()
+    let tag_rows =
+        sqlx::query("SELECT id FROM review_tags WHERE name IN ('医术精湛', '态度友好') LIMIT 2")
+            .fetch_all(&app.pool)
+            .await
+            .unwrap();
+
+    let tag_ids: Vec<String> = tag_rows
+        .iter()
         .map(|row| row.try_get::<String, _>("id").unwrap())
         .collect();
 
@@ -152,7 +163,9 @@ async fn test_create_review_with_tags() {
         "is_anonymous": false
     });
 
-    let (status, _body) = app.post_with_auth("/api/v1/reviews", create_review, &patient_token).await;
+    let (status, _body) = app
+        .post_with_auth("/api/v1/reviews", create_review, &patient_token)
+        .await;
     assert_eq!(status, StatusCode::CREATED);
 }
 
@@ -160,10 +173,12 @@ async fn test_create_review_with_tags() {
 async fn test_cannot_review_uncompleted_appointment() {
     let mut app = TestApp::new().await;
 
-    let (patient_id, patient_token) = create_test_user_with_token(&mut app, "patient3", UserRole::Patient).await;
-    let (doctor_user_id, _doctor_token) = create_test_user_with_token(&mut app, "doctor3", UserRole::Doctor).await;
+    let (patient_id, patient_token) =
+        create_test_user_with_token(&mut app, "patient3", UserRole::Patient).await;
+    let (doctor_user_id, _doctor_token) =
+        create_test_user_with_token(&mut app, "doctor3", UserRole::Doctor).await;
     let doctor_id = create_doctor_profile(&mut app, doctor_user_id).await;
-    
+
     // 创建未完成的预约
     let appointment_id = Uuid::new_v4();
     sqlx::query(
@@ -188,7 +203,9 @@ async fn test_cannot_review_uncompleted_appointment() {
         "comment": "测试评价"
     });
 
-    let (status, _body) = app.post_with_auth("/api/v1/reviews", create_review, &patient_token).await;
+    let (status, _body) = app
+        .post_with_auth("/api/v1/reviews", create_review, &patient_token)
+        .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
 }
 
@@ -196,10 +213,12 @@ async fn test_cannot_review_uncompleted_appointment() {
 async fn test_doctor_reply_to_review() {
     let mut app = TestApp::new().await;
 
-    let (patient_id, patient_token) = create_test_user_with_token(&mut app, "patient4", UserRole::Patient).await;
-    let (doctor_user_id, doctor_token) = create_test_user_with_token(&mut app, "doctor4", UserRole::Doctor).await;
+    let (patient_id, patient_token) =
+        create_test_user_with_token(&mut app, "patient4", UserRole::Patient).await;
+    let (doctor_user_id, doctor_token) =
+        create_test_user_with_token(&mut app, "doctor4", UserRole::Doctor).await;
     let doctor_id = create_doctor_profile(&mut app, doctor_user_id).await;
-    
+
     // 创建预约和评价
     let appointment_id = Uuid::new_v4();
     sqlx::query(
@@ -225,7 +244,9 @@ async fn test_doctor_reply_to_review() {
         "comment": "非常满意"
     });
 
-    let (status, body) = app.post_with_auth("/api/v1/reviews", create_review, &patient_token).await;
+    let (status, body) = app
+        .post_with_auth("/api/v1/reviews", create_review, &patient_token)
+        .await;
     assert_eq!(status, StatusCode::CREATED);
     let review_id = body["data"]["id"].as_str().unwrap();
 
@@ -234,26 +255,34 @@ async fn test_doctor_reply_to_review() {
         "reply": "感谢您的认可，祝您身体健康！"
     });
 
-    let (status, body) = app.post_with_auth(
-        &format!("/api/v1/reviews/{}/reply", review_id), 
-        reply, 
-        &doctor_token
-    ).await;
+    let (status, body) = app
+        .post_with_auth(
+            &format!("/api/v1/reviews/{}/reply", review_id),
+            reply,
+            &doctor_token,
+        )
+        .await;
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
-    assert_eq!(body["data"]["reply"].as_str().unwrap(), "感谢您的认可，祝您身体健康！");
+    assert_eq!(
+        body["data"]["reply"].as_str().unwrap(),
+        "感谢您的认可，祝您身体健康！"
+    );
 }
 
 #[tokio::test]
 async fn test_get_doctor_reviews() {
     let mut app = TestApp::new().await;
 
-    let (doctor_user_id, _doctor_token) = create_test_user_with_token(&mut app, "doctor5", UserRole::Doctor).await;
+    let (doctor_user_id, _doctor_token) =
+        create_test_user_with_token(&mut app, "doctor5", UserRole::Doctor).await;
     let doctor_id = create_doctor_profile(&mut app, doctor_user_id).await;
 
     // 公开接口，不需要认证
-    let (status, body) = app.get(&format!("/api/v1/reviews/doctor/{}/reviews", doctor_id)).await;
+    let (status, body) = app
+        .get(&format!("/api/v1/reviews/doctor/{}/reviews", doctor_id))
+        .await;
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
@@ -264,11 +293,14 @@ async fn test_get_doctor_reviews() {
 async fn test_get_doctor_statistics() {
     let mut app = TestApp::new().await;
 
-    let (doctor_user_id, _doctor_token) = create_test_user_with_token(&mut app, "doctor6", UserRole::Doctor).await;
+    let (doctor_user_id, _doctor_token) =
+        create_test_user_with_token(&mut app, "doctor6", UserRole::Doctor).await;
     let doctor_id = create_doctor_profile(&mut app, doctor_user_id).await;
 
     // 公开接口，不需要认证
-    let (status, body) = app.get(&format!("/api/v1/reviews/doctor/{}/statistics", doctor_id)).await;
+    let (status, body) = app
+        .get(&format!("/api/v1/reviews/doctor/{}/statistics", doctor_id))
+        .await;
 
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
@@ -280,11 +312,14 @@ async fn test_get_doctor_statistics() {
 async fn test_admin_manage_review_visibility() {
     let mut app = TestApp::new().await;
 
-    let (_admin_id, admin_token) = create_test_user_with_token(&mut app, "admin1", UserRole::Admin).await;
-    let (patient_id, patient_token) = create_test_user_with_token(&mut app, "patient5", UserRole::Patient).await;
-    let (doctor_user_id, _doctor_token) = create_test_user_with_token(&mut app, "doctor7", UserRole::Doctor).await;
+    let (_admin_id, admin_token) =
+        create_test_user_with_token(&mut app, "admin1", UserRole::Admin).await;
+    let (patient_id, patient_token) =
+        create_test_user_with_token(&mut app, "patient5", UserRole::Patient).await;
+    let (doctor_user_id, _doctor_token) =
+        create_test_user_with_token(&mut app, "doctor7", UserRole::Doctor).await;
     let doctor_id = create_doctor_profile(&mut app, doctor_user_id).await;
-    
+
     // 创建评价
     let appointment_id = Uuid::new_v4();
     sqlx::query(
@@ -309,7 +344,9 @@ async fn test_admin_manage_review_visibility() {
         "comment": "差评内容"
     });
 
-    let (status, body) = app.post_with_auth("/api/v1/reviews", create_review, &patient_token).await;
+    let (status, body) = app
+        .post_with_auth("/api/v1/reviews", create_review, &patient_token)
+        .await;
     assert_eq!(status, StatusCode::CREATED);
     let review_id = body["data"]["id"].as_str().unwrap();
 
@@ -318,11 +355,13 @@ async fn test_admin_manage_review_visibility() {
         "is_visible": false
     });
 
-    let (status, _body) = app.put_with_auth(
-        &format!("/api/v1/reviews/{}/visibility", review_id), 
-        update_visibility, 
-        &admin_token
-    ).await;
+    let (status, _body) = app
+        .put_with_auth(
+            &format!("/api/v1/reviews/{}/visibility", review_id),
+            update_visibility,
+            &admin_token,
+        )
+        .await;
 
     assert_eq!(status, StatusCode::OK);
 }

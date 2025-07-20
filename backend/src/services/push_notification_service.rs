@@ -1,7 +1,4 @@
-use crate::{
-    config::database::DbPool,
-    utils::errors::AppError,
-};
+use crate::{config::database::DbPool, utils::errors::AppError};
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -18,10 +15,10 @@ pub struct PushConfig {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PushProvider {
-    FCM,      // Firebase Cloud Messaging (Android/iOS/Web)
-    APNs,     // Apple Push Notification service
-    Jpush,    // 极光推送 (Popular in China)
-    Getui,    // 个推 (Popular in China)
+    FCM,   // Firebase Cloud Messaging (Android/iOS/Web)
+    APNs,  // Apple Push Notification service
+    Jpush, // 极光推送 (Popular in China)
+    Getui, // 个推 (Popular in China)
 }
 
 impl PushConfig {
@@ -33,7 +30,7 @@ impl PushConfig {
             "getui" => PushProvider::Getui,
             _ => return None,
         };
-        
+
         Some(Self {
             provider,
             api_key: std::env::var("PUSH_API_KEY").ok()?,
@@ -89,7 +86,7 @@ impl PushNotificationService {
             PushProvider::Getui => Self::send_getui_push(config, message).await,
         }
     }
-    
+
     /// Send appointment reminder push notification
     pub async fn send_appointment_reminder_push(
         config: &PushConfig,
@@ -103,7 +100,7 @@ impl PushNotificationService {
         data.insert("patient_name".to_string(), patient_name.to_string());
         data.insert("doctor_name".to_string(), doctor_name.to_string());
         data.insert("appointment_time".to_string(), appointment_time.to_string());
-        
+
         let message = PushMessage {
             device_tokens,
             title: "预约提醒".to_string(),
@@ -113,10 +110,10 @@ impl PushNotificationService {
             sound: Some("default".to_string()),
             click_action: Some("APPOINTMENT_DETAIL".to_string()),
         };
-        
+
         Self::send_push(config, message).await
     }
-    
+
     /// Send prescription ready push notification
     pub async fn send_prescription_ready_push(
         config: &PushConfig,
@@ -126,8 +123,11 @@ impl PushNotificationService {
     ) -> Result<PushResult, AppError> {
         let mut data = HashMap::new();
         data.insert("type".to_string(), "prescription_ready".to_string());
-        data.insert("prescription_code".to_string(), prescription_code.to_string());
-        
+        data.insert(
+            "prescription_code".to_string(),
+            prescription_code.to_string(),
+        );
+
         let message = PushMessage {
             device_tokens,
             title: "处方已开具".to_string(),
@@ -137,10 +137,10 @@ impl PushNotificationService {
             sound: Some("default".to_string()),
             click_action: Some("PRESCRIPTION_DETAIL".to_string()),
         };
-        
+
         Self::send_push(config, message).await
     }
-    
+
     /// Send FCM push notification
     async fn send_fcm_push(
         config: &PushConfig,
@@ -148,7 +148,7 @@ impl PushNotificationService {
     ) -> Result<PushResult, AppError> {
         let client = Client::new();
         let url = "https://fcm.googleapis.com/fcm/send";
-        
+
         let payload = serde_json::json!({
             "registration_ids": message.device_tokens,
             "notification": {
@@ -161,7 +161,7 @@ impl PushNotificationService {
             "data": message.data,
             "priority": "high",
         });
-        
+
         let response = client
             .post(url)
             .header("Authorization", format!("key={}", config.api_key))
@@ -169,12 +169,15 @@ impl PushNotificationService {
             .json(&payload)
             .send()
             .await
-            .map_err(|e| AppError::InternalServerError(format!("Failed to send FCM push: {}", e)))?;
-        
+            .map_err(|e| {
+                AppError::InternalServerError(format!("Failed to send FCM push: {}", e))
+            })?;
+
         let status = response.status();
-        let body = response.json::<serde_json::Value>().await
-            .map_err(|e| AppError::InternalServerError(format!("Failed to parse response: {}", e)))?;
-        
+        let body = response.json::<serde_json::Value>().await.map_err(|e| {
+            AppError::InternalServerError(format!("Failed to parse response: {}", e))
+        })?;
+
         if status.is_success() {
             let success = body["success"].as_u64().unwrap_or(0) > 0;
             let failed_tokens = body["results"]
@@ -190,7 +193,7 @@ impl PushNotificationService {
                     }
                 })
                 .collect();
-            
+
             Ok(PushResult {
                 success,
                 message_id: body["multicast_id"].as_u64().map(|id| id.to_string()),
@@ -206,7 +209,7 @@ impl PushNotificationService {
             })
         }
     }
-    
+
     /// Send APNs push notification
     async fn send_apns_push(
         _config: &PushConfig,
@@ -214,7 +217,7 @@ impl PushNotificationService {
     ) -> Result<PushResult, AppError> {
         // Simplified implementation - production should use proper APNs HTTP/2 API
         // with JWT authentication or certificate-based authentication
-        
+
         Ok(PushResult {
             success: false,
             message_id: None,
@@ -222,7 +225,7 @@ impl PushNotificationService {
             error_message: Some("APNs not implemented".to_string()),
         })
     }
-    
+
     /// Send Jpush push notification
     async fn send_jpush_push(
         config: &PushConfig,
@@ -230,13 +233,14 @@ impl PushNotificationService {
     ) -> Result<PushResult, AppError> {
         let client = Client::new();
         let url = "https://api.jpush.cn/v3/push";
-        
+
         use base64::Engine;
-        let auth = base64::engine::general_purpose::STANDARD.encode(format!("{}:{}", 
+        let auth = base64::engine::general_purpose::STANDARD.encode(format!(
+            "{}:{}",
             config.app_id.as_ref().unwrap_or(&String::new()),
             config.api_secret.as_ref().unwrap_or(&String::new())
         ));
-        
+
         let payload = serde_json::json!({
             "platform": "all",
             "audience": {
@@ -261,7 +265,7 @@ impl PushNotificationService {
                 "extras": message.data,
             },
         });
-        
+
         let response = client
             .post(url)
             .header("Authorization", format!("Basic {}", auth))
@@ -270,13 +274,14 @@ impl PushNotificationService {
             .send()
             .await
             .map_err(|e| AppError::InternalServerError(format!("Failed to send Jpush: {}", e)))?;
-        
+
         let status = response.status();
-        
+
         if status.is_success() {
-            let body = response.json::<serde_json::Value>().await
-                .map_err(|e| AppError::InternalServerError(format!("Failed to parse response: {}", e)))?;
-            
+            let body = response.json::<serde_json::Value>().await.map_err(|e| {
+                AppError::InternalServerError(format!("Failed to parse response: {}", e))
+            })?;
+
             Ok(PushResult {
                 success: true,
                 message_id: body["msg_id"].as_str().map(|s| s.to_string()),
@@ -292,14 +297,14 @@ impl PushNotificationService {
             })
         }
     }
-    
+
     /// Send Getui push notification
     async fn send_getui_push(
         _config: &PushConfig,
         message: PushMessage,
     ) -> Result<PushResult, AppError> {
         // Simplified implementation - production should use proper Getui API
-        
+
         Ok(PushResult {
             success: false,
             message_id: None,
@@ -307,7 +312,7 @@ impl PushNotificationService {
             error_message: Some("Getui not implemented".to_string()),
         })
     }
-    
+
     /// Register device token
     pub async fn register_device_token(
         db: &DbPool,
@@ -322,25 +327,25 @@ impl PushNotificationService {
             SET is_active = false
             WHERE token = ? AND user_id != ?
         "#;
-        
+
         sqlx::query(update_query)
             .bind(token)
             .bind(user_id.to_string())
             .execute(db)
             .await?;
-        
+
         // Check if token already exists for this user
         let check_query = r#"
             SELECT id FROM device_tokens
             WHERE user_id = ? AND token = ?
         "#;
-        
+
         let existing = sqlx::query(check_query)
             .bind(user_id.to_string())
             .bind(token)
             .fetch_optional(db)
             .await?;
-        
+
         if let Some(row) = existing {
             // Update existing token
             let id: String = sqlx::Row::get(&row, "id");
@@ -349,7 +354,7 @@ impl PushNotificationService {
                 SET platform = ?, provider = ?, is_active = true, updated_at = ?
                 WHERE id = ?
             "#;
-            
+
             sqlx::query(update_query)
                 .bind(platform)
                 .bind(provider)
@@ -357,13 +362,13 @@ impl PushNotificationService {
                 .bind(&id)
                 .execute(db)
                 .await?;
-            
+
             Self::get_device_token_by_id(db, Uuid::parse_str(&id).unwrap()).await
         } else {
             // Create new token
             let id = Uuid::new_v4();
             let now = Utc::now();
-            
+
             let insert_query = r#"
                 INSERT INTO device_tokens (
                     id, user_id, token, platform, provider, 
@@ -371,7 +376,7 @@ impl PushNotificationService {
                 )
                 VALUES (?, ?, ?, ?, ?, true, ?, ?)
             "#;
-            
+
             sqlx::query(insert_query)
                 .bind(id.to_string())
                 .bind(user_id.to_string())
@@ -382,11 +387,11 @@ impl PushNotificationService {
                 .bind(&now)
                 .execute(db)
                 .await?;
-            
+
             Self::get_device_token_by_id(db, id).await
         }
     }
-    
+
     /// Get active device tokens for user
     pub async fn get_user_device_tokens(
         db: &DbPool,
@@ -397,12 +402,12 @@ impl PushNotificationService {
             FROM device_tokens
             WHERE user_id = ? AND is_active = true
         "#;
-        
+
         let rows = sqlx::query(query)
             .bind(user_id.to_string())
             .fetch_all(db)
             .await?;
-        
+
         let mut tokens = Vec::new();
         for row in rows {
             tokens.push(DeviceToken {
@@ -416,27 +421,24 @@ impl PushNotificationService {
                 updated_at: sqlx::Row::get(&row, "updated_at"),
             });
         }
-        
+
         Ok(tokens)
     }
-    
+
     /// Get device token by ID
-    async fn get_device_token_by_id(
-        db: &DbPool,
-        id: Uuid,
-    ) -> Result<DeviceToken, AppError> {
+    async fn get_device_token_by_id(db: &DbPool, id: Uuid) -> Result<DeviceToken, AppError> {
         let query = r#"
             SELECT id, user_id, token, platform, provider, is_active, created_at, updated_at
             FROM device_tokens
             WHERE id = ?
         "#;
-        
+
         let row = sqlx::query(query)
             .bind(id.to_string())
             .fetch_one(db)
             .await
             .map_err(|e| AppError::NotFound(format!("Device token not found: {}", e)))?;
-        
+
         Ok(DeviceToken {
             id: Uuid::parse_str(sqlx::Row::get(&row, "id")).unwrap(),
             user_id: Uuid::parse_str(sqlx::Row::get(&row, "user_id")).unwrap(),
@@ -448,7 +450,7 @@ impl PushNotificationService {
             updated_at: sqlx::Row::get(&row, "updated_at"),
         })
     }
-    
+
     /// Store push notification record
     pub async fn store_push_record(
         db: &DbPool,
@@ -464,7 +466,7 @@ impl PushNotificationService {
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         "#;
-        
+
         sqlx::query(query)
             .bind(Uuid::new_v4().to_string())
             .bind(user_id.to_string())
@@ -476,8 +478,10 @@ impl PushNotificationService {
             .bind(Utc::now())
             .execute(db)
             .await
-            .map_err(|e| AppError::InternalServerError(format!("Failed to store push record: {}", e)))?;
-        
+            .map_err(|e| {
+                AppError::InternalServerError(format!("Failed to store push record: {}", e))
+            })?;
+
         Ok(())
     }
 }

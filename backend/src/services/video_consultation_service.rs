@@ -1,6 +1,6 @@
 use crate::config::database::DbPool;
-use crate::models::video_consultation::*;
 use crate::models::appointment::{Appointment, AppointmentStatus};
+use crate::models::video_consultation::*;
 use crate::utils::errors::AppError;
 use chrono::{DateTime, Duration, Utc};
 use sqlx::{MySql, Transaction};
@@ -134,18 +134,18 @@ impl VideoConsultationService {
                 if query.status.is_some() { conditions.push("status = ?"); }
                 if query.date_from.is_some() { conditions.push("scheduled_start_time >= ?"); }
                 if query.date_to.is_some() { conditions.push("scheduled_start_time <= ?"); }
-                
+
                 let where_clause = if conditions.is_empty() {
                     String::new()
                 } else {
                     format!(" WHERE {}", conditions.join(" AND "))
                 };
-                
+
                 let _sql = format!(
                     "SELECT * FROM video_consultations{} ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?",
                     where_clause
                 );
-                
+
                 // For now, just return all consultations if filters are complex
                 sqlx::query_as::<_, VideoConsultation>(
                     "SELECT * FROM video_consultations ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
@@ -165,7 +165,9 @@ impl VideoConsultationService {
         room_id: &str,
         user_id: Uuid,
     ) -> Result<JoinRoomResponse, AppError> {
-        let mut tx = db.begin().await
+        let mut tx = db
+            .begin()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         // Get consultation
@@ -173,9 +175,15 @@ impl VideoConsultationService {
 
         // Check if user is authorized
         let (role, token) = if user_id == consultation.doctor_id {
-            ("doctor", Self::generate_token(&consultation.id, &user_id, "doctor"))
+            (
+                "doctor",
+                Self::generate_token(&consultation.id, &user_id, "doctor"),
+            )
         } else if user_id == consultation.patient_id {
-            ("patient", Self::generate_token(&consultation.id, &user_id, "patient"))
+            (
+                "patient",
+                Self::generate_token(&consultation.id, &user_id, "patient"),
+            )
         } else {
             return Err(AppError::Forbidden);
         };
@@ -204,12 +212,14 @@ impl VideoConsultationService {
                 event_data: Some(serde_json::json!({ "role": role })),
             },
             user_id,
-        ).await?;
+        )
+        .await?;
 
         // Get ICE servers configuration
         let ice_servers = Self::get_ice_servers(db).await?;
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(JoinRoomResponse {
@@ -265,7 +275,8 @@ impl VideoConsultationService {
                 event_data: None,
             },
             doctor_id,
-        ).await?;
+        )
+        .await?;
 
         Ok(())
     }
@@ -276,7 +287,9 @@ impl VideoConsultationService {
         doctor_id: Uuid,
         complete_dto: CompleteConsultationDto,
     ) -> Result<(), AppError> {
-        let mut tx = db.begin().await
+        let mut tx = db
+            .begin()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         let consultation = Self::get_consultation(db, consultation_id).await?;
@@ -292,7 +305,8 @@ impl VideoConsultationService {
         }
 
         // Calculate duration
-        let duration = consultation.actual_start_time
+        let duration = consultation
+            .actual_start_time
             .map(|start| (Utc::now() - start).num_seconds() as i32);
 
         let now = Utc::now();
@@ -338,9 +352,11 @@ impl VideoConsultationService {
                 event_data: Some(serde_json::json!({ "duration": duration })),
             },
             doctor_id,
-        ).await?;
+        )
+        .await?;
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(())
@@ -427,7 +443,7 @@ impl VideoConsultationService {
     ) -> Result<(), AppError> {
         // Verify user is in the room
         let consultation = Self::get_consultation_by_room_id(db, &dto.room_id).await?;
-        
+
         if from_user_id != consultation.doctor_id && from_user_id != consultation.patient_id {
             return Err(AppError::Forbidden);
         }
@@ -467,12 +483,14 @@ impl VideoConsultationService {
     ) -> Result<Vec<WebRTCSignal>, AppError> {
         // Verify user is in the room
         let consultation = Self::get_consultation_by_room_id(db, room_id).await?;
-        
+
         if user_id != consultation.doctor_id && user_id != consultation.patient_id {
             return Err(AppError::Forbidden);
         }
 
-        let mut tx = db.begin().await
+        let mut tx = db
+            .begin()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         // Get undelivered signals
@@ -509,7 +527,8 @@ impl VideoConsultationService {
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;
         }
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(signals)
@@ -718,7 +737,7 @@ impl VideoConsultationService {
             (Some(doc_id), None, None) => {
                 sqlx::query(
                     r#"
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_consultations,
                         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_consultations,
                         AVG(CASE WHEN status = 'completed' THEN duration END) as average_duration,
@@ -733,7 +752,7 @@ impl VideoConsultationService {
             (None, None, None) => {
                 sqlx::query(
                     r#"
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_consultations,
                         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_consultations,
                         AVG(CASE WHEN status = 'completed' THEN duration END) as average_duration,
@@ -748,7 +767,7 @@ impl VideoConsultationService {
                 // For complex filters, just return simple stats
                 sqlx::query(
                     r#"
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_consultations,
                         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_consultations,
                         AVG(CASE WHEN status = 'completed' THEN duration END) as average_duration,
@@ -768,8 +787,12 @@ impl VideoConsultationService {
 
         use sqlx::Row;
         Ok(ConsultationStatistics {
-            total_consultations: row.get::<Option<i64>, _>("total_consultations").unwrap_or(0),
-            completed_consultations: row.get::<Option<i64>, _>("completed_consultations").unwrap_or(0),
+            total_consultations: row
+                .get::<Option<i64>, _>("total_consultations")
+                .unwrap_or(0),
+            completed_consultations: row
+                .get::<Option<i64>, _>("completed_consultations")
+                .unwrap_or(0),
             average_duration: row.get("average_duration"),
             average_rating: row.get("average_rating"),
             no_show_rate: row.get::<Option<f64>, _>("no_show_rate").unwrap_or(0.0),
@@ -777,10 +800,7 @@ impl VideoConsultationService {
     }
 
     // Helper methods
-    async fn get_appointment(
-        db: &DbPool,
-        appointment_id: Uuid,
-    ) -> Result<Appointment, AppError> {
+    async fn get_appointment(db: &DbPool, appointment_id: Uuid) -> Result<Appointment, AppError> {
         let query = r#"
             SELECT * FROM appointments WHERE id = ?
         "#;
@@ -795,11 +815,7 @@ impl VideoConsultationService {
             })
     }
 
-    async fn log_event(
-        db: &DbPool,
-        dto: LogEventDto,
-        user_id: Uuid,
-    ) -> Result<(), AppError> {
+    async fn log_event(db: &DbPool, dto: LogEventDto, user_id: Uuid) -> Result<(), AppError> {
         let event_id = Uuid::new_v4();
         let query = r#"
             INSERT INTO video_call_events (

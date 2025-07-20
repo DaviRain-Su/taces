@@ -13,7 +13,7 @@ impl CacheService {
     ) -> Option<T> {
         let redis = redis.as_ref()?;
         let mut conn = redis.clone();
-        
+
         match conn.get::<_, String>(key).await {
             Ok(data) => match serde_json::from_str(&data) {
                 Ok(value) => Some(value),
@@ -38,14 +38,14 @@ impl CacheService {
     ) -> Result<(), String> {
         let redis = redis.as_ref().ok_or("Redis not available")?;
         let mut conn = redis.clone();
-        
+
         let data = serde_json::to_string(value)
             .map_err(|e| format!("Failed to serialize value: {}", e))?;
-        
+
         conn.set_ex(key, data, expiration.as_secs())
             .await
             .map_err(|e| format!("Failed to set cache: {}", e))?;
-        
+
         Ok(())
     }
 
@@ -53,11 +53,11 @@ impl CacheService {
     pub async fn delete(redis: &Option<RedisPool>, key: &str) -> Result<(), String> {
         let redis = redis.as_ref().ok_or("Redis not available")?;
         let mut conn = redis.clone();
-        
+
         conn.del(key)
             .await
             .map_err(|e| format!("Failed to delete cache: {}", e))?;
-        
+
         Ok(())
     }
 
@@ -65,23 +65,23 @@ impl CacheService {
     pub async fn delete_pattern(redis: &Option<RedisPool>, pattern: &str) -> Result<u64, String> {
         let redis = redis.as_ref().ok_or("Redis not available")?;
         let mut conn = redis.clone();
-        
+
         // Get all keys matching the pattern
         let keys: Vec<String> = conn
             .keys(pattern)
             .await
             .map_err(|e| format!("Failed to get keys: {}", e))?;
-        
+
         if keys.is_empty() {
             return Ok(0);
         }
-        
+
         // Delete all matching keys
         let count: u64 = conn
             .del(&keys)
             .await
             .map_err(|e| format!("Failed to delete keys: {}", e))?;
-        
+
         Ok(count)
     }
 
@@ -103,14 +103,14 @@ impl CacheService {
     ) -> Result<(), String> {
         let redis = redis.as_ref().ok_or("Redis not available")?;
         let mut conn = redis.clone();
-        
+
         let data = serde_json::to_string(value)
             .map_err(|e| format!("Failed to serialize value: {}", e))?;
-        
+
         conn.set(key, data)
             .await
             .map_err(|e| format!("Failed to set cache: {}", e))?;
-        
+
         Ok(())
     }
 
@@ -122,7 +122,7 @@ impl CacheService {
     ) -> Result<i64, String> {
         let redis = redis.as_ref().ok_or("Redis not available")?;
         let mut conn = redis.clone();
-        
+
         conn.incr(key, increment)
             .await
             .map_err(|e| format!("Failed to increment counter: {}", e))
@@ -132,7 +132,7 @@ impl CacheService {
     pub async fn ttl(redis: &Option<RedisPool>, key: &str) -> Option<i64> {
         let redis = redis.as_ref()?;
         let mut conn = redis.clone();
-        
+
         match conn.ttl(key).await {
             Ok(ttl) => Some(ttl),
             Err(_) => None,

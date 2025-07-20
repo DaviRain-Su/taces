@@ -23,8 +23,7 @@ async fn test_article_crud() {
 
     // Create users
     let (_admin_id, admin_account, admin_password) = create_test_user(&app.pool, "admin").await;
-    let (doctor_id, doctor_account, doctor_password) =
-        create_test_user(&app.pool, "doctor").await;
+    let (doctor_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
     let (_doctor_record_id, _) = create_test_doctor(&app.pool, doctor_id).await;
 
     let _admin_token = get_auth_token(&mut app, &admin_account, &admin_password).await;
@@ -124,8 +123,7 @@ async fn test_video_crud() {
     let mut app = TestApp::new().await;
 
     // Create doctor
-    let (doctor_id, doctor_account, doctor_password) =
-        create_test_user(&app.pool, "doctor").await;
+    let (doctor_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
     let (_doctor_record_id, _) = create_test_doctor(&app.pool, doctor_id).await;
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
 
@@ -231,7 +229,11 @@ async fn test_content_permissions() {
     });
 
     let (status, _) = app
-        .post_with_auth("/api/v1/content/articles", create_dto.clone(), &patient_token)
+        .post_with_auth(
+            "/api/v1/content/articles",
+            create_dto.clone(),
+            &patient_token,
+        )
         .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 
@@ -291,8 +293,7 @@ async fn test_content_search_and_filter() {
     let mut app = TestApp::new().await;
 
     // Create doctor
-    let (doctor_id, doctor_account, doctor_password) =
-        create_test_user(&app.pool, "doctor").await;
+    let (doctor_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
     let (_doctor_record_id, _) = create_test_doctor(&app.pool, doctor_id).await;
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
 
@@ -338,25 +339,19 @@ async fn test_content_search_and_filter() {
     assert_eq!(status, StatusCode::OK);
 
     // Search by keyword
-    let (status, body) = app
-        .get("/api/v1/content/articles?search=养生")
-        .await;
+    let (status, body) = app.get("/api/v1/content/articles?search=养生").await;
     assert_eq!(status, StatusCode::OK);
     let results = body["data"].as_array().unwrap();
     assert_eq!(results.len(), 1); // Should find "春季养生指南"
 
     // Filter by category
-    let (status, body) = app
-        .get("/api/v1/content/articles?category=健康科普")
-        .await;
+    let (status, body) = app.get("/api/v1/content/articles?category=健康科普").await;
     assert_eq!(status, StatusCode::OK);
     let results = body["data"].as_array().unwrap();
     assert_eq!(results.len(), 2);
 
     // Filter by status
-    let (status, body) = app
-        .get("/api/v1/content/articles?status=published")
-        .await;
+    let (status, body) = app.get("/api/v1/content/articles?status=published").await;
     assert_eq!(status, StatusCode::OK);
     let results = body["data"].as_array().unwrap();
     assert_eq!(results.len(), 1);
@@ -377,7 +372,10 @@ async fn test_category_management() {
     assert!(!categories.is_empty()); // Should have default categories
 
     // Create new category with unique name
-    let unique_name = format!("测试分类_{}", uuid::Uuid::new_v4().to_string().split('-').next().unwrap());
+    let unique_name = format!(
+        "测试分类_{}",
+        uuid::Uuid::new_v4().to_string().split('-').next().unwrap()
+    );
     let create_dto = json!({
         "name": &unique_name,
         "type": "article",
@@ -417,8 +415,7 @@ async fn test_view_count_increment() {
     let mut app = TestApp::new().await;
 
     // Create doctor and article
-    let (doctor_id, doctor_account, doctor_password) =
-        create_test_user(&app.pool, "doctor").await;
+    let (doctor_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
     let (_doctor_record_id, _) = create_test_doctor(&app.pool, doctor_id).await;
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
 

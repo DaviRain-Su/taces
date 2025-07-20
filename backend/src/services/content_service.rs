@@ -1,7 +1,4 @@
-use crate::{
-    config::database::DbPool,
-    models::content::*,
-};
+use crate::{config::database::DbPool, models::content::*};
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use serde_json::to_string;
@@ -99,7 +96,9 @@ pub async fn create_article(
         "doctor"
     };
 
-    let tags_json = dto.tags.map(|t| to_string(&t).unwrap_or_else(|_| "[]".to_string()));
+    let tags_json = dto
+        .tags
+        .map(|t| to_string(&t).unwrap_or_else(|_| "[]".to_string()));
     let channels_json = dto
         .publish_channels
         .map(|c| to_string(&c).unwrap_or_else(|_| "[]".to_string()));
@@ -402,7 +401,9 @@ pub async fn create_video(
         "doctor"
     };
 
-    let tags_json = dto.tags.map(|t| to_string(&t).unwrap_or_else(|_| "[]".to_string()));
+    let tags_json = dto
+        .tags
+        .map(|t| to_string(&t).unwrap_or_else(|_| "[]".to_string()));
     let channels_json = dto
         .publish_channels
         .map(|c| to_string(&c).unwrap_or_else(|_| "[]".to_string()));
@@ -498,7 +499,10 @@ pub async fn update_video(
         return get_video_by_id(pool, id).await;
     }
 
-    let query = format!("UPDATE videos SET {} WHERE id = ?", update_fields.join(", "));
+    let query = format!(
+        "UPDATE videos SET {} WHERE id = ?",
+        update_fields.join(", ")
+    );
 
     let mut query_builder = sqlx::query(&query);
 

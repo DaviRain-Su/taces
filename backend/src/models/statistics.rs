@@ -91,7 +91,7 @@ pub struct CircleStats {
     pub total_circles: i64,
     pub total_members: i64,
     pub total_posts: i64,
-    pub active_circles: i64,  // Circles with posts in last 30 days
+    pub active_circles: i64, // Circles with posts in last 30 days
     pub average_members_per_circle: f64,
 }
 
@@ -158,6 +158,6 @@ pub enum ExportFormat {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HeatmapData {
     pub hour: i32,
-    pub day_of_week: i32,  // 0 = Sunday, 6 = Saturday
+    pub day_of_week: i32, // 0 = Sunday, 6 = Saturday
     pub count: i64,
 }

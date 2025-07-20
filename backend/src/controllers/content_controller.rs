@@ -96,10 +96,13 @@ pub async fn create_article(
     })?;
 
     // Get author name
-    let author_name = match crate::services::user_service::get_user_by_id(&app_state.pool, auth_user.user_id).await {
-        Ok(user) => user.name,
-        Err(_) => "Unknown".to_string(),
-    };
+    let author_name =
+        match crate::services::user_service::get_user_by_id(&app_state.pool, auth_user.user_id)
+            .await
+        {
+            Ok(user) => user.name,
+            Err(_) => "Unknown".to_string(),
+        };
 
     match content_service::create_article(
         &app_state.pool,
@@ -248,13 +251,8 @@ pub async fn delete_article(
     State(app_state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ApiResponse<()>>, (StatusCode, Json<ApiResponse<()>>)> {
-    match content_service::delete_article(
-        &app_state.pool,
-        id,
-        auth_user.user_id,
-        &auth_user.role,
-    )
-    .await
+    match content_service::delete_article(&app_state.pool, id, auth_user.user_id, &auth_user.role)
+        .await
     {
         Ok(_) => Ok(Json(ApiResponse::success(
             "Article deleted successfully",
@@ -348,10 +346,13 @@ pub async fn create_video(
     })?;
 
     // Get author name
-    let author_name = match crate::services::user_service::get_user_by_id(&app_state.pool, auth_user.user_id).await {
-        Ok(user) => user.name,
-        Err(_) => "Unknown".to_string(),
-    };
+    let author_name =
+        match crate::services::user_service::get_user_by_id(&app_state.pool, auth_user.user_id)
+            .await
+        {
+            Ok(user) => user.name,
+            Err(_) => "Unknown".to_string(),
+        };
 
     match content_service::create_video(
         &app_state.pool,
@@ -368,7 +369,10 @@ pub async fn create_video(
         ))),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(&format!("Failed to create video: {}", e))),
+            Json(ApiResponse::error(&format!(
+                "Failed to create video: {}",
+                e
+            ))),
         )),
     }
 }
@@ -461,13 +465,8 @@ pub async fn delete_video(
     State(app_state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ApiResponse<()>>, (StatusCode, Json<ApiResponse<()>>)> {
-    match content_service::delete_video(
-        &app_state.pool,
-        id,
-        auth_user.user_id,
-        &auth_user.role,
-    )
-    .await
+    match content_service::delete_video(&app_state.pool, id, auth_user.user_id, &auth_user.role)
+        .await
     {
         Ok(_) => Ok(Json(ApiResponse::success("Video deleted successfully", ()))),
         Err(e) => {

@@ -1,7 +1,7 @@
-use crate::AppState;
 use crate::middleware::auth::AuthUser;
 use crate::models::{ApiResponse, CreateCircleDto, UpdateCircleDto, UpdateMemberRoleDto};
 use crate::services::circle_service::CircleService;
+use crate::AppState;
 use axum::{
     extract::{Extension, Path, Query, State},
     http::StatusCode,
@@ -43,7 +43,10 @@ pub async fn create_circle(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(&format!("Failed to create circle: {}", e))),
+                Json(ApiResponse::error(&format!(
+                    "Failed to create circle: {}",
+                    e
+                ))),
             )
         })?;
 
@@ -133,28 +136,28 @@ pub async fn update_circle(
     }
 
     let is_admin = auth_user.role == "admin";
-    let circle = CircleService::update_circle(
-        &state.pool,
-        id,
-        auth_user.user_id,
-        is_admin,
-        dto,
-    )
-    .await
-    .map_err(|e| {
-        let error_str = e.to_string();
-        if error_str.contains("permission") || error_str.contains("Only circle owner") || error_str.contains("can update") {
-            (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("No permission to update this circle")),
-            )
-        } else {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(&format!("Failed to update circle: {}", e))),
-            )
-        }
-    })?;
+    let circle = CircleService::update_circle(&state.pool, id, auth_user.user_id, is_admin, dto)
+        .await
+        .map_err(|e| {
+            let error_str = e.to_string();
+            if error_str.contains("permission")
+                || error_str.contains("Only circle owner")
+                || error_str.contains("can update")
+            {
+                (
+                    StatusCode::FORBIDDEN,
+                    Json(ApiResponse::error("No permission to update this circle")),
+                )
+            } else {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(&format!(
+                        "Failed to update circle: {}",
+                        e
+                    ))),
+                )
+            }
+        })?;
 
     Ok(Json(ApiResponse::success(
         "Circle updated successfully",
@@ -172,7 +175,10 @@ pub async fn delete_circle(
         .await
         .map_err(|e| {
             let error_str = e.to_string();
-            if error_str.contains("permission") || error_str.contains("Only circle owner") || error_str.contains("can delete") {
+            if error_str.contains("permission")
+                || error_str.contains("Only circle owner")
+                || error_str.contains("can delete")
+            {
                 (
                     StatusCode::FORBIDDEN,
                     Json(ApiResponse::error("No permission to delete this circle")),
@@ -180,7 +186,10 @@ pub async fn delete_circle(
             } else {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to delete circle: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to delete circle: {}",
+                        e
+                    ))),
                 )
             }
         })?;
@@ -212,10 +221,7 @@ pub async fn join_circle(
             }
         })?;
 
-    Ok(Json(ApiResponse::success(
-        "Joined circle successfully",
-        (),
-    )))
+    Ok(Json(ApiResponse::success("Joined circle successfully", ())))
 }
 
 pub async fn leave_circle(
@@ -239,15 +245,15 @@ pub async fn leave_circle(
             } else {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error(&format!("Failed to leave circle: {}", e))),
+                    Json(ApiResponse::error(&format!(
+                        "Failed to leave circle: {}",
+                        e
+                    ))),
                 )
             }
         })?;
 
-    Ok(Json(ApiResponse::success(
-        "Left circle successfully",
-        (),
-    )))
+    Ok(Json(ApiResponse::success("Left circle successfully", ())))
 }
 
 pub async fn get_circle_members(
@@ -329,35 +335,29 @@ pub async fn remove_member(
     Path((circle_id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<ApiResponse<()>>, (StatusCode, Json<ApiResponse<()>>)> {
     let is_admin = auth_user.role == "admin";
-    CircleService::remove_member(
-        &state.pool,
-        circle_id,
-        user_id,
-        auth_user.user_id,
-        is_admin,
-    )
-    .await
-    .map_err(|e| {
-        if e.to_string().contains("permission") {
-            (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("No permission to remove member")),
-            )
-        } else if e.to_string().contains("Cannot remove owner") {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("Cannot remove owner")),
-            )
-        } else {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(&format!(
-                    "Failed to remove member: {}",
-                    e
-                ))),
-            )
-        }
-    })?;
+    CircleService::remove_member(&state.pool, circle_id, user_id, auth_user.user_id, is_admin)
+        .await
+        .map_err(|e| {
+            if e.to_string().contains("permission") {
+                (
+                    StatusCode::FORBIDDEN,
+                    Json(ApiResponse::error("No permission to remove member")),
+                )
+            } else if e.to_string().contains("Cannot remove owner") {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiResponse::error("Cannot remove owner")),
+                )
+            } else {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(&format!(
+                        "Failed to remove member: {}",
+                        e
+                    ))),
+                )
+            }
+        })?;
 
     Ok(Json(ApiResponse::success(
         "Member removed successfully",
@@ -373,22 +373,18 @@ pub async fn get_user_circles(
     let page = query.page.unwrap_or(1).max(1);
     let page_size = query.page_size.unwrap_or(10).min(100);
 
-    let (circles, total) = CircleService::get_user_circles(
-        &state.pool,
-        auth_user.user_id,
-        page,
-        page_size,
-    )
-    .await
-    .map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(&format!(
-                "Failed to get user circles: {}",
-                e
-            ))),
-        )
-    })?;
+    let (circles, total) =
+        CircleService::get_user_circles(&state.pool, auth_user.user_id, page, page_size)
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(&format!(
+                        "Failed to get user circles: {}",
+                        e
+                    ))),
+                )
+            })?;
 
     Ok(Json(ApiResponse::success(
         "User circles retrieved successfully",

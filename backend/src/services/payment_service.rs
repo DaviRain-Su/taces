@@ -4,8 +4,8 @@ use crate::utils::errors::AppError;
 use chrono::{Duration, Utc};
 use rust_decimal::Decimal;
 use sqlx::{MySql, Transaction};
-use uuid::Uuid;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 pub struct PaymentService;
 
@@ -47,10 +47,7 @@ impl PaymentService {
         Self::get_order(db, order_id).await
     }
 
-    pub async fn get_order(
-        db: &DbPool,
-        order_id: Uuid,
-    ) -> Result<PaymentOrder, AppError> {
+    pub async fn get_order(db: &DbPool, order_id: Uuid) -> Result<PaymentOrder, AppError> {
         let query = r#"
             SELECT * FROM payment_orders WHERE id = ?
         "#;
@@ -65,10 +62,7 @@ impl PaymentService {
             })
     }
 
-    pub async fn get_order_by_no(
-        db: &DbPool,
-        order_no: &str,
-    ) -> Result<PaymentOrder, AppError> {
+    pub async fn get_order_by_no(db: &DbPool, order_no: &str) -> Result<PaymentOrder, AppError> {
         let query = r#"
             SELECT * FROM payment_orders WHERE order_no = ?
         "#;
@@ -126,7 +120,7 @@ impl PaymentService {
         );
 
         let mut count_query_builder = sqlx::query_scalar::<_, i64>(&count_query);
-        
+
         // Bind parameters in order
         if let Some(user_id) = &query.user_id {
             count_query_builder = count_query_builder.bind(user_id.to_string());
@@ -156,7 +150,7 @@ impl PaymentService {
         );
 
         let mut orders_query_builder = sqlx::query_as::<_, PaymentOrder>(&orders_query);
-        
+
         // Bind parameters in the same order
         if let Some(user_id) = &query.user_id {
             orders_query_builder = orders_query_builder.bind(user_id.to_string());
@@ -189,10 +183,7 @@ impl PaymentService {
         })
     }
 
-    pub async fn cancel_order(
-        db: &DbPool,
-        order_id: Uuid,
-    ) -> Result<(), AppError> {
+    pub async fn cancel_order(db: &DbPool, order_id: Uuid) -> Result<(), AppError> {
         let order = Self::get_order(db, order_id).await?;
 
         if order.status != OrderStatus::Pending {
@@ -258,9 +249,15 @@ impl PaymentService {
 
         // Process payment based on method
         match dto.payment_method {
-            PaymentMethod::Wechat => Self::process_wechat_payment(db, &order, &transaction_id).await,
-            PaymentMethod::Alipay => Self::process_alipay_payment(db, &order, &transaction_id, dto.return_url).await,
-            PaymentMethod::Balance => Self::process_balance_payment(db, &order, &transaction_id).await,
+            PaymentMethod::Wechat => {
+                Self::process_wechat_payment(db, &order, &transaction_id).await
+            }
+            PaymentMethod::Alipay => {
+                Self::process_alipay_payment(db, &order, &transaction_id, dto.return_url).await
+            }
+            PaymentMethod::Balance => {
+                Self::process_balance_payment(db, &order, &transaction_id).await
+            }
             _ => Err(AppError::BadRequest("不支持的支付方式".to_string())),
         }
     }
@@ -272,11 +269,11 @@ impl PaymentService {
     ) -> Result<PaymentResponse, AppError> {
         // Get WeChat Pay configuration
         let config = Self::get_payment_config(db, PaymentMethod::Wechat).await?;
-        
+
         // TODO: Implement actual WeChat Pay API integration
         // For now, return mock data
         let prepay_id = format!("wx_prepay_{}", Uuid::new_v4());
-        
+
         // Update transaction with prepay_id
         let query = r#"
             UPDATE payment_transactions
@@ -322,11 +319,11 @@ impl PaymentService {
     ) -> Result<PaymentResponse, AppError> {
         // Get Alipay configuration
         let config = Self::get_payment_config(db, PaymentMethod::Alipay).await?;
-        
+
         // TODO: Implement actual Alipay API integration
         // For now, return mock data
         let trade_no = format!("alipay_{}", Uuid::new_v4());
-        
+
         // Update transaction
         let query = r#"
             UPDATE payment_transactions
@@ -353,7 +350,10 @@ impl PaymentService {
             order_id: order.id,
             order_no: order.order_no.clone(),
             payment_method: PaymentMethod::Alipay,
-            payment_url: Some(format!("https://openapi.alipay.com/gateway.do?trade_no={}", trade_no)),
+            payment_url: Some(format!(
+                "https://openapi.alipay.com/gateway.do?trade_no={}",
+                trade_no
+            )),
             qr_code: None,
             prepay_data: None,
         })
@@ -364,12 +364,14 @@ impl PaymentService {
         order: &PaymentOrder,
         transaction_id: &Uuid,
     ) -> Result<PaymentResponse, AppError> {
-        let mut tx = db.begin().await
+        let mut tx = db
+            .begin()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         // Check user balance
         let balance = Self::get_user_balance_tx(&mut tx, order.user_id).await?;
-        
+
         if balance.balance < order.amount {
             return Err(AppError::BadRequest("余额不足".to_string()));
         }
@@ -383,7 +385,8 @@ impl PaymentService {
             Some("order".to_string()),
             Some(order.id),
             &format!("订单支付: {}", order.order_no),
-        ).await?;
+        )
+        .await?;
 
         // Update transaction status
         let query = r#"
@@ -431,7 +434,8 @@ impl PaymentService {
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;
         }
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(PaymentResponse {
@@ -450,12 +454,14 @@ impl PaymentService {
         payment_method: PaymentMethod,
         callback_data: PaymentCallbackData,
     ) -> Result<(), AppError> {
-        let mut tx = db.begin().await
+        let mut tx = db
+            .begin()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         // Get order and transaction
         let order = Self::get_order_by_no(db, &callback_data.order_no).await?;
-        
+
         let query = r#"
             SELECT * FROM payment_transactions
             WHERE order_id = ? AND payment_method = ? AND status = 'pending'
@@ -527,7 +533,8 @@ impl PaymentService {
             }
         }
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(())
@@ -593,10 +600,7 @@ impl PaymentService {
         Self::get_refund(db, refund_id).await
     }
 
-    pub async fn get_refund(
-        db: &DbPool,
-        refund_id: Uuid,
-    ) -> Result<RefundRecord, AppError> {
+    pub async fn get_refund(db: &DbPool, refund_id: Uuid) -> Result<RefundRecord, AppError> {
         let query = r#"
             SELECT * FROM refund_records WHERE id = ?
         "#;
@@ -656,7 +660,9 @@ impl PaymentService {
         reviewer_id: Uuid,
         review_notes: Option<String>,
     ) -> Result<(), AppError> {
-        let mut tx = db.begin().await
+        let mut tx = db
+            .begin()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         // Update refund status to processing
@@ -694,7 +700,8 @@ impl PaymentService {
                     Some("refund".to_string()),
                     Some(refund.id),
                     &format!("退款: {}", refund.refund_no),
-                ).await?;
+                )
+                .await?;
 
                 // Update refund status
                 let query = r#"
@@ -774,17 +781,15 @@ impl PaymentService {
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(())
     }
 
     // Balance management
-    pub async fn get_user_balance(
-        db: &DbPool,
-        user_id: Uuid,
-    ) -> Result<UserBalance, AppError> {
+    pub async fn get_user_balance(db: &DbPool, user_id: Uuid) -> Result<UserBalance, AppError> {
         let query = r#"
             SELECT * FROM user_balances WHERE user_id = ?
         "#;
@@ -816,10 +821,7 @@ impl PaymentService {
             .ok_or_else(|| AppError::NotFound("用户余额记录不存在".to_string()))
     }
 
-    pub async fn create_user_balance(
-        db: &DbPool,
-        user_id: Uuid,
-    ) -> Result<UserBalance, AppError> {
+    pub async fn create_user_balance(db: &DbPool, user_id: Uuid) -> Result<UserBalance, AppError> {
         let balance_id = Uuid::new_v4();
         let now = Utc::now();
 
@@ -875,26 +877,34 @@ impl PaymentService {
 
         // Update balance
         let query = match transaction_type {
-            BalanceTransactionType::Income => r#"
+            BalanceTransactionType::Income => {
+                r#"
                 UPDATE user_balances
                 SET balance = balance + ?, total_income = total_income + ?, updated_at = ?
                 WHERE user_id = ?
-            "#,
-            BalanceTransactionType::Expense => r#"
+            "#
+            }
+            BalanceTransactionType::Expense => {
+                r#"
                 UPDATE user_balances
                 SET balance = balance - ?, total_expense = total_expense + ?, updated_at = ?
                 WHERE user_id = ?
-            "#,
-            BalanceTransactionType::Freeze => r#"
+            "#
+            }
+            BalanceTransactionType::Freeze => {
+                r#"
                 UPDATE user_balances
                 SET balance = balance - ?, frozen_balance = frozen_balance + ?, updated_at = ?
                 WHERE user_id = ?
-            "#,
-            BalanceTransactionType::Unfreeze => r#"
+            "#
+            }
+            BalanceTransactionType::Unfreeze => {
+                r#"
                 UPDATE user_balances
                 SET balance = balance + ?, frozen_balance = frozen_balance - ?, updated_at = ?
                 WHERE user_id = ?
-            "#,
+            "#
+            }
         };
 
         let now = Utc::now();
@@ -1036,15 +1046,19 @@ impl PaymentService {
         is_active: Option<bool>,
     ) -> Result<Vec<PriceConfig>, AppError> {
         let query = match is_active {
-            Some(_active) => r#"
+            Some(_active) => {
+                r#"
                 SELECT * FROM price_configs
                 WHERE is_active = ?
                 ORDER BY service_type, created_at DESC
-            "#,
-            None => r#"
+            "#
+            }
+            None => {
+                r#"
                 SELECT * FROM price_configs
                 ORDER BY service_type, created_at DESC
-            "#,
+            "#
+            }
         };
 
         if let Some(active) = is_active {
@@ -1053,9 +1067,7 @@ impl PaymentService {
                 .fetch_all(db)
                 .await
         } else {
-            sqlx::query_as::<_, PriceConfig>(query)
-                .fetch_all(db)
-                .await
+            sqlx::query_as::<_, PriceConfig>(query).fetch_all(db).await
         }
         .map_err(|e| AppError::DatabaseError(e.to_string()))
     }
@@ -1068,15 +1080,15 @@ impl PaymentService {
         end_date: Option<chrono::DateTime<Utc>>,
     ) -> Result<PaymentStatistics, AppError> {
         let mut where_clauses = vec![];
-        
+
         if user_id.is_some() {
             where_clauses.push("user_id = ?");
         }
-        
+
         if start_date.is_some() {
             where_clauses.push("created_at >= ?");
         }
-        
+
         if end_date.is_some() {
             where_clauses.push("created_at <= ?");
         }
@@ -1103,15 +1115,15 @@ impl PaymentService {
         );
 
         let mut query_builder = sqlx::query(&query);
-        
+
         if let Some(uid) = user_id {
             query_builder = query_builder.bind(uid);
         }
-        
+
         if let Some(start) = start_date {
             query_builder = query_builder.bind(start);
         }
-        
+
         if let Some(end) = end_date {
             query_builder = query_builder.bind(end);
         }
@@ -1124,11 +1136,17 @@ impl PaymentService {
         use sqlx::Row;
         Ok(PaymentStatistics {
             total_orders: row.get::<Option<i64>, _>("total_orders").unwrap_or(0),
-            total_amount: row.get::<Option<Decimal>, _>("total_amount").unwrap_or(Decimal::ZERO),
+            total_amount: row
+                .get::<Option<Decimal>, _>("total_amount")
+                .unwrap_or(Decimal::ZERO),
             paid_orders: row.get::<Option<i64>, _>("paid_orders").unwrap_or(0),
-            paid_amount: row.get::<Option<Decimal>, _>("paid_amount").unwrap_or(Decimal::ZERO),
+            paid_amount: row
+                .get::<Option<Decimal>, _>("paid_amount")
+                .unwrap_or(Decimal::ZERO),
             refunded_orders: row.get::<Option<i64>, _>("refunded_orders").unwrap_or(0),
-            refunded_amount: row.get::<Option<Decimal>, _>("refunded_amount").unwrap_or(Decimal::ZERO),
+            refunded_amount: row
+                .get::<Option<Decimal>, _>("refunded_amount")
+                .unwrap_or(Decimal::ZERO),
         })
     }
 

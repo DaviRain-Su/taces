@@ -1,7 +1,7 @@
 use crate::config::database::DbPool;
 use crate::models::{
-    Circle, CircleListItem, CircleMemberInfo, CircleWithMemberInfo,
-    CreateCircleDto, MemberRole, UpdateCircleDto, UpdateMemberRoleDto,
+    Circle, CircleListItem, CircleMemberInfo, CircleWithMemberInfo, CreateCircleDto, MemberRole,
+    UpdateCircleDto, UpdateMemberRoleDto,
 };
 use anyhow::{anyhow, Result};
 use sqlx::{MySql, Row, Transaction};
@@ -118,14 +118,11 @@ impl CircleService {
         for param in count_params {
             count_query_builder = count_query_builder.bind(param);
         }
-        let total: i64 = count_query_builder
-            .fetch_one(pool)
-            .await?
-            .get::<i64, _>(0);
+        let total: i64 = count_query_builder.fetch_one(pool).await?.get::<i64, _>(0);
 
         // Get circles list
-        let mut list_query_builder = sqlx::query(&list_query)
-            .bind(user_id.unwrap_or(Uuid::nil()).to_string());
+        let mut list_query_builder =
+            sqlx::query(&list_query).bind(user_id.unwrap_or(Uuid::nil()).to_string());
         for param in params {
             list_query_builder = list_query_builder.bind(param);
         }
@@ -225,58 +222,66 @@ impl CircleService {
         // Build dynamic query
         let mut query = String::from("UPDATE circles SET ");
         let mut first = true;
-        
+
         if dto.name.is_some() {
-            if !first { query.push_str(", "); }
+            if !first {
+                query.push_str(", ");
+            }
             query.push_str("name = ?");
             first = false;
         }
-        
+
         if dto.description.is_some() {
-            if !first { query.push_str(", "); }
+            if !first {
+                query.push_str(", ");
+            }
             query.push_str("description = ?");
             first = false;
         }
-        
+
         if dto.avatar.is_some() {
-            if !first { query.push_str(", "); }
+            if !first {
+                query.push_str(", ");
+            }
             query.push_str("avatar = ?");
             first = false;
         }
-        
+
         if dto.is_active.is_some() {
-            if !first { query.push_str(", "); }
+            if !first {
+                query.push_str(", ");
+            }
             query.push_str("is_active = ?");
             first = false;
         }
-        
+
         if first {
             return Err(anyhow!("No fields to update"));
         }
-        
+
         query.push_str(", updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-        
+
         // Bind parameters
         let mut query_builder = sqlx::query(&query);
-        
+
         if let Some(name) = dto.name {
             query_builder = query_builder.bind(name);
         }
-        
+
         if let Some(description) = dto.description {
             query_builder = query_builder.bind(description);
         }
-        
+
         if let Some(avatar) = dto.avatar {
             query_builder = query_builder.bind(avatar);
         }
-        
+
         if let Some(is_active) = dto.is_active {
             query_builder = query_builder.bind(is_active);
         }
-        
+
         query_builder = query_builder.bind(id.to_string());
-        
+
         query_builder.execute(pool).await?;
 
         Self::get_circle_simple(pool, id).await
@@ -307,13 +312,12 @@ impl CircleService {
 
     pub async fn join_circle(pool: &DbPool, circle_id: Uuid, user_id: Uuid) -> Result<()> {
         // Check if already joined
-        let existing = sqlx::query(
-            "SELECT id FROM circle_members WHERE circle_id = ? AND user_id = ?"
-        )
-        .bind(circle_id.to_string())
-        .bind(user_id.to_string())
-        .fetch_optional(pool)
-        .await?;
+        let existing =
+            sqlx::query("SELECT id FROM circle_members WHERE circle_id = ? AND user_id = ?")
+                .bind(circle_id.to_string())
+                .bind(user_id.to_string())
+                .fetch_optional(pool)
+                .await?;
 
         if existing.is_some() {
             return Err(anyhow!("Already joined this circle"));
@@ -348,14 +352,13 @@ impl CircleService {
 
     pub async fn leave_circle(pool: &DbPool, circle_id: Uuid, user_id: Uuid) -> Result<()> {
         // Check if user is owner
-        let member = sqlx::query(
-            "SELECT role FROM circle_members WHERE circle_id = ? AND user_id = ?"
-        )
-        .bind(circle_id.to_string())
-        .bind(user_id.to_string())
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| anyhow!("Not a member of this circle"))?;
+        let member =
+            sqlx::query("SELECT role FROM circle_members WHERE circle_id = ? AND user_id = ?")
+                .bind(circle_id.to_string())
+                .bind(user_id.to_string())
+                .fetch_optional(pool)
+                .await?
+                .ok_or_else(|| anyhow!("Not a member of this circle"))?;
 
         let role: String = member.get::<String, _>("role");
         if role == "owner" {
@@ -453,13 +456,13 @@ impl CircleService {
         if !is_admin {
             let operator_role = Self::get_member_role(pool, circle_id, operator_id).await?;
             match operator_role {
-                MemberRole::Owner => {}, // Owner can update any role
+                MemberRole::Owner => {} // Owner can update any role
                 MemberRole::Admin => {
                     // Admin can only update members
                     if matches!(dto.role, MemberRole::Owner | MemberRole::Admin) {
                         return Err(anyhow!("Admin can only set member role"));
                     }
-                },
+                }
                 MemberRole::Member => {
                     return Err(anyhow!("No permission to update member roles"));
                 }
@@ -478,14 +481,12 @@ impl CircleService {
             MemberRole::Member => "member",
         };
 
-        sqlx::query(
-            "UPDATE circle_members SET role = ? WHERE circle_id = ? AND user_id = ?"
-        )
-        .bind(role_str)
-        .bind(circle_id.to_string())
-        .bind(member_user_id.to_string())
-        .execute(pool)
-        .await?;
+        sqlx::query("UPDATE circle_members SET role = ? WHERE circle_id = ? AND user_id = ?")
+            .bind(role_str)
+            .bind(circle_id.to_string())
+            .bind(member_user_id.to_string())
+            .execute(pool)
+            .await?;
 
         Ok(())
     }
@@ -501,7 +502,7 @@ impl CircleService {
         if !is_admin {
             let operator_role = Self::get_member_role(pool, circle_id, operator_id).await?;
             match operator_role {
-                MemberRole::Owner | MemberRole::Admin => {}, // Can remove members
+                MemberRole::Owner | MemberRole::Admin => {} // Can remove members
                 MemberRole::Member => {
                     return Err(anyhow!("No permission to remove members"));
                 }
@@ -549,7 +550,7 @@ impl CircleService {
             FROM circle_members cm
             JOIN circles c ON cm.circle_id = c.id
             WHERE cm.user_id = ? AND c.is_active = TRUE
-            "#
+            "#,
         )
         .bind(user_id.to_string())
         .fetch_one(pool)
@@ -596,13 +597,12 @@ impl CircleService {
 
     // Helper methods
     async fn is_circle_owner(pool: &DbPool, circle_id: Uuid, user_id: Uuid) -> Result<bool> {
-        let result = sqlx::query(
-            "SELECT role FROM circle_members WHERE circle_id = ? AND user_id = ?"
-        )
-        .bind(circle_id.to_string())
-        .bind(user_id.to_string())
-        .fetch_optional(pool)
-        .await?;
+        let result =
+            sqlx::query("SELECT role FROM circle_members WHERE circle_id = ? AND user_id = ?")
+                .bind(circle_id.to_string())
+                .bind(user_id.to_string())
+                .fetch_optional(pool)
+                .await?;
 
         if let Some(row) = result {
             let role: String = row.get("role");
@@ -612,19 +612,14 @@ impl CircleService {
         }
     }
 
-    async fn get_member_role(
-        pool: &DbPool,
-        circle_id: Uuid,
-        user_id: Uuid,
-    ) -> Result<MemberRole> {
-        let row = sqlx::query(
-            "SELECT role FROM circle_members WHERE circle_id = ? AND user_id = ?"
-        )
-        .bind(circle_id.to_string())
-        .bind(user_id.to_string())
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| anyhow!("Not a member of this circle"))?;
+    async fn get_member_role(pool: &DbPool, circle_id: Uuid, user_id: Uuid) -> Result<MemberRole> {
+        let row =
+            sqlx::query("SELECT role FROM circle_members WHERE circle_id = ? AND user_id = ?")
+                .bind(circle_id.to_string())
+                .bind(user_id.to_string())
+                .fetch_optional(pool)
+                .await?
+                .ok_or_else(|| anyhow!("Not a member of this circle"))?;
 
         let role_str: String = row.get("role");
         parse_member_role(&role_str)
@@ -658,11 +653,13 @@ impl CircleService {
                 .execute(&mut **tx)
                 .await?;
         } else {
-            sqlx::query("UPDATE circles SET post_count = post_count - ? WHERE id = ? AND post_count > 0")
-                .bind(-increment)
-                .bind(circle_id.to_string())
-                .execute(&mut **tx)
-                .await?;
+            sqlx::query(
+                "UPDATE circles SET post_count = post_count - ? WHERE id = ? AND post_count > 0",
+            )
+            .bind(-increment)
+            .bind(circle_id.to_string())
+            .execute(&mut **tx)
+            .await?;
         }
         Ok(())
     }
@@ -671,7 +668,7 @@ impl CircleService {
 fn parse_circle_row(row: &sqlx::mysql::MySqlRow) -> Result<Circle> {
     let id_str: String = row.get("id");
     let creator_id_str: String = row.get("creator_id");
-    
+
     Ok(Circle {
         id: Uuid::parse_str(&id_str)?,
         name: row.get("name"),

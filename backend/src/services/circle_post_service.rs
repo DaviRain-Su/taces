@@ -1,7 +1,7 @@
 use crate::config::database::DbPool;
 use crate::models::{
-    CirclePost, CirclePostWithAuthor, CreateCirclePostDto, CreateCommentDto,
-    PostComment, PostCommentWithAuthor, PostStatus, UpdateCirclePostDto,
+    CirclePost, CirclePostWithAuthor, CreateCirclePostDto, CreateCommentDto, PostComment,
+    PostCommentWithAuthor, PostStatus, UpdateCirclePostDto,
 };
 use crate::services::circle_service::CircleService;
 use anyhow::{anyhow, Result};
@@ -33,7 +33,7 @@ impl CirclePostService {
         // Create the post
         let post_id = Uuid::new_v4();
         let images_json = serde_json::to_string(&dto.images)?;
-        
+
         sqlx::query(
             r#"
             INSERT INTO circle_posts (id, author_id, circle_id, title, content, images, status)
@@ -83,7 +83,8 @@ impl CirclePostService {
         let offset = (page - 1) * page_size;
 
         // Build query with filters
-        let mut count_query = String::from("SELECT COUNT(*) FROM circle_posts p WHERE p.status = 'active'");
+        let mut count_query =
+            String::from("SELECT COUNT(*) FROM circle_posts p WHERE p.status = 'active'");
         let mut list_query = String::from(
             r#"
             SELECT p.id, p.author_id, p.circle_id, p.title, p.content, p.images,
@@ -119,14 +120,11 @@ impl CirclePostService {
         for param in &params {
             count_query_builder = count_query_builder.bind(param);
         }
-        let total: i64 = count_query_builder
-            .fetch_one(pool)
-            .await?
-            .get::<i64, _>(0);
+        let total: i64 = count_query_builder.fetch_one(pool).await?.get::<i64, _>(0);
 
         // Get posts list
-        let mut list_query_builder = sqlx::query(&list_query)
-            .bind(user_id.unwrap_or(Uuid::nil()).to_string());
+        let mut list_query_builder =
+            sqlx::query(&list_query).bind(user_id.unwrap_or(Uuid::nil()).to_string());
         for param in params {
             list_query_builder = list_query_builder.bind(param);
         }
@@ -192,60 +190,61 @@ impl CirclePostService {
         // Build dynamic update query
         let mut query = String::from("UPDATE circle_posts SET ");
         let mut first = true;
-        
+
         if dto.title.is_some() {
-            if !first { query.push_str(", "); }
+            if !first {
+                query.push_str(", ");
+            }
             query.push_str("title = ?");
             first = false;
         }
-        
+
         if dto.content.is_some() {
-            if !first { query.push_str(", "); }
+            if !first {
+                query.push_str(", ");
+            }
             query.push_str("content = ?");
             first = false;
         }
-        
+
         if dto.images.is_some() {
-            if !first { query.push_str(", "); }
+            if !first {
+                query.push_str(", ");
+            }
             query.push_str("images = ?");
             first = false;
         }
-        
+
         if first {
             return Err(anyhow!("No fields to update"));
         }
-        
+
         query.push_str(", updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-        
+
         // Bind parameters
         let mut query_builder = sqlx::query(&query);
-        
+
         if let Some(title) = dto.title {
             query_builder = query_builder.bind(title);
         }
-        
+
         if let Some(content) = dto.content {
             query_builder = query_builder.bind(content);
         }
-        
+
         if let Some(images) = dto.images {
             let images_json = serde_json::to_string(&images)?;
             query_builder = query_builder.bind(images_json);
         }
-        
+
         query_builder = query_builder.bind(id.to_string());
-        
+
         query_builder.execute(pool).await?;
 
         Self::get_post_simple(pool, id).await
     }
 
-    pub async fn delete_post(
-        pool: &DbPool,
-        id: Uuid,
-        user_id: Uuid,
-        is_admin: bool,
-    ) -> Result<()> {
+    pub async fn delete_post(pool: &DbPool, id: Uuid, user_id: Uuid, is_admin: bool) -> Result<()> {
         let mut tx = pool.begin().await?;
 
         // Check if user can delete (author or admin)
@@ -269,21 +268,15 @@ impl CirclePostService {
     }
 
     // Like operations
-    pub async fn toggle_like(
-        pool: &DbPool,
-        post_id: Uuid,
-        user_id: Uuid,
-    ) -> Result<bool> {
+    pub async fn toggle_like(pool: &DbPool, post_id: Uuid, user_id: Uuid) -> Result<bool> {
         let mut tx = pool.begin().await?;
 
         // Check if already liked
-        let existing = sqlx::query(
-            "SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?"
-        )
-        .bind(post_id.to_string())
-        .bind(user_id.to_string())
-        .fetch_optional(&mut *tx)
-        .await?;
+        let existing = sqlx::query("SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?")
+            .bind(post_id.to_string())
+            .bind(user_id.to_string())
+            .fetch_optional(&mut *tx)
+            .await?;
 
         let liked = if existing.is_some() {
             // Unlike
@@ -302,14 +295,12 @@ impl CirclePostService {
         } else {
             // Like
             let like_id = Uuid::new_v4();
-            sqlx::query(
-                "INSERT INTO post_likes (id, post_id, user_id) VALUES (?, ?, ?)"
-            )
-            .bind(like_id.to_string())
-            .bind(post_id.to_string())
-            .bind(user_id.to_string())
-            .execute(&mut *tx)
-            .await?;
+            sqlx::query("INSERT INTO post_likes (id, post_id, user_id) VALUES (?, ?, ?)")
+                .bind(like_id.to_string())
+                .bind(post_id.to_string())
+                .bind(user_id.to_string())
+                .execute(&mut *tx)
+                .await?;
 
             sqlx::query("UPDATE circle_posts SET likes = likes + 1 WHERE id = ?")
                 .bind(post_id.to_string())
@@ -386,7 +377,7 @@ impl CirclePostService {
 
         // Get total count
         let total: i64 = sqlx::query(
-            "SELECT COUNT(*) FROM post_comments WHERE post_id = ? AND is_deleted = FALSE"
+            "SELECT COUNT(*) FROM post_comments WHERE post_id = ? AND is_deleted = FALSE",
         )
         .bind(post_id.to_string())
         .fetch_one(pool)
@@ -428,13 +419,11 @@ impl CirclePostService {
         let mut tx = pool.begin().await?;
 
         // Check if user can delete (author or admin)
-        let comment = sqlx::query(
-            "SELECT user_id, post_id FROM post_comments WHERE id = ?"
-        )
-        .bind(comment_id.to_string())
-        .fetch_optional(&mut *tx)
-        .await?
-        .ok_or_else(|| anyhow!("Comment not found"))?;
+        let comment = sqlx::query("SELECT user_id, post_id FROM post_comments WHERE id = ?")
+            .bind(comment_id.to_string())
+            .fetch_optional(&mut *tx)
+            .await?
+            .ok_or_else(|| anyhow!("Comment not found"))?;
 
         let comment_user_id: String = comment.get::<String, _>("user_id");
         let post_id: String = comment.get::<String, _>("post_id");
@@ -450,10 +439,12 @@ impl CirclePostService {
             .await?;
 
         // Update comment count
-        sqlx::query("UPDATE circle_posts SET comments = comments - 1 WHERE id = ? AND comments > 0")
-            .bind(post_id)
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "UPDATE circle_posts SET comments = comments - 1 WHERE id = ? AND comments > 0",
+        )
+        .bind(post_id)
+        .execute(&mut *tx)
+        .await?;
 
         tx.commit().await?;
 
@@ -462,13 +453,12 @@ impl CirclePostService {
 
     // Helper methods
     async fn is_circle_member(pool: &DbPool, circle_id: Uuid, user_id: Uuid) -> Result<bool> {
-        let result = sqlx::query(
-            "SELECT id FROM circle_members WHERE circle_id = ? AND user_id = ?"
-        )
-        .bind(circle_id.to_string())
-        .bind(user_id.to_string())
-        .fetch_optional(pool)
-        .await?;
+        let result =
+            sqlx::query("SELECT id FROM circle_members WHERE circle_id = ? AND user_id = ?")
+                .bind(circle_id.to_string())
+                .bind(user_id.to_string())
+                .fetch_optional(pool)
+                .await?;
 
         Ok(result.is_some())
     }
@@ -490,14 +480,13 @@ impl CirclePostService {
     }
 
     async fn check_sensitive_words(pool: &DbPool, text: &str) -> Result<()> {
-        let sensitive_words: Vec<String> = sqlx::query(
-            "SELECT word FROM sensitive_words WHERE is_active = TRUE"
-        )
-        .fetch_all(pool)
-        .await?
-        .into_iter()
-        .map(|row| row.get::<String, _>("word"))
-        .collect::<Vec<String>>();
+        let sensitive_words: Vec<String> =
+            sqlx::query("SELECT word FROM sensitive_words WHERE is_active = TRUE")
+                .fetch_all(pool)
+                .await?
+                .into_iter()
+                .map(|row| row.get::<String, _>("word"))
+                .collect::<Vec<String>>();
 
         let lower_text = text.to_lowercase();
         for word in sensitive_words {
@@ -535,7 +524,7 @@ fn parse_post_row(row: &sqlx::mysql::MySqlRow) -> Result<CirclePost> {
     let circle_id_str: String = row.get("circle_id");
     let images: serde_json::Value = row.get("images");
     let status_str: String = row.get("status");
-    
+
     Ok(CirclePost {
         id: Uuid::parse_str(&id_str)?,
         author_id: Uuid::parse_str(&author_id_str)?,
@@ -560,7 +549,7 @@ fn parse_post_with_author_row(row: &sqlx::mysql::MySqlRow) -> Result<CirclePostW
     let author_id_str: String = row.get("author_id");
     let circle_id_str: String = row.get("circle_id");
     let images: serde_json::Value = row.get("images");
-    
+
     Ok(CirclePostWithAuthor {
         id: Uuid::parse_str(&id_str)?,
         author_id: Uuid::parse_str(&author_id_str)?,
@@ -582,7 +571,7 @@ fn parse_comment_row(row: &sqlx::mysql::MySqlRow) -> Result<PostComment> {
     let id_str: String = row.get("id");
     let post_id_str: String = row.get("post_id");
     let user_id_str: String = row.get("user_id");
-    
+
     Ok(PostComment {
         id: Uuid::parse_str(&id_str)?,
         post_id: Uuid::parse_str(&post_id_str)?,
@@ -598,7 +587,7 @@ fn parse_comment_with_author_row(row: &sqlx::mysql::MySqlRow) -> Result<PostComm
     let id_str: String = row.get("id");
     let post_id_str: String = row.get("post_id");
     let user_id_str: String = row.get("user_id");
-    
+
     Ok(PostCommentWithAuthor {
         id: Uuid::parse_str(&id_str)?,
         post_id: Uuid::parse_str(&post_id_str)?,
