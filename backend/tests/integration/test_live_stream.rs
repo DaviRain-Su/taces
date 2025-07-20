@@ -342,7 +342,7 @@ async fn test_upcoming_live_streams() {
     let doctor_token = get_auth_token(&mut app, &doctor_account, &doctor_password).await;
 
     // Create multiple scheduled streams
-    let future_times = vec![
+    let future_times = [
         Duration::hours(1),
         Duration::hours(2),
         Duration::hours(3),

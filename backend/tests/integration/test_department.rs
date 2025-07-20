@@ -46,7 +46,7 @@ async fn test_department_crud() {
     let (status, body) = app.get("/api/v1/departments").await;
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
-    assert!(body["data"].as_array().unwrap().len() > 0);
+    assert!(!body["data"].as_array().unwrap().is_empty());
 
     // Get department by ID (public endpoint)
     let (status, body) = app

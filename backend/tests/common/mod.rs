@@ -13,6 +13,7 @@ use tower::Service;
 pub struct TestApp {
     pub app: Router,
     pub pool: DbPool,
+    #[allow(dead_code)]
     pub config: Config,
 }
 

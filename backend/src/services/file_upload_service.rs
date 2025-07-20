@@ -39,8 +39,7 @@ impl FileUploadService {
             related_type: row.get("related_type"),
             related_id: row
                 .get::<Option<String>, _>("related_id")
-                .map(|s| Uuid::parse_str(&s).ok())
-                .flatten(),
+                .and_then(|s| Uuid::parse_str(&s).ok()),
             width: row.get("width"),
             height: row.get("height"),
             thumbnail_url: row.get("thumbnail_url"),
@@ -86,11 +85,11 @@ impl FileUploadService {
             .bind(&dto.file_type)
             .bind(&dto.file_name)
             .bind(&file_path)
-            .bind(&dto.file_size)
+            .bind(dto.file_size)
             .bind(&dto.mime_type)
             .bind(&dto.related_type)
             .bind(dto.related_id.map(|id| id.to_string()))
-            .bind(&now)
+            .bind(now)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -138,10 +137,10 @@ impl FileUploadService {
             .bind(&dto.bucket_name)
             .bind(&dto.object_key)
             .bind(&dto.etag)
-            .bind(&dto.width)
-            .bind(&dto.height)
+            .bind(dto.width)
+            .bind(dto.height)
             .bind(&dto.thumbnail_url)
-            .bind(&Utc::now())
+            .bind(Utc::now())
             .bind(upload_id.to_string())
             .execute(&mut *tx)
             .await
@@ -329,7 +328,7 @@ impl FileUploadService {
         "#;
 
         sqlx::query(query)
-            .bind(&Utc::now())
+            .bind(Utc::now())
             .bind(file_id.to_string())
             .execute(db)
             .await
@@ -413,7 +412,7 @@ impl FileUploadService {
             allowed_mime_types: configs
                 .get("allowed_mime_types")
                 .and_then(|v| serde_json::from_str(v).ok())
-                .unwrap_or_else(|| vec![]),
+                .unwrap_or_default(),
             storage_backend: configs
                 .get("storage_backend")
                 .unwrap_or(&"oss".to_string())
@@ -507,7 +506,7 @@ impl FileUploadService {
         let result = sqlx::query(query)
             .bind(&dto.config_value)
             .bind(&dto.description)
-            .bind(&Utc::now())
+            .bind(Utc::now())
             .bind(category)
             .bind(key)
             .execute(db)
@@ -682,7 +681,7 @@ impl FileUploadService {
             // Delete record from database
             let delete_query = "DELETE FROM file_uploads WHERE id = ?";
             sqlx::query(delete_query)
-                .bind(&file_id)
+                .bind(file_id)
                 .execute(db)
                 .await
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;

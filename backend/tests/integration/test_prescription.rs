@@ -29,7 +29,7 @@ async fn test_create_prescription() {
 
     // Create prescription
     let prescription_dto = CreatePrescriptionDto {
-        doctor_id: doctor_id,
+        doctor_id,
         patient_id: patient_user_id,
         patient_name: "测试患者".to_string(),
         diagnosis: "风寒感冒".to_string(),
@@ -81,7 +81,7 @@ async fn test_list_prescriptions() {
     // Create multiple prescriptions
     for i in 0..3 {
         let prescription_dto = CreatePrescriptionDto {
-            doctor_id: doctor_id,
+            doctor_id,
             patient_id: patient_user_id,
             patient_name: format!("患者{}", i + 1),
             diagnosis: format!("诊断{}", i + 1),
@@ -127,7 +127,7 @@ async fn test_get_prescription_by_id() {
 
     // Create prescription
     let prescription_dto = CreatePrescriptionDto {
-        doctor_id: doctor_id,
+        doctor_id,
         patient_id: patient_user_id,
         patient_name: "测试患者".to_string(),
         diagnosis: "测试诊断".to_string(),
@@ -188,7 +188,7 @@ async fn test_get_prescription_by_code() {
 
     // Create prescription
     let prescription_dto = CreatePrescriptionDto {
-        doctor_id: doctor_id,
+        doctor_id,
         patient_id: patient_user_id,
         patient_name: "测试患者".to_string(),
         diagnosis: "测试诊断".to_string(),
@@ -236,7 +236,7 @@ async fn test_get_doctor_prescriptions() {
     // Create multiple prescriptions for the doctor
     for i in 0..3 {
         let prescription_dto = CreatePrescriptionDto {
-            doctor_id: doctor_id,
+            doctor_id,
             patient_id: patient_user_id,
             patient_name: format!("患者{}", i + 1),
             diagnosis: format!("诊断{}", i + 1),
@@ -287,7 +287,7 @@ async fn test_get_patient_prescriptions() {
     // Create prescriptions for the patient
     for i in 0..2 {
         let prescription_dto = CreatePrescriptionDto {
-            doctor_id: doctor_id,
+            doctor_id,
             patient_id: patient_user_id,
             patient_name: "测试患者".to_string(),
             diagnosis: format!("诊断{}", i + 1),
@@ -333,7 +333,7 @@ async fn test_prescription_authorization() {
     let (doctor1_id, _) = create_test_doctor(&app.pool, doctor1_user_id).await;
     let (doctor2_user_id, doctor2_account, doctor2_password) =
         create_test_user(&app.pool, "doctor").await;
-    let (doctor2_id, _) = create_test_doctor(&app.pool, doctor2_user_id).await;
+    let (_doctor2_id, _) = create_test_doctor(&app.pool, doctor2_user_id).await;
     let (patient_user_id, _, _) = create_test_user(&app.pool, "patient").await;
 
     let doctor1_token = get_auth_token(&mut app, &doctor1_account, &doctor1_password).await;
@@ -387,7 +387,7 @@ async fn test_patient_cannot_create_prescription() {
 
     // Patient tries to create a prescription (should fail)
     let prescription_dto = CreatePrescriptionDto {
-        doctor_id: doctor_id,
+        doctor_id,
         patient_id: patient_user_id,
         patient_name: "测试患者".to_string(),
         diagnosis: "测试诊断".to_string(),
@@ -423,7 +423,7 @@ async fn test_prescription_with_multiple_medicines() {
 
     // Create prescription with multiple medicines
     let prescription_dto = CreatePrescriptionDto {
-        doctor_id: doctor_id,
+        doctor_id,
         patient_id: patient_user_id,
         patient_name: "复方测试患者".to_string(),
         diagnosis: "肝肾阴虚，虚火上炎".to_string(),
@@ -486,7 +486,7 @@ async fn test_prescription_code_uniqueness() {
     let mut prescription_codes = Vec::new();
     for i in 0..5 {
         let prescription_dto = CreatePrescriptionDto {
-            doctor_id: doctor_id,
+            doctor_id,
             patient_id: patient_user_id,
             patient_name: format!("患者{}", i + 1),
             diagnosis: "测试诊断".to_string(),

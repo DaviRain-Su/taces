@@ -22,7 +22,7 @@ async fn test_create_video_consultation() {
     let mut app = TestApp::new().await;
 
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) =
+    let (patient_id, _patient_email, _patient_password) =
         create_test_user(&app.pool, "patient").await;
     let (doctor_user_id, doctor_email, doctor_password) =
         create_test_user(&app.pool, "doctor").await;
@@ -51,7 +51,7 @@ async fn test_create_video_consultation() {
         UPDATE appointments SET status = 'confirmed' WHERE id = ?
     "#;
     sqlx::query(update_query)
-        .bind(&appointment_id.to_string())
+        .bind(appointment_id.to_string())
         .execute(&app.pool)
         .await
         .unwrap();
@@ -84,7 +84,7 @@ async fn test_get_video_consultation() {
     let mut app = TestApp::new().await;
 
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) =
+    let (patient_id, _patient_email, _patient_password) =
         create_test_user(&app.pool, "patient").await;
     let (doctor_user_id, doctor_email, doctor_password) =
         create_test_user(&app.pool, "doctor").await;
@@ -105,15 +105,15 @@ async fn test_get_video_consultation() {
 
     let now = Utc::now();
     sqlx::query(query)
-        .bind(&consultation_id)
-        .bind(&appointment_id)
-        .bind(&doctor_id)
-        .bind(&patient_id)
+        .bind(consultation_id)
+        .bind(appointment_id)
+        .bind(doctor_id)
+        .bind(patient_id)
         .bind(&room_id)
-        .bind(&(now + Duration::hours(1)))
+        .bind(now + Duration::hours(1))
         .bind("头痛")
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
         .execute(&app.pool)
         .await
         .unwrap();
@@ -143,7 +143,7 @@ async fn test_join_room() {
     let mut app = TestApp::new().await;
 
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) =
+    let (patient_id, _patient_email, _patient_password) =
         create_test_user(&app.pool, "patient").await;
     let (doctor_user_id, doctor_email, doctor_password) =
         create_test_user(&app.pool, "doctor").await;
@@ -163,14 +163,14 @@ async fn test_join_room() {
 
     let now = Utc::now();
     sqlx::query(query)
-        .bind(&consultation_id)
-        .bind(&appointment_id)
-        .bind(&doctor_id)
-        .bind(&patient_id)
+        .bind(consultation_id)
+        .bind(appointment_id)
+        .bind(doctor_id)
+        .bind(patient_id)
         .bind(&room_id)
-        .bind(&(now + Duration::hours(1)))
-        .bind(&now)
-        .bind(&now)
+        .bind(now + Duration::hours(1))
+        .bind(now)
+        .bind(now)
         .execute(&app.pool)
         .await
         .unwrap();
@@ -200,7 +200,7 @@ async fn test_start_consultation() {
     let mut app = TestApp::new().await;
 
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) =
+    let (patient_id, _patient_email, _patient_password) =
         create_test_user(&app.pool, "patient").await;
     let (doctor_user_id, doctor_email, doctor_password) =
         create_test_user(&app.pool, "doctor").await;
@@ -220,14 +220,14 @@ async fn test_start_consultation() {
 
     let now = Utc::now();
     sqlx::query(query)
-        .bind(&consultation_id)
-        .bind(&appointment_id)
-        .bind(&doctor_id)
-        .bind(&patient_id)
+        .bind(consultation_id)
+        .bind(appointment_id)
+        .bind(doctor_id)
+        .bind(patient_id)
         .bind(&room_id)
-        .bind(&now)
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
+        .bind(now)
         .execute(&app.pool)
         .await
         .unwrap();
@@ -257,7 +257,7 @@ async fn test_start_consultation() {
     }
 
     let result: ConsultationStatus = sqlx::query_as(check_query)
-        .bind(&consultation_id)
+        .bind(consultation_id)
         .fetch_one(&app.pool)
         .await
         .unwrap();
@@ -272,7 +272,7 @@ async fn test_end_consultation() {
     let mut app = TestApp::new().await;
 
     // Create patient and doctor
-    let (patient_id, patient_email, patient_password) =
+    let (patient_id, _patient_email, _patient_password) =
         create_test_user(&app.pool, "patient").await;
     let (doctor_user_id, doctor_email, doctor_password) =
         create_test_user(&app.pool, "doctor").await;
@@ -292,15 +292,15 @@ async fn test_end_consultation() {
 
     let now = Utc::now();
     sqlx::query(query)
-        .bind(&consultation_id)
-        .bind(&appointment_id)
-        .bind(&doctor_id)
-        .bind(&patient_id)
+        .bind(consultation_id)
+        .bind(appointment_id)
+        .bind(doctor_id)
+        .bind(patient_id)
         .bind(&room_id)
-        .bind(&(now - Duration::minutes(30)))
-        .bind(&(now - Duration::minutes(25)))
-        .bind(&now)
-        .bind(&now)
+        .bind(now - Duration::minutes(30))
+        .bind(now - Duration::minutes(25))
+        .bind(now)
+        .bind(now)
         .execute(&app.pool)
         .await
         .unwrap();
@@ -333,13 +333,15 @@ async fn test_end_consultation() {
     struct ConsultationResult {
         status: String,
         diagnosis: String,
+        #[allow(dead_code)]
         treatment_plan: String,
+        #[allow(dead_code)]
         notes: String,
         duration: Option<i32>,
     }
 
     let result: ConsultationResult = sqlx::query_as(check_query)
-        .bind(&consultation_id)
+        .bind(consultation_id)
         .fetch_one(&app.pool)
         .await
         .unwrap();
@@ -357,7 +359,7 @@ async fn test_rate_consultation() {
     // Create patient and doctor
     let (patient_id, patient_email, patient_password) =
         create_test_user(&app.pool, "patient").await;
-    let (doctor_user_id, doctor_email, doctor_password) =
+    let (doctor_user_id, _doctor_email, _doctor_password) =
         create_test_user(&app.pool, "doctor").await;
     let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
 
@@ -376,18 +378,18 @@ async fn test_rate_consultation() {
 
     let now = Utc::now();
     sqlx::query(query)
-        .bind(&consultation_id)
-        .bind(&appointment_id)
-        .bind(&doctor_id)
-        .bind(&patient_id)
+        .bind(consultation_id)
+        .bind(appointment_id)
+        .bind(doctor_id)
+        .bind(patient_id)
         .bind(&room_id)
-        .bind(&(now - Duration::hours(2)))
-        .bind(&(now - Duration::hours(2)))
-        .bind(&(now - Duration::minutes(90)))
+        .bind(now - Duration::hours(2))
+        .bind(now - Duration::hours(2))
+        .bind(now - Duration::minutes(90))
         .bind(1800)
         .bind("头痛症")
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
         .execute(&app.pool)
         .await
         .unwrap();
@@ -422,7 +424,7 @@ async fn test_rate_consultation() {
     }
 
     let result: ConsultationRating = sqlx::query_as(check_query)
-        .bind(&consultation_id)
+        .bind(consultation_id)
         .fetch_one(&app.pool)
         .await
         .unwrap();
@@ -457,14 +459,14 @@ async fn test_webrtc_signaling() {
 
     let now = Utc::now();
     sqlx::query(query)
-        .bind(&consultation_id)
-        .bind(&appointment_id)
-        .bind(&doctor_id)
-        .bind(&patient_id)
+        .bind(consultation_id)
+        .bind(appointment_id)
+        .bind(doctor_id)
+        .bind(patient_id)
         .bind(&room_id)
-        .bind(&now)
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
+        .bind(now)
         .execute(&app.pool)
         .await
         .unwrap();
@@ -521,7 +523,7 @@ async fn test_consultation_templates() {
     // Create doctor
     let (doctor_user_id, doctor_email, doctor_password) =
         create_test_user(&app.pool, "doctor").await;
-    let (doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
+    let (_, _) = create_test_doctor(&app.pool, doctor_user_id).await;
     let doctor_token = get_auth_token(&mut app, &doctor_email, &doctor_password).await;
 
     // Create template
@@ -609,19 +611,19 @@ async fn test_consultation_statistics() {
     "#;
 
     sqlx::query(query)
-        .bind(&uuid::Uuid::new_v4())
-        .bind(&uuid::Uuid::new_v4())
-        .bind(&doctor_id)
-        .bind(&uuid::Uuid::new_v4())
-        .bind(&format!(
+        .bind(uuid::Uuid::new_v4())
+        .bind(uuid::Uuid::new_v4())
+        .bind(doctor_id)
+        .bind(uuid::Uuid::new_v4())
+        .bind(format!(
             "room_{}",
             uuid::Uuid::new_v4().to_string().replace("-", "")
         ))
-        .bind(&(now - Duration::days(1)))
+        .bind(now - Duration::days(1))
         .bind(1800)
         .bind(5)
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
         .execute(&app.pool)
         .await
         .unwrap();
@@ -635,17 +637,17 @@ async fn test_consultation_statistics() {
         ) VALUES (?, ?, ?, ?, ?, 'no_show', ?, NULL, NULL, ?, ?)
     "#;
     sqlx::query(no_show_query)
-        .bind(&uuid::Uuid::new_v4())
-        .bind(&uuid::Uuid::new_v4())
-        .bind(&doctor_id)
-        .bind(&uuid::Uuid::new_v4())
-        .bind(&format!(
+        .bind(uuid::Uuid::new_v4())
+        .bind(uuid::Uuid::new_v4())
+        .bind(doctor_id)
+        .bind(uuid::Uuid::new_v4())
+        .bind(format!(
             "room_{}",
             uuid::Uuid::new_v4().to_string().replace("-", "")
         ))
-        .bind(&(now - Duration::days(2)))
-        .bind(&now)
-        .bind(&now)
+        .bind(now - Duration::days(2))
+        .bind(now)
+        .bind(now)
         .execute(&app.pool)
         .await
         .unwrap();
@@ -692,14 +694,14 @@ async fn test_authorization() {
 
     let now = Utc::now();
     sqlx::query(query)
-        .bind(&consultation_id)
-        .bind(&appointment_id)
-        .bind(&doctor1_id)
-        .bind(&uuid::Uuid::new_v4())
+        .bind(consultation_id)
+        .bind(appointment_id)
+        .bind(doctor1_id)
+        .bind(uuid::Uuid::new_v4())
         .bind(&room_id)
-        .bind(&now)
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
+        .bind(now)
         .execute(&app.pool)
         .await
         .unwrap();

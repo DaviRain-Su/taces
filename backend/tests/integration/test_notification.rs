@@ -1,11 +1,7 @@
 use crate::common::TestApp;
 use axum::http::StatusCode;
-use backend::{
-    models::{notification::*, user::LoginDto},
-    utils::test_helpers::create_test_user,
-};
+use backend::{models::user::LoginDto, utils::test_helpers::create_test_user};
 use serde_json::json;
-use uuid::Uuid;
 
 async fn get_auth_token(app: &mut TestApp, account: &str, password: &str) -> String {
     let login_dto = LoginDto {
@@ -27,10 +23,10 @@ async fn test_notification_lifecycle() {
 
     // Create admin for sending notifications
     let (_, admin_account, admin_password) = create_test_user(&app.pool, "admin").await;
-    let admin_token = get_auth_token(&mut app, &admin_account, &admin_password).await;
+    let _admin_token = get_auth_token(&mut app, &admin_account, &admin_password).await;
 
     // Admin creates a notification for the user
-    let notification_dto = json!({
+    let _notification_dto = json!({
         "user_id": user_id,
         "type": "appointment_reminder",
         "title": "预约提醒",

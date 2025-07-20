@@ -1,12 +1,13 @@
 #[cfg(test)]
 mod tests {
     use backend::services::cache_service::{CacheDurations, CacheKeys};
+    use std::time::Duration;
     use uuid::Uuid;
 
     #[test]
     fn test_cache_keys() {
         let user_id = Uuid::new_v4();
-        let user_key = CacheKeys::user(&user_id);
+        let user_key = CacheKeys::user(&user_id.to_string());
         assert!(user_key.starts_with("user:"));
         assert!(user_key.contains(&user_id.to_string()));
 
@@ -26,9 +27,10 @@ mod tests {
 
     #[test]
     fn test_cache_durations() {
-        assert_eq!(CacheDurations::SHORT, 300);
-        assert_eq!(CacheDurations::MEDIUM, 3600);
-        assert_eq!(CacheDurations::LONG, 86400);
-        assert_eq!(CacheDurations::SESSION, 7200);
+        assert_eq!(CacheDurations::SHORT, Duration::from_secs(60));
+        assert_eq!(CacheDurations::MEDIUM, Duration::from_secs(300));
+        assert_eq!(CacheDurations::LONG, Duration::from_secs(3600));
+        assert_eq!(CacheDurations::DAY, Duration::from_secs(86400));
+        assert_eq!(CacheDurations::WEEK, Duration::from_secs(604800));
     }
 }

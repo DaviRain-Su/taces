@@ -57,7 +57,7 @@ async fn test_common_phrase_crud() {
         .await;
     assert_eq!(status, StatusCode::OK);
     let phrases = body["data"]["phrases"].as_array().unwrap();
-    assert!(phrases.len() >= 1); // 包含刚创建的和种子数据
+    assert!(!phrases.is_empty()); // 包含刚创建的和种子数据
 
     // 3. 根据分类筛选
     let (status, body) = app
@@ -181,7 +181,7 @@ async fn test_prescription_template_crud() {
         .await;
     assert_eq!(status, StatusCode::OK);
     let templates = body["data"]["templates"].as_array().unwrap();
-    assert!(templates.len() >= 1);
+    assert!(!templates.is_empty());
 
     // 3. 搜索处方模板
     let (status, body) = app
@@ -369,14 +369,14 @@ async fn test_template_permissions() {
         .post_with_auth(
             "/api/v1/templates/common-phrases",
             patient_create_dto,
-            &patient_token,
+            patient_token,
         )
         .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 
     // 患者不能查看常用语
     let (status, _) = app
-        .get_with_auth("/api/v1/templates/common-phrases", &patient_token)
+        .get_with_auth("/api/v1/templates/common-phrases", patient_token)
         .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 }

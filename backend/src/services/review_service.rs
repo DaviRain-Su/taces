@@ -9,6 +9,17 @@ use chrono::Utc;
 use sqlx::{MySql, Row, Transaction};
 use uuid::Uuid;
 
+pub struct ReviewQueryParams {
+    pub doctor_id: Option<Uuid>,
+    pub patient_id: Option<Uuid>,
+    pub rating: Option<i32>,
+    pub has_comment: Option<bool>,
+    pub has_reply: Option<bool>,
+    pub is_anonymous: Option<bool>,
+    pub page: i64,
+    pub page_size: i64,
+}
+
 pub struct ReviewService;
 
 impl ReviewService {
@@ -106,16 +117,9 @@ impl ReviewService {
 
     pub async fn get_reviews(
         pool: &DbPool,
-        doctor_id: Option<Uuid>,
-        patient_id: Option<Uuid>,
-        rating: Option<i32>,
-        has_comment: Option<bool>,
-        has_reply: Option<bool>,
-        is_anonymous: Option<bool>,
-        page: i64,
-        page_size: i64,
+        params: ReviewQueryParams,
     ) -> Result<(Vec<ReviewDetail>, i64)> {
-        let offset = (page - 1) * page_size;
+        let offset = (params.page - 1) * params.page_size;
 
         // 构建查询条件
         let mut count_query =
@@ -136,27 +140,27 @@ impl ReviewService {
             "#,
         );
 
-        let mut params = vec![];
+        let mut bind_params = vec![];
 
-        if let Some(did) = doctor_id {
+        if let Some(did) = params.doctor_id {
             count_query.push_str(" AND pr.doctor_id = ?");
             list_query.push_str(" AND pr.doctor_id = ?");
-            params.push(did.to_string());
+            bind_params.push(did.to_string());
         }
 
-        if let Some(pid) = patient_id {
+        if let Some(pid) = params.patient_id {
             count_query.push_str(" AND pr.patient_id = ?");
             list_query.push_str(" AND pr.patient_id = ?");
-            params.push(pid.to_string());
+            bind_params.push(pid.to_string());
         }
 
-        if let Some(r) = rating {
+        if let Some(r) = params.rating {
             count_query.push_str(" AND pr.rating = ?");
             list_query.push_str(" AND pr.rating = ?");
-            params.push(r.to_string());
+            bind_params.push(r.to_string());
         }
 
-        if let Some(has_c) = has_comment {
+        if let Some(has_c) = params.has_comment {
             if has_c {
                 count_query.push_str(" AND pr.comment IS NOT NULL AND pr.comment != ''");
                 list_query.push_str(" AND pr.comment IS NOT NULL AND pr.comment != ''");
@@ -166,7 +170,7 @@ impl ReviewService {
             }
         }
 
-        if let Some(has_r) = has_reply {
+        if let Some(has_r) = params.has_reply {
             if has_r {
                 count_query.push_str(" AND pr.reply IS NOT NULL");
                 list_query.push_str(" AND pr.reply IS NOT NULL");
@@ -176,27 +180,27 @@ impl ReviewService {
             }
         }
 
-        if let Some(anon) = is_anonymous {
+        if let Some(anon) = params.is_anonymous {
             count_query.push_str(" AND pr.is_anonymous = ?");
             list_query.push_str(" AND pr.is_anonymous = ?");
-            params.push(anon.to_string());
+            bind_params.push(anon.to_string());
         }
 
         list_query.push_str(" ORDER BY pr.created_at DESC LIMIT ? OFFSET ?");
 
         // 获取总数
         let mut count_query_builder = sqlx::query(&count_query);
-        for param in &params {
+        for param in &bind_params {
             count_query_builder = count_query_builder.bind(param);
         }
         let total: i64 = count_query_builder.fetch_one(pool).await?.get(0);
 
         // 获取列表
         let mut list_query_builder = sqlx::query(&list_query);
-        for param in params {
+        for param in bind_params {
             list_query_builder = list_query_builder.bind(param);
         }
-        list_query_builder = list_query_builder.bind(page_size).bind(offset);
+        list_query_builder = list_query_builder.bind(params.page_size).bind(offset);
 
         let rows = list_query_builder.fetch_all(pool).await?;
 

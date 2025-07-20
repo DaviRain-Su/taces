@@ -6,7 +6,7 @@ use backend::{
 };
 use chrono;
 use rust_decimal::Decimal;
-use serde_json::{json, Value};
+use serde_json::json;
 use sqlx;
 use std::str::FromStr;
 use uuid::Uuid;

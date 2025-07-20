@@ -32,8 +32,7 @@ impl NotificationService {
             content: row.get("content"),
             related_id: row
                 .get::<Option<String>, _>("related_id")
-                .map(|s| Uuid::parse_str(&s).ok())
-                .flatten(),
+                .and_then(|s| Uuid::parse_str(&s).ok()),
             status: row.get("status"),
             metadata: row.get("metadata"),
             created_at: row.get("created_at"),
@@ -89,7 +88,7 @@ impl NotificationService {
         )
         .bind(notification_id.to_string())
         .bind(dto.user_id.to_string())
-        .bind(&dto.notification_type.to_string())
+        .bind(dto.notification_type.to_string())
         .bind(&dto.title)
         .bind(&dto.content)
         .bind(dto.related_id.map(|id| id.to_string()))
@@ -475,8 +474,8 @@ impl NotificationService {
         .bind(&dto.device_type)
         .bind(&dto.token)
         .bind(&device_info)
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
         .execute(pool)
         .await?;
 
@@ -549,8 +548,8 @@ impl NotificationService {
         .bind(status)
         .bind(&error_message)
         .bind(&provider)
-        .bind(&now)
-        .bind(&sent_at)
+        .bind(now)
+        .bind(sent_at)
         .execute(pool)
         .await?;
 
@@ -577,8 +576,7 @@ impl NotificationService {
             })?,
             user_id: row
                 .get::<Option<String>, _>("user_id")
-                .map(|s| Uuid::parse_str(&s).ok())
-                .flatten(),
+                .and_then(|s| Uuid::parse_str(&s).ok()),
             phone: row.get("phone"),
             template_code: row.get("template_code"),
             template_params: row.get("template_params"),
@@ -620,8 +618,8 @@ impl NotificationService {
         .bind(status)
         .bind(&error_message)
         .bind(&provider)
-        .bind(&now)
-        .bind(&sent_at)
+        .bind(now)
+        .bind(sent_at)
         .execute(pool)
         .await?;
 
@@ -648,8 +646,7 @@ impl NotificationService {
             })?,
             user_id: row
                 .get::<Option<String>, _>("user_id")
-                .map(|s| Uuid::parse_str(&s).ok())
-                .flatten(),
+                .and_then(|s| Uuid::parse_str(&s).ok()),
             email: row.get("email"),
             subject: row.get("subject"),
             body: row.get("body"),

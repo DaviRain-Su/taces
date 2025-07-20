@@ -248,7 +248,7 @@ impl CirclePostService {
         let mut tx = pool.begin().await?;
 
         // Check if user can delete (author or admin)
-        let post = Self::get_post_simple(&pool, id).await?;
+        let post = Self::get_post_simple(pool, id).await?;
         if !is_admin && post.author_id != user_id {
             return Err(anyhow!("No permission to delete this post"));
         }

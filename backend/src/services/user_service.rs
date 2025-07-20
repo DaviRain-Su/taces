@@ -137,7 +137,7 @@ pub async fn create_user(pool: &DbPool, dto: CreateUserDto) -> Result<User> {
         .bind(&dto.gender)
         .bind(&dto.phone)
         .bind(&dto.email)
-        .bind(&dto.birthday)
+        .bind(dto.birthday)
         .bind(role_str)
         .bind("active")
         .execute(pool)

@@ -1,5 +1,5 @@
 use backend::{
-    config::{database, redis},
+    config::redis,
     models::user::{User, UserRole, UserStatus},
     services::{
         cache_service::{CacheDurations, CacheKeys, CacheService},

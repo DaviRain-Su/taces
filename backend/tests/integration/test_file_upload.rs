@@ -21,7 +21,7 @@ async fn test_create_upload_url() {
     let mut app = TestApp::new().await;
 
     // Create user
-    let (user_id, email, password) = create_test_user(&app.pool, "patient").await;
+    let (_user_id, email, password) = create_test_user(&app.pool, "patient").await;
     let token = get_auth_token(&mut app, &email, &password).await;
 
     // Request upload URL
@@ -69,12 +69,12 @@ async fn test_complete_upload() {
     "#;
 
     sqlx::query(query)
-        .bind(&upload_id)
-        .bind(&user_id)
-        .bind(&file_name)
+        .bind(upload_id)
+        .bind(user_id)
+        .bind(file_name)
         .bind(&file_path)
         .bind(524288i64)
-        .bind(&Utc::now())
+        .bind(Utc::now())
         .execute(&app.pool)
         .await
         .unwrap();
@@ -129,10 +129,10 @@ async fn test_get_file() {
     "#;
 
     sqlx::query(query)
-        .bind(&file_id)
-        .bind(&user_id)
+        .bind(file_id)
+        .bind(user_id)
         .bind(&file_url)
-        .bind(&Utc::now())
+        .bind(Utc::now())
         .execute(&app.pool)
         .await
         .unwrap();
@@ -176,17 +176,17 @@ async fn test_list_files() {
         "#;
 
         sqlx::query(query)
-            .bind(&file_id)
-            .bind(&user_id)
-            .bind(&file_type)
-            .bind(&format!("file{}.ext", i))
-            .bind(&format!("{}/2024/01/{}.ext", file_type, file_id))
-            .bind(&format!(
+            .bind(file_id)
+            .bind(user_id)
+            .bind(file_type)
+            .bind(format!("file{}.ext", i))
+            .bind(format!("{}/2024/01/{}.ext", file_type, file_id))
+            .bind(format!(
                 "https://cdn.example.com/{}/2024/01/{}.ext",
                 file_type, file_id
             ))
             .bind((i + 1) * 1048576i64)
-            .bind(&now)
+            .bind(now)
             .execute(&app.pool)
             .await
             .unwrap();
@@ -227,9 +227,9 @@ async fn test_delete_file() {
     "#;
 
     sqlx::query(query)
-        .bind(&file_id)
-        .bind(&user_id)
-        .bind(&Utc::now())
+        .bind(file_id)
+        .bind(user_id)
+        .bind(Utc::now())
         .execute(&app.pool)
         .await
         .unwrap();
@@ -253,7 +253,7 @@ async fn test_delete_file() {
     }
 
     let file_status: FileStatus = sqlx::query_as(check_query)
-        .bind(&file_id)
+        .bind(file_id)
         .fetch_one(&app.pool)
         .await
         .unwrap();
@@ -290,17 +290,17 @@ async fn test_file_stats() {
             "#;
 
             sqlx::query(query)
-                .bind(&file_id)
-                .bind(&user_id)
-                .bind(&file_type)
-                .bind(&format!("{}_{}.ext", file_type, i))
-                .bind(&format!("{}/2024/01/{}.ext", file_type, file_id))
-                .bind(&format!(
+                .bind(file_id)
+                .bind(user_id)
+                .bind(file_type)
+                .bind(format!("{}_{}.ext", file_type, i))
+                .bind(format!("{}/2024/01/{}.ext", file_type, file_id))
+                .bind(format!(
                     "https://cdn.example.com/{}/2024/01/{}.ext",
                     file_type, file_id
                 ))
-                .bind(&size)
-                .bind(&Utc::now())
+                .bind(size)
+                .bind(Utc::now())
                 .execute(&app.pool)
                 .await
                 .unwrap();
@@ -327,7 +327,7 @@ async fn test_file_type_validation() {
     let mut app = TestApp::new().await;
 
     // Create user
-    let (user_id, email, password) = create_test_user(&app.pool, "patient").await;
+    let (_user_id, email, password) = create_test_user(&app.pool, "patient").await;
     let token = get_auth_token(&mut app, &email, &password).await;
 
     // Try to upload file exceeding size limit
@@ -357,7 +357,7 @@ async fn test_authorization() {
 
     // Create two users
     let (user1_id, _, _) = create_test_user(&app.pool, "patient").await;
-    let (user2_id, email2, password2) = create_test_user(&app.pool, "patient").await;
+    let (_user2_id, email2, password2) = create_test_user(&app.pool, "patient").await;
     let user2_token = get_auth_token(&mut app, &email2, &password2).await;
 
     // Create private file for user1
@@ -372,9 +372,9 @@ async fn test_authorization() {
     "#;
 
     sqlx::query(query)
-        .bind(&file_id)
-        .bind(&user1_id)
-        .bind(&Utc::now())
+        .bind(file_id)
+        .bind(user1_id)
+        .bind(Utc::now())
         .execute(&app.pool)
         .await
         .unwrap();
@@ -400,7 +400,7 @@ async fn test_admin_access() {
     let mut app = TestApp::new().await;
 
     // Create admin
-    let (admin_id, admin_email, admin_password) = create_test_user(&app.pool, "admin").await;
+    let (_admin_id, admin_email, admin_password) = create_test_user(&app.pool, "admin").await;
     let admin_token = get_auth_token(&mut app, &admin_email, &admin_password).await;
 
     // Test config endpoints
@@ -439,7 +439,7 @@ async fn test_public_file_access() {
 
     // Create user1 with public file
     let (user1_id, _, _) = create_test_user(&app.pool, "patient").await;
-    let (user2_id, email2, password2) = create_test_user(&app.pool, "patient").await;
+    let (_user2_id, email2, password2) = create_test_user(&app.pool, "patient").await;
     let user2_token = get_auth_token(&mut app, &email2, &password2).await;
 
     // Create public file
@@ -454,9 +454,9 @@ async fn test_public_file_access() {
     "#;
 
     sqlx::query(query)
-        .bind(&file_id)
-        .bind(&user1_id)
-        .bind(&Utc::now())
+        .bind(file_id)
+        .bind(user1_id)
+        .bind(Utc::now())
         .execute(&app.pool)
         .await
         .unwrap();

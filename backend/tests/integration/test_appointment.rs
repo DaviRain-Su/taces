@@ -33,7 +33,7 @@ async fn test_create_appointment() {
     let tomorrow = Utc::now() + Duration::days(1);
     let appointment_dto = CreateAppointmentDto {
         patient_id: patient_user_id,
-        doctor_id: doctor_id,
+        doctor_id,
         appointment_date: tomorrow,
         time_slot: "09:00-10:00".to_string(),
         visit_type: VisitType::Offline,
@@ -69,7 +69,7 @@ async fn test_list_appointments() {
     for i in 0..3 {
         let appointment = CreateAppointmentDto {
             patient_id: patient_user_id,
-            doctor_id: doctor_id,
+            doctor_id,
             appointment_date: Utc::now() + Duration::days(i + 1),
             time_slot: format!("{}:00-{}:00", 9 + i, 10 + i),
             visit_type: VisitType::Offline,
@@ -107,7 +107,7 @@ async fn test_get_appointment_by_id() {
 
     let appointment_dto = CreateAppointmentDto {
         patient_id: patient_user_id,
-        doctor_id: doctor_id,
+        doctor_id,
         appointment_date: Utc::now() + Duration::days(1),
         time_slot: "09:00-10:00".to_string(),
         visit_type: VisitType::Offline,
@@ -148,7 +148,7 @@ async fn test_update_appointment() {
 
     let appointment_dto = CreateAppointmentDto {
         patient_id: patient_user_id,
-        doctor_id: doctor_id,
+        doctor_id,
         appointment_date: Utc::now() + Duration::days(1),
         time_slot: "09:00-10:00".to_string(),
         visit_type: VisitType::Offline,
@@ -196,7 +196,7 @@ async fn test_cancel_appointment() {
 
     let appointment_dto = CreateAppointmentDto {
         patient_id: patient_user_id,
-        doctor_id: doctor_id,
+        doctor_id,
         appointment_date: Utc::now() + Duration::days(1),
         time_slot: "09:00-10:00".to_string(),
         visit_type: VisitType::Offline,
@@ -240,7 +240,7 @@ async fn test_get_doctor_appointments() {
     for i in 0..3 {
         let appointment_dto = CreateAppointmentDto {
             patient_id: patient_user_id,
-            doctor_id: doctor_id,
+            doctor_id,
             appointment_date: Utc::now() + Duration::days(i + 1),
             time_slot: format!("{}:00-{}:00", 9 + i, 10 + i),
             visit_type: VisitType::Offline,
@@ -286,7 +286,7 @@ async fn test_get_patient_appointments() {
     for i in 0..2 {
         let appointment_dto = CreateAppointmentDto {
             patient_id: patient_user_id,
-            doctor_id: doctor_id,
+            doctor_id,
             appointment_date: Utc::now() + Duration::days(i + 1),
             time_slot: format!("{}:00-{}:00", 9 + i, 10 + i),
             visit_type: VisitType::Offline,
@@ -344,7 +344,7 @@ async fn test_get_available_slots() {
     assert_eq!(body["success"], true);
     assert!(body["data"].is_array());
     // Should have multiple time slots available
-    assert!(body["data"].as_array().unwrap().len() > 0);
+    assert!(!body["data"].as_array().unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -365,7 +365,7 @@ async fn test_appointment_authorization() {
     // Patient 1 creates an appointment
     let appointment_dto = CreateAppointmentDto {
         patient_id: patient1_user_id,
-        doctor_id: doctor_id,
+        doctor_id,
         appointment_date: Utc::now() + Duration::days(1),
         time_slot: "09:00-10:00".to_string(),
         visit_type: VisitType::Offline,
@@ -416,8 +416,8 @@ async fn test_appointment_conflict() {
     // Create first appointment
     let appointment_dto = CreateAppointmentDto {
         patient_id: patient_user_id,
-        doctor_id: doctor_id,
-        appointment_date: appointment_date,
+        doctor_id,
+        appointment_date,
         time_slot: time_slot.clone(),
         visit_type: VisitType::Offline,
         symptoms: "测试症状1".to_string(),
@@ -433,9 +433,9 @@ async fn test_appointment_conflict() {
     // Try to create conflicting appointment (same doctor, date, and time)
     let conflicting_appointment = CreateAppointmentDto {
         patient_id: patient_user_id,
-        doctor_id: doctor_id,
-        appointment_date: appointment_date,
-        time_slot: time_slot,
+        doctor_id,
+        appointment_date,
+        time_slot,
         visit_type: VisitType::Offline,
         symptoms: "测试症状2".to_string(),
         has_visited_before: false,

@@ -254,8 +254,8 @@ async fn create_department_uncached(
         .bind(&input.contact_phone)
         .bind(&input.description)
         .bind("active")
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to create department: {}", e))?;

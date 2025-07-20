@@ -42,7 +42,7 @@ impl CacheService {
         let data = serde_json::to_string(value)
             .map_err(|e| format!("Failed to serialize value: {}", e))?;
 
-        conn.set_ex(key, data, expiration.as_secs())
+        conn.set_ex::<_, _, ()>(key, data, expiration.as_secs())
             .await
             .map_err(|e| format!("Failed to set cache: {}", e))?;
 
@@ -54,7 +54,7 @@ impl CacheService {
         let redis = redis.as_ref().ok_or("Redis not available")?;
         let mut conn = redis.clone();
 
-        conn.del(key)
+        conn.del::<_, ()>(key)
             .await
             .map_err(|e| format!("Failed to delete cache: {}", e))?;
 
@@ -107,7 +107,7 @@ impl CacheService {
         let data = serde_json::to_string(value)
             .map_err(|e| format!("Failed to serialize value: {}", e))?;
 
-        conn.set(key, data)
+        conn.set::<_, _, ()>(key, data)
             .await
             .map_err(|e| format!("Failed to set cache: {}", e))?;
 

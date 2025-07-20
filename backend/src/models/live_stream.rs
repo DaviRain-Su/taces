@@ -59,9 +59,3 @@ pub struct StartLiveStreamDto {
     pub stream_url: String,
     pub qr_code: Option<String>,
 }
-
-impl Default for LiveStreamStatus {
-    fn default() -> Self {
-        LiveStreamStatus::Scheduled
-    }
-}

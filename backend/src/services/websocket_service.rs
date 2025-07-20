@@ -99,6 +99,12 @@ pub struct WebSocketManager {
     _broadcast_tx: broadcast::Sender<(Uuid, WsMessage)>,
 }
 
+impl Default for WebSocketManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WebSocketManager {
     pub fn new() -> Self {
         let (broadcast_tx, _) = broadcast::channel(1024);

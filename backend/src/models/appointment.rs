@@ -21,6 +21,7 @@ pub struct Appointment {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "visit_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum VisitType {
     OnlineVideo,
     Offline,
@@ -28,6 +29,7 @@ pub enum VisitType {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "appointment_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum AppointmentStatus {
     Pending,
     Confirmed,

@@ -2,7 +2,7 @@ use crate::models::{
     ApiResponse, CreateReviewDto, CreateTagDto, ReplyReviewDto, ReviewQuery, UpdateReviewDto,
     UpdateReviewVisibilityDto, User, UserRole,
 };
-use crate::services::review_service::ReviewService;
+use crate::services::review_service::{ReviewQueryParams, ReviewService};
 use crate::AppState;
 use axum::{
     extract::{Extension, Path, Query, State},
@@ -62,19 +62,18 @@ pub async fn get_reviews(
     let page = query.page.unwrap_or(1);
     let page_size = query.page_size.unwrap_or(10);
 
-    match ReviewService::get_reviews(
-        &state.pool,
-        query.doctor_id,
-        query.patient_id,
-        query.rating,
-        query.has_comment,
-        query.has_reply,
-        query.is_anonymous,
+    let params = ReviewQueryParams {
+        doctor_id: query.doctor_id,
+        patient_id: query.patient_id,
+        rating: query.rating,
+        has_comment: query.has_comment,
+        has_reply: query.has_reply,
+        is_anonymous: query.is_anonymous,
         page,
         page_size,
-    )
-    .await
-    {
+    };
+
+    match ReviewService::get_reviews(&state.pool, params).await {
         Ok((reviews, total)) => {
             let response = serde_json::json!({
                 "reviews": reviews,
@@ -341,19 +340,18 @@ pub async fn get_patient_reviews(
     let page = query.page.unwrap_or(1);
     let page_size = query.page_size.unwrap_or(10);
 
-    match ReviewService::get_reviews(
-        &state.pool,
-        None,
-        Some(patient_id),
-        query.rating,
-        query.has_comment,
-        query.has_reply,
-        query.is_anonymous,
+    let params = ReviewQueryParams {
+        doctor_id: None,
+        patient_id: Some(patient_id),
+        rating: query.rating,
+        has_comment: query.has_comment,
+        has_reply: query.has_reply,
+        is_anonymous: query.is_anonymous,
         page,
         page_size,
-    )
-    .await
-    {
+    };
+
+    match ReviewService::get_reviews(&state.pool, params).await {
         Ok((reviews, total)) => {
             let response = serde_json::json!({
                 "reviews": reviews,
@@ -389,19 +387,18 @@ pub async fn get_doctor_reviews(
     let page = query.page.unwrap_or(1);
     let page_size = query.page_size.unwrap_or(10);
 
-    match ReviewService::get_reviews(
-        &state.pool,
-        Some(doctor_id),
-        None,
-        query.rating,
-        query.has_comment,
-        query.has_reply,
-        query.is_anonymous,
+    let params = ReviewQueryParams {
+        doctor_id: Some(doctor_id),
+        patient_id: None,
+        rating: query.rating,
+        has_comment: query.has_comment,
+        has_reply: query.has_reply,
+        is_anonymous: query.is_anonymous,
         page,
         page_size,
-    )
-    .await
-    {
+    };
+
+    match ReviewService::get_reviews(&state.pool, params).await {
         Ok((reviews, total)) => {
             let response = serde_json::json!({
                 "reviews": reviews,

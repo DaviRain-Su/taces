@@ -33,15 +33,15 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(&consultation_id)
-            .bind(&dto.appointment_id)
-            .bind(&dto.doctor_id)
-            .bind(&dto.patient_id)
+            .bind(consultation_id)
+            .bind(dto.appointment_id)
+            .bind(dto.doctor_id)
+            .bind(dto.patient_id)
             .bind(&room_id)
-            .bind(&dto.scheduled_start_time)
+            .bind(dto.scheduled_start_time)
             .bind(&dto.chief_complaint)
-            .bind(&now)
-            .bind(&now)
+            .bind(now)
+            .bind(now)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -58,7 +58,7 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query_as::<_, VideoConsultation>(query)
-            .bind(&consultation_id)
+            .bind(consultation_id)
             .fetch_one(db)
             .await
             .map_err(|e| match e {
@@ -99,7 +99,7 @@ impl VideoConsultationService {
                 sqlx::query_as::<_, VideoConsultation>(
                     "SELECT * FROM video_consultations WHERE doctor_id = ? ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
                 )
-                .bind(doctor_id.clone())
+                .bind(*doctor_id)
                 .bind(page_size)
                 .bind(offset)
                 .fetch_all(db)
@@ -109,7 +109,7 @@ impl VideoConsultationService {
                 sqlx::query_as::<_, VideoConsultation>(
                     "SELECT * FROM video_consultations WHERE patient_id = ? ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
                 )
-                .bind(patient_id.clone())
+                .bind(*patient_id)
                 .bind(page_size)
                 .bind(offset)
                 .fetch_all(db)
@@ -119,8 +119,8 @@ impl VideoConsultationService {
                 sqlx::query_as::<_, VideoConsultation>(
                     "SELECT * FROM video_consultations WHERE doctor_id = ? AND patient_id = ? ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
                 )
-                .bind(doctor_id.clone())
-                .bind(patient_id.clone())
+                .bind(*doctor_id)
+                .bind(*patient_id)
                 .bind(page_size)
                 .bind(offset)
                 .fetch_all(db)
@@ -197,8 +197,8 @@ impl VideoConsultationService {
 
         sqlx::query(update_query)
             .bind(&token)
-            .bind(&Utc::now())
-            .bind(&consultation.id)
+            .bind(Utc::now())
+            .bind(consultation.id)
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -255,9 +255,9 @@ impl VideoConsultationService {
         "#;
 
         let result = sqlx::query(query)
-            .bind(&now)
-            .bind(&now)
-            .bind(&consultation_id)
+            .bind(now)
+            .bind(now)
+            .bind(consultation_id)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -318,13 +318,13 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(&now)
-            .bind(&duration)
+            .bind(now)
+            .bind(duration)
             .bind(&complete_dto.diagnosis)
             .bind(&complete_dto.treatment_plan)
             .bind(&complete_dto.notes)
-            .bind(&now)
-            .bind(&consultation_id)
+            .bind(now)
+            .bind(consultation_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -337,8 +337,8 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(&now)
-            .bind(&consultation.appointment_id)
+            .bind(now)
+            .bind(consultation.appointment_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -390,8 +390,8 @@ impl VideoConsultationService {
             .bind(&dto.diagnosis)
             .bind(&dto.treatment_plan)
             .bind(&dto.notes)
-            .bind(&Utc::now())
-            .bind(&consultation_id)
+            .bind(Utc::now())
+            .bind(consultation_id)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -424,10 +424,10 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(&dto.rating)
+            .bind(dto.rating)
             .bind(&dto.feedback)
-            .bind(&Utc::now())
-            .bind(&consultation_id)
+            .bind(Utc::now())
+            .bind(consultation_id)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -462,13 +462,13 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(&signal_id)
+            .bind(signal_id)
             .bind(&dto.room_id)
-            .bind(&from_user_id)
-            .bind(&dto.to_user_id)
+            .bind(from_user_id)
+            .bind(dto.to_user_id)
             .bind(&dto.signal_type)
             .bind(&dto.payload)
-            .bind(&Utc::now())
+            .bind(Utc::now())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -502,7 +502,7 @@ impl VideoConsultationService {
 
         let signals = sqlx::query_as::<_, WebRTCSignal>(query)
             .bind(room_id)
-            .bind(&user_id)
+            .bind(user_id)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -554,10 +554,10 @@ impl VideoConsultationService {
 
         let now = Utc::now();
         sqlx::query(query)
-            .bind(&recording_id)
-            .bind(&consultation_id)
-            .bind(&now)
-            .bind(&now)
+            .bind(recording_id)
+            .bind(consultation_id)
+            .bind(now)
+            .bind(now)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -581,10 +581,10 @@ impl VideoConsultationService {
 
         let result = sqlx::query(query)
             .bind(&recording_url)
-            .bind(&file_size)
-            .bind(&duration)
-            .bind(&Utc::now())
-            .bind(&recording_id)
+            .bind(file_size)
+            .bind(duration)
+            .bind(Utc::now())
+            .bind(recording_id)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -605,7 +605,7 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query_as::<_, VideoRecording>(query)
-            .bind(&recording_id)
+            .bind(recording_id)
             .fetch_one(db)
             .await
             .map_err(|e| match e {
@@ -625,7 +625,7 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query_as::<_, VideoRecording>(query)
-            .bind(&consultation_id)
+            .bind(consultation_id)
             .fetch_all(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))
@@ -648,15 +648,15 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(&template_id)
-            .bind(&doctor_id)
+            .bind(template_id)
+            .bind(doctor_id)
             .bind(&dto.name)
             .bind(&dto.chief_complaint)
             .bind(&dto.diagnosis)
             .bind(&dto.treatment_plan)
             .bind(&dto.notes)
-            .bind(&now)
-            .bind(&now)
+            .bind(now)
+            .bind(now)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -673,7 +673,7 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query_as::<_, VideoConsultationTemplate>(query)
-            .bind(&template_id)
+            .bind(template_id)
             .fetch_one(db)
             .await
             .map_err(|e| match e {
@@ -693,7 +693,7 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query_as::<_, VideoConsultationTemplate>(query)
-            .bind(&doctor_id)
+            .bind(doctor_id)
             .fetch_all(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))
@@ -717,8 +717,8 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(&Utc::now())
-            .bind(&template_id)
+            .bind(Utc::now())
+            .bind(template_id)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -806,7 +806,7 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query_as::<_, Appointment>(query)
-            .bind(&appointment_id)
+            .bind(appointment_id)
             .fetch_one(db)
             .await
             .map_err(|e| match e {
@@ -825,12 +825,12 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(&event_id)
-            .bind(&dto.consultation_id)
-            .bind(&user_id)
+            .bind(event_id)
+            .bind(dto.consultation_id)
+            .bind(user_id)
             .bind(&dto.event_type)
             .bind(&dto.event_data)
-            .bind(&Utc::now())
+            .bind(Utc::now())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -852,12 +852,12 @@ impl VideoConsultationService {
         "#;
 
         sqlx::query(query)
-            .bind(&event_id)
-            .bind(&dto.consultation_id)
-            .bind(&user_id)
+            .bind(event_id)
+            .bind(dto.consultation_id)
+            .bind(user_id)
             .bind(&dto.event_type)
             .bind(&dto.event_data)
-            .bind(&Utc::now())
+            .bind(Utc::now())
             .execute(&mut **tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -894,7 +894,7 @@ impl VideoConsultationService {
 
         let one_hour_ago = Utc::now() - Duration::hours(1);
         let result = sqlx::query(query)
-            .bind(&one_hour_ago)
+            .bind(one_hour_ago)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;

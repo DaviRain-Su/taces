@@ -4,8 +4,7 @@ use backend::{
     models::user::LoginDto,
     utils::test_helpers::{create_test_doctor, create_test_user},
 };
-use chrono::{Duration, Local, NaiveDate};
-use serde_json::json;
+use chrono::{Duration, Local};
 use uuid::Uuid;
 
 async fn get_auth_token(app: &mut TestApp, account: &str, password: &str) -> String {
@@ -351,5 +350,5 @@ async fn test_user_growth_statistics() {
         .await;
     assert_eq!(status, StatusCode::OK);
     assert!(body["data"].is_array());
-    assert!(body["data"].as_array().unwrap().len() > 0);
+    assert!(!body["data"].as_array().unwrap().is_empty());
 }

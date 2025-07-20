@@ -383,8 +383,8 @@ impl PushNotificationService {
                 .bind(token)
                 .bind(platform)
                 .bind(provider)
-                .bind(&now)
-                .bind(&now)
+                .bind(now)
+                .bind(now)
                 .execute(db)
                 .await?;
 

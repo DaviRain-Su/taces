@@ -34,12 +34,12 @@ impl PaymentService {
             .bind(create_dto.user_id.to_string())
             .bind(create_dto.appointment_id.map(|id| id.to_string()))
             .bind(&create_dto.order_type)
-            .bind(&create_dto.amount)
-            .bind(&expire_time)
+            .bind(create_dto.amount)
+            .bind(expire_time)
             .bind(create_dto.description.as_deref())
             .bind(&create_dto.metadata)
-            .bind(&now)
-            .bind(&now)
+            .bind(now)
+            .bind(now)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -53,7 +53,7 @@ impl PaymentService {
         "#;
 
         sqlx::query_as::<_, PaymentOrder>(query)
-            .bind(&order_id)
+            .bind(order_id)
             .fetch_one(db)
             .await
             .map_err(|e| match e {
@@ -197,8 +197,8 @@ impl PaymentService {
         "#;
 
         let result = sqlx::query(query)
-            .bind(&Utc::now())
-            .bind(&order_id)
+            .bind(Utc::now())
+            .bind(order_id)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -237,12 +237,12 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(&transaction_id)
+            .bind(transaction_id)
             .bind(&transaction_no)
-            .bind(&order.id)
+            .bind(order.id)
             .bind(&dto.payment_method)
-            .bind(&order.amount)
-            .bind(&Utc::now())
+            .bind(order.amount)
+            .bind(Utc::now())
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -396,7 +396,7 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(&Utc::now())
+            .bind(Utc::now())
             .bind(transaction_id)
             .execute(&mut *tx)
             .await
@@ -411,9 +411,9 @@ impl PaymentService {
 
         let now = Utc::now();
         sqlx::query(query)
-            .bind(&now)
-            .bind(&now)
-            .bind(&order.id)
+            .bind(now)
+            .bind(now)
+            .bind(order.id)
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -427,8 +427,8 @@ impl PaymentService {
             "#;
 
             sqlx::query(query)
-                .bind(&now)
-                .bind(&appointment_id)
+                .bind(now)
+                .bind(appointment_id)
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -469,7 +469,7 @@ impl PaymentService {
         "#;
 
         let transaction = sqlx::query_as::<_, PaymentTransaction>(query)
-            .bind(&order.id)
+            .bind(order.id)
             .bind(&payment_method)
             .fetch_one(db)
             .await
@@ -493,8 +493,8 @@ impl PaymentService {
             .bind(&status)
             .bind(&callback_data.external_transaction_id)
             .bind(&callback_data.raw_data)
-            .bind(&Utc::now())
-            .bind(&transaction.id)
+            .bind(Utc::now())
+            .bind(transaction.id)
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -509,9 +509,9 @@ impl PaymentService {
 
             sqlx::query(query)
                 .bind(&payment_method)
-                .bind(&callback_data.payment_time)
-                .bind(&Utc::now())
-                .bind(&order.id)
+                .bind(callback_data.payment_time)
+                .bind(Utc::now())
+                .bind(order.id)
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -525,8 +525,8 @@ impl PaymentService {
                 "#;
 
                 sqlx::query(query)
-                    .bind(&Utc::now())
-                    .bind(&appointment_id)
+                    .bind(Utc::now())
+                    .bind(appointment_id)
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -566,7 +566,7 @@ impl PaymentService {
         "#;
 
         let transaction = sqlx::query_as::<_, PaymentTransaction>(query)
-            .bind(&order.id)
+            .bind(order.id)
             .fetch_one(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -584,15 +584,15 @@ impl PaymentService {
 
         let now = Utc::now();
         sqlx::query(query)
-            .bind(&refund_id)
+            .bind(refund_id)
             .bind(&refund_no)
-            .bind(&order.id)
-            .bind(&transaction.id)
-            .bind(&user_id)
-            .bind(&dto.refund_amount)
+            .bind(order.id)
+            .bind(transaction.id)
+            .bind(user_id)
+            .bind(dto.refund_amount)
             .bind(&dto.refund_reason)
-            .bind(&now)
-            .bind(&now)
+            .bind(now)
+            .bind(now)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -606,7 +606,7 @@ impl PaymentService {
         "#;
 
         sqlx::query_as::<_, RefundRecord>(query)
-            .bind(&refund_id)
+            .bind(refund_id)
             .fetch_one(db)
             .await
             .map_err(|e| match e {
@@ -641,11 +641,11 @@ impl PaymentService {
 
             let now = Utc::now();
             sqlx::query(query)
-                .bind(&reviewer_id)
-                .bind(&now)
+                .bind(reviewer_id)
+                .bind(now)
                 .bind(&dto.review_notes)
-                .bind(&now)
-                .bind(&refund_id)
+                .bind(now)
+                .bind(refund_id)
                 .execute(db)
                 .await
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -675,11 +675,11 @@ impl PaymentService {
 
         let now = Utc::now();
         sqlx::query(query)
-            .bind(&reviewer_id)
-            .bind(&now)
+            .bind(reviewer_id)
+            .bind(now)
             .bind(&review_notes)
-            .bind(&now)
-            .bind(&refund.id)
+            .bind(now)
+            .bind(refund.id)
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -711,9 +711,9 @@ impl PaymentService {
                 "#;
 
                 sqlx::query(query)
-                    .bind(&now)
-                    .bind(&now)
-                    .bind(&refund.id)
+                    .bind(now)
+                    .bind(now)
+                    .bind(refund.id)
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -728,9 +728,9 @@ impl PaymentService {
                 "#;
 
                 sqlx::query(query)
-                    .bind(&now)
-                    .bind(&now)
-                    .bind(&refund.id)
+                    .bind(now)
+                    .bind(now)
+                    .bind(refund.id)
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -752,8 +752,8 @@ impl PaymentService {
 
         sqlx::query(query)
             .bind(&new_status)
-            .bind(&now)
-            .bind(&order.id)
+            .bind(now)
+            .bind(order.id)
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -770,13 +770,13 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(&refund_transaction_id)
+            .bind(refund_transaction_id)
             .bind(&refund_transaction_no)
-            .bind(&order.id)
+            .bind(order.id)
             .bind(&transaction.payment_method)
-            .bind(&refund.refund_amount)
-            .bind(&now)
-            .bind(&now)
+            .bind(refund.refund_amount)
+            .bind(now)
+            .bind(now)
             .execute(&mut *tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -795,7 +795,7 @@ impl PaymentService {
         "#;
 
         sqlx::query_as::<_, UserBalance>(query)
-            .bind(&user_id)
+            .bind(user_id)
             .fetch_optional(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?
@@ -814,7 +814,7 @@ impl PaymentService {
         "#;
 
         sqlx::query_as::<_, UserBalance>(query)
-            .bind(&user_id)
+            .bind(user_id)
             .fetch_optional(&mut **tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?
@@ -833,10 +833,10 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(&balance_id)
-            .bind(&user_id)
-            .bind(&now)
-            .bind(&now)
+            .bind(balance_id)
+            .bind(user_id)
+            .bind(now)
+            .bind(now)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -909,10 +909,10 @@ impl PaymentService {
 
         let now = Utc::now();
         sqlx::query(query)
-            .bind(&amount)
-            .bind(&amount)
-            .bind(&now)
-            .bind(&user_id)
+            .bind(amount)
+            .bind(amount)
+            .bind(now)
+            .bind(user_id)
             .execute(&mut **tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -928,16 +928,16 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(&transaction_id)
-            .bind(&user_id)
+            .bind(transaction_id)
+            .bind(user_id)
             .bind(&transaction_type)
-            .bind(&amount)
-            .bind(&balance_before)
-            .bind(&balance_after)
+            .bind(amount)
+            .bind(balance_before)
+            .bind(balance_after)
             .bind(&related_type)
-            .bind(&related_id)
+            .bind(related_id)
             .bind(description)
-            .bind(&now)
+            .bind(now)
             .execute(&mut **tx)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -961,7 +961,7 @@ impl PaymentService {
         "#;
 
         sqlx::query_as::<_, BalanceTransaction>(query)
-            .bind(&user_id)
+            .bind(user_id)
             .bind(page_size)
             .bind(offset)
             .fetch_all(db)
@@ -1006,13 +1006,13 @@ impl PaymentService {
 
         let now = Utc::now();
         sqlx::query(query)
-            .bind(&Uuid::new_v4())
+            .bind(Uuid::new_v4())
             .bind(&payment_method)
             .bind(config_key)
             .bind(config_value)
             .bind(is_encrypted)
-            .bind(&now)
-            .bind(&now)
+            .bind(now)
+            .bind(now)
             .execute(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -1160,7 +1160,7 @@ impl PaymentService {
         "#;
 
         sqlx::query_as::<_, PaymentTransaction>(query)
-            .bind(&transaction_id)
+            .bind(transaction_id)
             .fetch_one(db)
             .await
             .map_err(|e| match e {

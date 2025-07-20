@@ -20,7 +20,7 @@ async fn main() {
         ws_manager: Arc::new(WebSocketManager::new()),
     };
 
-    let app: Router<AppState> = Router::new()
+    let _app: Router<AppState> = Router::new()
         .nest("/api/v1", routes::create_routes())
         .with_state(state);
 
