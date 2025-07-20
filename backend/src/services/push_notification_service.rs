@@ -1,6 +1,5 @@
 use crate::{
     config::database::DbPool,
-    models::notification::*,
     utils::errors::AppError,
 };
 use chrono::{DateTime, Utc};
@@ -122,7 +121,7 @@ impl PushNotificationService {
     pub async fn send_prescription_ready_push(
         config: &PushConfig,
         device_tokens: Vec<String>,
-        patient_name: &str,
+        _patient_name: &str,
         prescription_code: &str,
     ) -> Result<PushResult, AppError> {
         let mut data = HashMap::new();
@@ -210,7 +209,7 @@ impl PushNotificationService {
     
     /// Send APNs push notification
     async fn send_apns_push(
-        config: &PushConfig,
+        _config: &PushConfig,
         message: PushMessage,
     ) -> Result<PushResult, AppError> {
         // Simplified implementation - production should use proper APNs HTTP/2 API
@@ -232,7 +231,8 @@ impl PushNotificationService {
         let client = Client::new();
         let url = "https://api.jpush.cn/v3/push";
         
-        let auth = base64::encode(format!("{}:{}", 
+        use base64::Engine;
+        let auth = base64::engine::general_purpose::STANDARD.encode(format!("{}:{}", 
             config.app_id.as_ref().unwrap_or(&String::new()),
             config.api_secret.as_ref().unwrap_or(&String::new())
         ));
@@ -295,7 +295,7 @@ impl PushNotificationService {
     
     /// Send Getui push notification
     async fn send_getui_push(
-        config: &PushConfig,
+        _config: &PushConfig,
         message: PushMessage,
     ) -> Result<PushResult, AppError> {
         // Simplified implementation - production should use proper Getui API

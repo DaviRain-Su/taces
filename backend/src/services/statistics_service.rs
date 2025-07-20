@@ -499,7 +499,7 @@ impl StatisticsService {
 
     /// 导出数据到CSV（示例实现）
     pub async fn export_appointments_csv(
-        pool: &DbPool,
+        _pool: &DbPool,
         start_date: Option<NaiveDate>,
         end_date: Option<NaiveDate>,
     ) -> Result<String, sqlx::Error> {

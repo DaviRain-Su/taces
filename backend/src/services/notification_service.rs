@@ -63,7 +63,7 @@ impl NotificationService {
         let notification_id = Uuid::new_v4();
         
         // Insert the notification
-        let result = sqlx::query(
+        sqlx::query(
             r#"
             INSERT INTO notifications (id, user_id, type, title, content, related_id, metadata, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, 'unread', NOW())
@@ -386,7 +386,7 @@ impl NotificationService {
             // 创建新设置
             let settings_id = Uuid::new_v4();
             
-            let result = sqlx::query(
+            sqlx::query(
                 r#"
                 INSERT INTO notification_settings 
                 (id, user_id, notification_type, enabled, email_enabled, sms_enabled, push_enabled)
@@ -447,7 +447,7 @@ impl NotificationService {
         let token_id = Uuid::new_v4();
         let now = Utc::now();
         
-        let result = sqlx::query(
+        sqlx::query(
             r#"
             INSERT INTO push_tokens (id, user_id, device_type, token, device_info, active, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, true, ?, ?)
@@ -509,7 +509,7 @@ impl NotificationService {
         let now = Utc::now();
         let sent_at = if status == "sent" { Some(now) } else { None };
         
-        let result = sqlx::query(
+        sqlx::query(
             r#"
             INSERT INTO sms_logs (id, user_id, phone, template_code, template_params, 
                                   status, error_message, provider, created_at, sent_at)
@@ -576,7 +576,7 @@ impl NotificationService {
         let now = Utc::now();
         let sent_at = if status == "sent" { Some(now) } else { None };
         
-        let result = sqlx::query(
+        sqlx::query(
             r#"
             INSERT INTO email_logs (id, user_id, email, subject, body, 
                                     status, error_message, provider, created_at, sent_at)

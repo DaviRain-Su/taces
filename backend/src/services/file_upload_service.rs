@@ -202,32 +202,32 @@ impl FileUploadService {
             "SELECT COUNT(*) as count, SUM(file_size) as total_size FROM file_uploads WHERE deleted_at IS NULL"
         );
         // Build WHERE clauses
-        if let Some(user_id) = &query_params.user_id {
+        if query_params.user_id.is_some() {
             query.push_str(" AND user_id = ?");
             count_query.push_str(" AND user_id = ?");
         }
 
-        if let Some(file_type) = &query_params.file_type {
+        if query_params.file_type.is_some() {
             query.push_str(" AND file_type = ?");
             count_query.push_str(" AND file_type = ?");
         }
 
-        if let Some(related_type) = &query_params.related_type {
+        if query_params.related_type.is_some() {
             query.push_str(" AND related_type = ?");
             count_query.push_str(" AND related_type = ?");
         }
 
-        if let Some(related_id) = &query_params.related_id {
+        if query_params.related_id.is_some() {
             query.push_str(" AND related_id = ?");
             count_query.push_str(" AND related_id = ?");
         }
 
-        if let Some(status) = &query_params.status {
+        if query_params.status.is_some() {
             query.push_str(" AND status = ?");
             count_query.push_str(" AND status = ?");
         }
 
-        if let Some(is_public) = &query_params.is_public {
+        if query_params.is_public.is_some() {
             query.push_str(" AND is_public = ?");
             count_query.push_str(" AND is_public = ?");
         }
@@ -344,7 +344,7 @@ impl FileUploadService {
     ) -> Result<FileStorageStats, AppError> {
         let mut base_query = String::from("FROM file_uploads WHERE deleted_at IS NULL");
 
-        if let Some(uid) = user_id {
+        if let Some(_uid) = user_id {
             base_query.push_str(" AND user_id = ?");
         }
 

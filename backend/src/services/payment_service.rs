@@ -852,7 +852,7 @@ impl PaymentService {
         description: &str,
     ) -> Result<(), AppError> {
         // Get current balance
-        let mut balance = Self::get_user_balance_tx(tx, user_id).await?;
+        let balance = Self::get_user_balance_tx(tx, user_id).await?;
         let balance_before = balance.balance;
 
         // Calculate new balance
@@ -1036,7 +1036,7 @@ impl PaymentService {
         is_active: Option<bool>,
     ) -> Result<Vec<PriceConfig>, AppError> {
         let query = match is_active {
-            Some(active) => r#"
+            Some(_active) => r#"
                 SELECT * FROM price_configs
                 WHERE is_active = ?
                 ORDER BY service_type, created_at DESC

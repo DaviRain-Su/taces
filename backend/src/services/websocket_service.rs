@@ -87,7 +87,7 @@ pub enum WsMessage {
 
 pub struct WebSocketManager {
     connections: Arc<RwLock<HashMap<Uuid, WsConnection>>>,
-    broadcast_tx: broadcast::Sender<(Uuid, WsMessage)>,
+    _broadcast_tx: broadcast::Sender<(Uuid, WsMessage)>,
 }
 
 impl WebSocketManager {
@@ -95,7 +95,7 @@ impl WebSocketManager {
         let (broadcast_tx, _) = broadcast::channel(1024);
         Self {
             connections: Arc::new(RwLock::new(HashMap::new())),
-            broadcast_tx,
+            _broadcast_tx: broadcast_tx,
         }
     }
     

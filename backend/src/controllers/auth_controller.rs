@@ -53,7 +53,7 @@ pub async fn login(
 
 pub async fn logout(
     State(app_state): State<AppState>,
-    Extension(auth_user): Extension<AuthUser>,
+    Extension(_auth_user): Extension<AuthUser>,
     TypedHeader(auth_header): TypedHeader<headers::Authorization<headers::authorization::Bearer>>,
 ) -> Result<Json<ApiResponse<()>>, (StatusCode, Json<ApiResponse<()>>)> {
     let token = auth_header.token();

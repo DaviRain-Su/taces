@@ -141,7 +141,7 @@ impl VideoConsultationService {
                     format!(" WHERE {}", conditions.join(" AND "))
                 };
                 
-                let sql = format!(
+                let _sql = format!(
                     "SELECT * FROM video_consultations{} ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?",
                     where_clause
                 );

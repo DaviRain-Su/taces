@@ -84,7 +84,7 @@ impl SessionService {
 
     /// Invalidate all sessions for a user
     pub async fn invalidate_user_sessions(
-        redis: &Option<RedisPool>,
+        _redis: &Option<RedisPool>,
         user_id: Uuid,
     ) -> Result<u64, AppError> {
         // This would require maintaining a separate index of sessions per user
