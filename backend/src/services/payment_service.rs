@@ -763,7 +763,14 @@ impl PaymentService {
         "#;
 
         sqlx::query(query)
-            .bind(&new_status)
+            .bind(match new_status {
+                OrderStatus::Pending => "pending",
+                OrderStatus::Paid => "paid",
+                OrderStatus::Cancelled => "cancelled",
+                OrderStatus::Refunded => "refunded",
+                OrderStatus::PartialRefunded => "partial_refunded",
+                OrderStatus::Expired => "expired",
+            })
             .bind(now)
             .bind(order.id.to_string())
             .execute(&mut *tx)
@@ -785,7 +792,12 @@ impl PaymentService {
             .bind(refund_transaction_id.to_string())
             .bind(&refund_transaction_no)
             .bind(order.id.to_string())
-            .bind(&transaction.payment_method)
+            .bind(match transaction.payment_method {
+                PaymentMethod::Wechat => "wechat",
+                PaymentMethod::Alipay => "alipay",
+                PaymentMethod::BankCard => "bank_card",
+                PaymentMethod::Balance => "balance",
+            })
             .bind(refund.refund_amount)
             .bind(now)
             .bind(now)

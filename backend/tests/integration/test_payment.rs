@@ -400,7 +400,7 @@ async fn test_admin_review_refund() {
         review_notes: Some("同意退款".to_string()),
     };
 
-    let (status, _body) = app
+    let (status, body) = app
         .put_with_auth(
             &format!("/api/v1/payment/admin/refunds/{}/review", refund_id),
             review_dto,
@@ -408,6 +408,9 @@ async fn test_admin_review_refund() {
         )
         .await;
 
+    if status != StatusCode::OK {
+        println!("Admin review refund failed: status={:?}, body={:?}", status, body);
+    }
     assert_eq!(status, StatusCode::OK);
 }
 

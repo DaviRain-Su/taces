@@ -1,6 +1,7 @@
+use crate::middleware::auth::AuthUser;
 use crate::models::{
     ApiResponse, CreateReviewDto, CreateTagDto, ReplyReviewDto, ReviewQuery, UpdateReviewDto,
-    UpdateReviewVisibilityDto, User, UserRole,
+    UpdateReviewVisibilityDto,
 };
 use crate::services::review_service::{ReviewQueryParams, ReviewService};
 use crate::AppState;
@@ -17,11 +18,11 @@ use validator::Validate;
 
 pub async fn create_review(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(auth_user): Extension<AuthUser>,
     Json(dto): Json<CreateReviewDto>,
 ) -> impl IntoResponse {
     // 只有患者可以创建评价
-    if user.role != UserRole::Patient {
+    if auth_user.role != "patient" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error(
@@ -40,7 +41,7 @@ pub async fn create_review(
         );
     }
 
-    match ReviewService::create_review(&state.pool, user.id, dto).await {
+    match ReviewService::create_review(&state.pool, auth_user.user_id, dto).await {
         Ok(review) => (
             StatusCode::CREATED,
             Json(ApiResponse::success(
@@ -120,12 +121,12 @@ pub async fn get_review_by_id(
 
 pub async fn update_review(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
     Json(dto): Json<UpdateReviewDto>,
 ) -> impl IntoResponse {
     // 只有患者可以更新自己的评价
-    if user.role != UserRole::Patient {
+    if auth_user.role != "patient" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error(
@@ -144,7 +145,7 @@ pub async fn update_review(
         );
     }
 
-    match ReviewService::update_review(&state.pool, id, user.id, dto).await {
+    match ReviewService::update_review(&state.pool, id, auth_user.user_id, dto).await {
         Ok(review) => (
             StatusCode::OK,
             Json(ApiResponse::success(
@@ -161,12 +162,12 @@ pub async fn update_review(
 
 pub async fn reply_to_review(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
     Json(dto): Json<ReplyReviewDto>,
 ) -> impl IntoResponse {
     // 只有医生可以回复评价
-    if user.role != UserRole::Doctor {
+    if auth_user.role != "doctor" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error(
@@ -185,7 +186,7 @@ pub async fn reply_to_review(
         );
     }
 
-    match ReviewService::reply_to_review(&state.pool, id, user.id, dto).await {
+    match ReviewService::reply_to_review(&state.pool, id, auth_user.user_id, dto).await {
         Ok(review) => (
             StatusCode::OK,
             Json(ApiResponse::success(
@@ -202,12 +203,12 @@ pub async fn reply_to_review(
 
 pub async fn update_review_visibility(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
     Json(dto): Json<UpdateReviewVisibilityDto>,
 ) -> impl IntoResponse {
     // 只有管理员可以管理评价可见性
-    if user.role != UserRole::Admin {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error(
@@ -235,11 +236,11 @@ pub async fn update_review_visibility(
 
 pub async fn create_tag(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(auth_user): Extension<AuthUser>,
     Json(dto): Json<CreateTagDto>,
 ) -> impl IntoResponse {
     // 只有管理员可以创建标签
-    if user.role != UserRole::Admin {
+    if auth_user.role != "admin" {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error(
@@ -322,12 +323,12 @@ pub async fn get_doctor_statistics(
 // 获取患者的评价列表
 pub async fn get_patient_reviews(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(patient_id): Path<Uuid>,
     Query(query): Query<ReviewQuery>,
 ) -> impl IntoResponse {
     // 只能查看自己的评价或者管理员可以查看所有
-    if user.role != UserRole::Admin && user.id != patient_id {
+    if auth_user.role != "admin" && auth_user.user_id != patient_id {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error(

@@ -6,6 +6,7 @@ use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "file_type", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum FileType {
     Image,
     Video,
@@ -16,6 +17,7 @@ pub enum FileType {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "upload_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum UploadStatus {
     Uploading,
     Completed,
@@ -156,6 +158,7 @@ pub struct VideoConfig {
 // System Configuration
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "value_type", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum ValueType {
     String,
     Number,

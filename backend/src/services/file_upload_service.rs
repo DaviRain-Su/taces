@@ -10,13 +10,22 @@ pub struct FileUploadService;
 
 impl FileUploadService {
     fn parse_system_config_from_row(row: &sqlx::mysql::MySqlRow) -> Result<SystemConfig, AppError> {
+        let value_type_str: String = row.get("value_type");
+        let value_type = match value_type_str.as_str() {
+            "string" => ValueType::String,
+            "number" => ValueType::Number,
+            "boolean" => ValueType::Boolean,
+            "json" => ValueType::Json,
+            _ => return Err(AppError::DatabaseError(format!("Invalid value type: {}", value_type_str))),
+        };
+
         Ok(SystemConfig {
             id: Uuid::parse_str(row.get("id"))
                 .map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
             category: row.get("category"),
             config_key: row.get("config_key"),
             config_value: row.get("config_value"),
-            value_type: row.get("value_type"),
+            value_type,
             description: row.get("description"),
             is_encrypted: row.get("is_encrypted"),
             created_at: row.get("created_at"),
@@ -25,12 +34,31 @@ impl FileUploadService {
     }
 
     fn parse_file_upload_from_row(row: &sqlx::mysql::MySqlRow) -> Result<FileUpload, AppError> {
+        let file_type_str: String = row.get("file_type");
+        let file_type = match file_type_str.as_str() {
+            "image" => FileType::Image,
+            "video" => FileType::Video,
+            "document" => FileType::Document,
+            "audio" => FileType::Audio,
+            "other" => FileType::Other,
+            _ => return Err(AppError::DatabaseError(format!("Invalid file type: {}", file_type_str))),
+        };
+
+        let status_str: String = row.get("status");
+        let status = match status_str.as_str() {
+            "uploading" => UploadStatus::Uploading,
+            "completed" => UploadStatus::Completed,
+            "failed" => UploadStatus::Failed,
+            "deleted" => UploadStatus::Deleted,
+            _ => return Err(AppError::DatabaseError(format!("Invalid upload status: {}", status_str))),
+        };
+
         Ok(FileUpload {
             id: Uuid::parse_str(row.get("id"))
                 .map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
             user_id: Uuid::parse_str(row.get("user_id"))
                 .map_err(|e| AppError::DatabaseError(format!("Invalid UUID: {}", e)))?,
-            file_type: row.get("file_type"),
+            file_type,
             file_name: row.get("file_name"),
             file_path: row.get("file_path"),
             file_url: row.get("file_url"),
@@ -44,7 +72,7 @@ impl FileUploadService {
             height: row.get("height"),
             thumbnail_url: row.get("thumbnail_url"),
             is_public: row.get("is_public"),
-            status: row.get("status"),
+            status,
             error_message: row.get("error_message"),
             bucket_name: row.get("bucket_name"),
             object_key: row.get("object_key"),
@@ -82,7 +110,7 @@ impl FileUploadService {
         sqlx::query(query)
             .bind(upload_id.to_string())
             .bind(user_id.to_string())
-            .bind(&dto.file_type)
+            .bind(dto.file_type.to_string())
             .bind(&dto.file_name)
             .bind(&file_path)
             .bind(dto.file_size)
@@ -128,7 +156,7 @@ impl FileUploadService {
             UPDATE file_uploads
             SET file_url = ?, bucket_name = ?, object_key = ?,
                 etag = ?, width = ?, height = ?, thumbnail_url = ?,
-                status = 'completed', updated_at = ?
+                status = 'completed'
             WHERE id = ?
         "#;
 
@@ -140,7 +168,6 @@ impl FileUploadService {
             .bind(dto.width)
             .bind(dto.height)
             .bind(&dto.thumbnail_url)
-            .bind(Utc::now())
             .bind(upload_id.to_string())
             .execute(&mut *tx)
             .await
@@ -261,7 +288,11 @@ impl FileUploadService {
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         let total: i64 = count_row.get::<Option<i64>, _>("count").unwrap_or(0);
-        let total_size: i64 = count_row.get::<Option<i64>, _>("total_size").unwrap_or(0);
+        let total_size: i64 = count_row.get::<Option<sqlx::types::Decimal>, _>("total_size")
+            .unwrap_or(sqlx::types::Decimal::from(0))
+            .to_string()
+            .parse()
+            .unwrap_or(0);
 
         // Get files
         query.push_str(" ORDER BY uploaded_at DESC LIMIT ? OFFSET ?");
@@ -366,7 +397,11 @@ impl FileUploadService {
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         let total_files: i64 = total_row.get::<Option<i64>, _>("count").unwrap_or(0);
-        let total_size: i64 = total_row.get::<Option<i64>, _>("size").unwrap_or(0);
+        let total_size: i64 = total_row.get::<Option<sqlx::types::Decimal>, _>("size")
+            .unwrap_or(sqlx::types::Decimal::from(0))
+            .to_string()
+            .parse()
+            .unwrap_or(0);
 
         // Get stats by type
         let type_query = format!(
@@ -386,10 +421,24 @@ impl FileUploadService {
 
         let mut by_type = Vec::new();
         for row in type_rows {
+            let file_type_str: String = row.get("file_type");
+            let file_type = match file_type_str.as_str() {
+                "image" => FileType::Image,
+                "video" => FileType::Video,
+                "document" => FileType::Document,
+                "audio" => FileType::Audio,
+                "other" => FileType::Other,
+                _ => continue, // Skip unknown types
+            };
+
             by_type.push(TypeStats {
-                file_type: row.get("file_type"),
+                file_type,
                 count: row.get::<Option<i64>, _>("count").unwrap_or(0),
-                total_size: row.get::<Option<i64>, _>("size").unwrap_or(0),
+                total_size: row.get::<Option<sqlx::types::Decimal>, _>("size")
+                    .unwrap_or(sqlx::types::Decimal::from(0))
+                    .to_string()
+                    .parse()
+                    .unwrap_or(0),
             });
         }
 
@@ -499,14 +548,13 @@ impl FileUploadService {
     ) -> Result<SystemConfig, AppError> {
         let query = r#"
             UPDATE system_configs
-            SET config_value = ?, description = ?, updated_at = ?
+            SET config_value = ?, description = ?
             WHERE category = ? AND config_key = ?
         "#;
 
         let result = sqlx::query(query)
             .bind(&dto.config_value)
             .bind(&dto.description)
-            .bind(Utc::now())
             .bind(category)
             .bind(key)
             .execute(db)
@@ -681,7 +729,7 @@ impl FileUploadService {
             // Delete record from database
             let delete_query = "DELETE FROM file_uploads WHERE id = ?";
             sqlx::query(delete_query)
-                .bind(file_id)
+                .bind(file_id.to_string())
                 .execute(db)
                 .await
                 .map_err(|e| AppError::DatabaseError(e.to_string()))?;

@@ -12,9 +12,9 @@ pub fn file_upload_routes() -> Router<AppState> {
         // File Management
         .route("/upload", post(create_upload))
         .route("/upload/:id/complete", put(complete_upload))
-        .route("/files", get(list_files))
-        .route("/files/:id", get(get_file))
-        .route("/files/:id", delete(delete_file))
+        .route("/", get(list_files))
+        .route("/:id", get(get_file))
+        .route("/:id", delete(delete_file))
         .route("/stats", get(get_file_stats))
         // Configuration (admin only)
         .route("/config/upload", get(get_upload_config))

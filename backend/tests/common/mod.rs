@@ -107,7 +107,16 @@ impl TestApp {
         let response = self.app.call(request).await.unwrap();
         let status = response.status();
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let json: Value = serde_json::from_slice(&body).unwrap();
+        
+        if body.is_empty() {
+            return (status, Value::Null);
+        }
+        
+        let json: Value = serde_json::from_slice(&body).unwrap_or_else(|e| {
+            eprintln!("Failed to parse JSON response. Status: {:?}, Body: {:?}, Error: {:?}", 
+                     status, String::from_utf8_lossy(&body), e);
+            Value::Null
+        });
 
         (status, json)
     }
@@ -123,7 +132,16 @@ impl TestApp {
         let response = self.app.call(request).await.unwrap();
         let status = response.status();
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let json: Value = serde_json::from_slice(&body).unwrap();
+        
+        if body.is_empty() {
+            return (status, Value::Null);
+        }
+        
+        let json: Value = serde_json::from_slice(&body).unwrap_or_else(|e| {
+            eprintln!("Failed to parse JSON response. Status: {:?}, Body: {:?}, Error: {:?}", 
+                     status, String::from_utf8_lossy(&body), e);
+            Value::Null
+        });
 
         (status, json)
     }
@@ -148,7 +166,16 @@ impl TestApp {
         let response = self.app.call(request).await.unwrap();
         let status = response.status();
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let json: Value = serde_json::from_slice(&body).unwrap();
+        
+        if body.is_empty() {
+            return (status, Value::Null);
+        }
+        
+        let json: Value = serde_json::from_slice(&body).unwrap_or_else(|e| {
+            eprintln!("Failed to parse JSON response. Status: {:?}, Body: {:?}, Error: {:?}", 
+                     status, String::from_utf8_lossy(&body), e);
+            Value::Null
+        });
 
         (status, json)
     }
@@ -164,7 +191,16 @@ impl TestApp {
         let response = self.app.call(request).await.unwrap();
         let status = response.status();
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let json: Value = serde_json::from_slice(&body).unwrap();
+        
+        if body.is_empty() {
+            return (status, Value::Null);
+        }
+        
+        let json: Value = serde_json::from_slice(&body).unwrap_or_else(|e| {
+            eprintln!("Failed to parse JSON response. Status: {:?}, Body: {:?}, Error: {:?}", 
+                     status, String::from_utf8_lossy(&body), e);
+            Value::Null
+        });
 
         (status, json)
     }
@@ -190,6 +226,38 @@ impl TestApp {
         let status = response.status();
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
+
+        (status, json)
+    }
+
+    pub async fn post_multipart_with_auth(
+        &mut self,
+        path: &str,
+        boundary: &str,
+        body: Vec<u8>,
+        token: &str,
+    ) -> (StatusCode, Value) {
+        let request = Request::builder()
+            .method("POST")
+            .uri(path)
+            .header("content-type", format!("multipart/form-data; boundary={}", boundary))
+            .header("authorization", format!("Bearer {}", token))
+            .body(Body::from(body))
+            .unwrap();
+
+        let response = self.app.call(request).await.unwrap();
+        let status = response.status();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        
+        if body.is_empty() {
+            return (status, Value::Null);
+        }
+        
+        let json: Value = serde_json::from_slice(&body).unwrap_or_else(|e| {
+            eprintln!("Failed to parse JSON response. Status: {:?}, Body: {:?}, Error: {:?}", 
+                     status, String::from_utf8_lossy(&body), e);
+            Value::Null
+        });
 
         (status, json)
     }

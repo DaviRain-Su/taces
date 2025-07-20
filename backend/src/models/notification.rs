@@ -7,6 +7,7 @@ use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "notification_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum NotificationType {
     AppointmentReminder,
     AppointmentConfirmed,
@@ -21,6 +22,7 @@ pub enum NotificationType {
 
 #[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
 #[sqlx(type_name = "notification_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum NotificationStatus {
     Unread,
     Read,

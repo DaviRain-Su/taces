@@ -105,6 +105,9 @@ async fn test_create_review() {
         .post_with_auth("/api/v1/reviews", create_review, &patient_token)
         .await;
 
+    if status != StatusCode::CREATED {
+        println!("Create review failed: status={:?}, body={:?}", status, body);
+    }
     assert_eq!(status, StatusCode::CREATED);
     assert!(body["success"].as_bool().unwrap());
     assert_eq!(body["data"]["rating"].as_i64().unwrap(), 5);

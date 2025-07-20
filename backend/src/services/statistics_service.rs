@@ -295,7 +295,10 @@ impl StatisticsService {
                 .get::<Option<i64>, _>("completed_streams")
                 .unwrap_or(0),
             total_viewers: stats.get("total_viewers"),
-            average_viewers_per_stream: stats.get("average_viewers_per_stream"),
+            average_viewers_per_stream: stats.get::<sqlx::types::Decimal, _>("average_viewers_per_stream")
+                .to_string()
+                .parse()
+                .unwrap_or(0.0),
         })
     }
 

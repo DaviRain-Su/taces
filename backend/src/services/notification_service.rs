@@ -27,13 +27,47 @@ impl NotificationService {
                     )),
                 }
             })?,
-            notification_type: row.get("notification_type"),
+            notification_type: {
+                let type_str: String = row.get("type");
+                match type_str.as_str() {
+                    "appointment_reminder" => NotificationType::AppointmentReminder,
+                    "appointment_confirmed" => NotificationType::AppointmentConfirmed,
+                    "appointment_cancelled" => NotificationType::AppointmentCancelled,
+                    "prescription_ready" => NotificationType::PrescriptionReady,
+                    "doctor_reply" => NotificationType::DoctorReply,
+                    "system_announcement" => NotificationType::SystemAnnouncement,
+                    "review_reply" => NotificationType::ReviewReply,
+                    "live_stream_reminder" => NotificationType::LiveStreamReminder,
+                    "group_message" => NotificationType::GroupMessage,
+                    _ => return Err(sqlx::Error::ColumnDecode {
+                        index: "notification_type".to_string(),
+                        source: Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            format!("Unknown notification type: {}", type_str),
+                        )),
+                    }),
+                }
+            },
             title: row.get("title"),
             content: row.get("content"),
             related_id: row
                 .get::<Option<String>, _>("related_id")
                 .and_then(|s| Uuid::parse_str(&s).ok()),
-            status: row.get("status"),
+            status: {
+                let status_str: String = row.get("status");
+                match status_str.as_str() {
+                    "unread" => NotificationStatus::Unread,
+                    "read" => NotificationStatus::Read,
+                    "deleted" => NotificationStatus::Deleted,
+                    _ => return Err(sqlx::Error::ColumnDecode {
+                        index: "status".to_string(),
+                        source: Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            format!("Unknown notification status: {}", status_str),
+                        )),
+                    }),
+                }
+            },
             metadata: row.get("metadata"),
             created_at: row.get("created_at"),
             read_at: row.get("read_at"),
@@ -62,7 +96,27 @@ impl NotificationService {
                     )),
                 }
             })?,
-            notification_type: row.get("notification_type"),
+            notification_type: {
+                let type_str: String = row.get("notification_type");
+                match type_str.as_str() {
+                    "appointment_reminder" => NotificationType::AppointmentReminder,
+                    "appointment_confirmed" => NotificationType::AppointmentConfirmed,
+                    "appointment_cancelled" => NotificationType::AppointmentCancelled,
+                    "prescription_ready" => NotificationType::PrescriptionReady,
+                    "doctor_reply" => NotificationType::DoctorReply,
+                    "system_announcement" => NotificationType::SystemAnnouncement,
+                    "review_reply" => NotificationType::ReviewReply,
+                    "live_stream_reminder" => NotificationType::LiveStreamReminder,
+                    "group_message" => NotificationType::GroupMessage,
+                    _ => return Err(sqlx::Error::ColumnDecode {
+                        index: "notification_type".to_string(),
+                        source: Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            format!("Unknown notification type: {}", type_str),
+                        )),
+                    }),
+                }
+            },
             enabled: row.get("enabled"),
             email_enabled: row.get("email_enabled"),
             sms_enabled: row.get("sms_enabled"),
@@ -98,7 +152,7 @@ impl NotificationService {
 
         // Fetch the created notification
         let query = r#"
-            SELECT id, user_id, type as notification_type, 
+            SELECT id, user_id, type, 
                    title, content, related_id, status, 
                    metadata, created_at, read_at
             FROM notifications
@@ -178,8 +232,8 @@ impl NotificationService {
         // 获取通知列表
         let list_query = format!(
             r#"
-            SELECT id, user_id, type as "notification_type: NotificationType", 
-                   title, content, related_id, status as "status: NotificationStatus", 
+            SELECT id, user_id, type, 
+                   title, content, related_id, status, 
                    metadata, created_at, read_at
             FROM notifications
             WHERE user_id = ? {}
@@ -211,7 +265,7 @@ impl NotificationService {
         user_id: Uuid,
     ) -> Result<Option<Notification>, sqlx::Error> {
         let query = r#"
-            SELECT id, user_id, type as notification_type, 
+            SELECT id, user_id, type, 
                    title, content, related_id, status, 
                    metadata, created_at, read_at
             FROM notifications
@@ -307,9 +361,21 @@ impl NotificationService {
 
         use sqlx::Row;
         Ok(NotificationStats {
-            total_count: row.get::<Option<i64>, _>("total_count").unwrap_or(0),
-            unread_count: row.get::<Option<i64>, _>("unread_count").unwrap_or(0),
-            read_count: row.get::<Option<i64>, _>("read_count").unwrap_or(0),
+            total_count: row.get::<Option<sqlx::types::Decimal>, _>("total_count")
+                .unwrap_or(sqlx::types::Decimal::from(0))
+                .to_string()
+                .parse()
+                .unwrap_or(0),
+            unread_count: row.get::<Option<sqlx::types::Decimal>, _>("unread_count")
+                .unwrap_or(sqlx::types::Decimal::from(0))
+                .to_string()
+                .parse()
+                .unwrap_or(0),
+            read_count: row.get::<Option<sqlx::types::Decimal>, _>("read_count")
+                .unwrap_or(sqlx::types::Decimal::from(0))
+                .to_string()
+                .parse()
+                .unwrap_or(0),
         })
     }
 

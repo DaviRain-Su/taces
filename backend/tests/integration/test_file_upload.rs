@@ -11,7 +11,9 @@ async fn get_auth_token(app: &mut TestApp, account: &str, password: &str) -> Str
         "password": password
     });
 
-    let (_, body) = app.post("/api/v1/auth/login", login_data).await;
+    let (status, body) = app.post("/api/v1/auth/login", login_data).await;
+    assert_eq!(status, StatusCode::OK, "Login failed");
+    assert_eq!(body["success"], true, "Login success=false");
     body["data"]["token"].as_str().unwrap().to_string()
 }
 
@@ -69,8 +71,8 @@ async fn test_complete_upload() {
     "#;
 
     sqlx::query(query)
-        .bind(upload_id)
-        .bind(user_id)
+        .bind(upload_id.to_string())
+        .bind(user_id.to_string())
         .bind(file_name)
         .bind(&file_path)
         .bind(524288i64)
@@ -99,6 +101,9 @@ async fn test_complete_upload() {
         )
         .await;
 
+    if status != StatusCode::OK {
+        println!("Complete upload failed: status={:?}, body={:?}", status, body);
+    }
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
     assert_eq!(body["data"]["status"].as_str().unwrap(), "completed");
@@ -129,8 +134,8 @@ async fn test_get_file() {
     "#;
 
     sqlx::query(query)
-        .bind(file_id)
-        .bind(user_id)
+        .bind(file_id.to_string())
+        .bind(user_id.to_string())
         .bind(&file_url)
         .bind(Utc::now())
         .execute(&app.pool)
@@ -176,8 +181,8 @@ async fn test_list_files() {
         "#;
 
         sqlx::query(query)
-            .bind(file_id)
-            .bind(user_id)
+            .bind(file_id.to_string())
+            .bind(user_id.to_string())
             .bind(file_type)
             .bind(format!("file{}.ext", i))
             .bind(format!("{}/2024/01/{}.ext", file_type, file_id))
@@ -227,8 +232,8 @@ async fn test_delete_file() {
     "#;
 
     sqlx::query(query)
-        .bind(file_id)
-        .bind(user_id)
+        .bind(file_id.to_string())
+        .bind(user_id.to_string())
         .bind(Utc::now())
         .execute(&app.pool)
         .await
@@ -253,7 +258,7 @@ async fn test_delete_file() {
     }
 
     let file_status: FileStatus = sqlx::query_as(check_query)
-        .bind(file_id)
+        .bind(file_id.to_string())
         .fetch_one(&app.pool)
         .await
         .unwrap();
@@ -290,8 +295,8 @@ async fn test_file_stats() {
             "#;
 
             sqlx::query(query)
-                .bind(file_id)
-                .bind(user_id)
+                .bind(file_id.to_string())
+                .bind(user_id.to_string())
                 .bind(file_type)
                 .bind(format!("{}_{}.ext", file_type, i))
                 .bind(format!("{}/2024/01/{}.ext", file_type, file_id))
@@ -372,8 +377,8 @@ async fn test_authorization() {
     "#;
 
     sqlx::query(query)
-        .bind(file_id)
-        .bind(user1_id)
+        .bind(file_id.to_string())
+        .bind(user1_id.to_string())
         .bind(Utc::now())
         .execute(&app.pool)
         .await
@@ -454,8 +459,8 @@ async fn test_public_file_access() {
     "#;
 
     sqlx::query(query)
-        .bind(file_id)
-        .bind(user1_id)
+        .bind(file_id.to_string())
+        .bind(user1_id.to_string())
         .bind(Utc::now())
         .execute(&app.pool)
         .await

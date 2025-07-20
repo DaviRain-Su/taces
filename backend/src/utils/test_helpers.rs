@@ -31,7 +31,19 @@ pub async fn setup_test_db(pool: &Pool<MySql>) {
         .execute(pool)
         .await
         .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM file_uploads")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
     sqlx::query("DELETE FROM video_consultations")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM review_replies")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM patient_reviews")
         .execute(pool)
         .await
         .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist

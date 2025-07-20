@@ -507,16 +507,48 @@ impl ReviewService {
         Ok(DoctorReviewStatistics {
             doctor_id,
             total_reviews: row.get("total_reviews"),
-            average_rating: row.get("average_rating"),
-            average_attitude: row.get("average_attitude"),
-            average_professionalism: row.get("average_professionalism"),
-            average_efficiency: row.get("average_efficiency"),
+            average_rating: row.get::<sqlx::types::Decimal, _>("average_rating")
+                .to_string()
+                .parse()
+                .unwrap_or(0.0),
+            average_attitude: row.get::<sqlx::types::Decimal, _>("average_attitude")
+                .to_string()
+                .parse()
+                .unwrap_or(0.0),
+            average_professionalism: row.get::<sqlx::types::Decimal, _>("average_professionalism")
+                .to_string()
+                .parse()
+                .unwrap_or(0.0),
+            average_efficiency: row.get::<sqlx::types::Decimal, _>("average_efficiency")
+                .to_string()
+                .parse()
+                .unwrap_or(0.0),
             rating_distribution: RatingDistribution {
-                five_star: row.get("five_star"),
-                four_star: row.get("four_star"),
-                three_star: row.get("three_star"),
-                two_star: row.get("two_star"),
-                one_star: row.get("one_star"),
+                five_star: row.get::<Option<sqlx::types::Decimal>, _>("five_star")
+                    .unwrap_or(sqlx::types::Decimal::from(0))
+                    .to_string()
+                    .parse()
+                    .unwrap_or(0),
+                four_star: row.get::<Option<sqlx::types::Decimal>, _>("four_star")
+                    .unwrap_or(sqlx::types::Decimal::from(0))
+                    .to_string()
+                    .parse()
+                    .unwrap_or(0),
+                three_star: row.get::<Option<sqlx::types::Decimal>, _>("three_star")
+                    .unwrap_or(sqlx::types::Decimal::from(0))
+                    .to_string()
+                    .parse()
+                    .unwrap_or(0),
+                two_star: row.get::<Option<sqlx::types::Decimal>, _>("two_star")
+                    .unwrap_or(sqlx::types::Decimal::from(0))
+                    .to_string()
+                    .parse()
+                    .unwrap_or(0),
+                one_star: row.get::<Option<sqlx::types::Decimal>, _>("one_star")
+                    .unwrap_or(sqlx::types::Decimal::from(0))
+                    .to_string()
+                    .parse()
+                    .unwrap_or(0),
             },
         })
     }
@@ -572,10 +604,22 @@ impl ReviewService {
             "#,
         )
         .bind(stats.try_get::<i64, _>("total")?)
-        .bind(stats.try_get::<f64, _>("avg_rating")?)
-        .bind(stats.try_get::<f64, _>("avg_attitude")?)
-        .bind(stats.try_get::<f64, _>("avg_professionalism")?)
-        .bind(stats.try_get::<f64, _>("avg_efficiency")?)
+        .bind(stats.try_get::<sqlx::types::Decimal, _>("avg_rating")?
+            .to_string()
+            .parse::<f64>()
+            .unwrap_or(0.0))
+        .bind(stats.try_get::<sqlx::types::Decimal, _>("avg_attitude")?
+            .to_string()
+            .parse::<f64>()
+            .unwrap_or(0.0))
+        .bind(stats.try_get::<sqlx::types::Decimal, _>("avg_professionalism")?
+            .to_string()
+            .parse::<f64>()
+            .unwrap_or(0.0))
+        .bind(stats.try_get::<sqlx::types::Decimal, _>("avg_efficiency")?
+            .to_string()
+            .parse::<f64>()
+            .unwrap_or(0.0))
         .bind(doctor_id.to_string())
         .execute(&mut **tx)
         .await?;
