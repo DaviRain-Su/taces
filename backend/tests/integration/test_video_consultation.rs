@@ -240,6 +240,9 @@ async fn test_join_room() {
         )
         .await;
 
+    if status != StatusCode::OK {
+        println!("Join room failed: status={:?}, body={:?}", status, body);
+    }
     assert_eq!(status, StatusCode::OK);
     assert!(body["success"].as_bool().unwrap());
     assert_eq!(body["data"]["room_id"].as_str().unwrap(), room_id);
@@ -631,7 +634,7 @@ async fn test_webrtc_signaling() {
         }
     });
 
-    let (status, _) = app
+    let (status, body) = app
         .post_with_auth(
             "/api/v1/video-consultations/signal",
             signal_dto,
@@ -639,6 +642,9 @@ async fn test_webrtc_signaling() {
         )
         .await;
 
+    if status != StatusCode::OK {
+        println!("Send signal failed: status={:?}, body={:?}", status, body);
+    }
     assert_eq!(status, StatusCode::OK);
 
     // Patient receives signals
@@ -691,6 +697,9 @@ async fn test_consultation_templates() {
         )
         .await;
 
+    if status != StatusCode::CREATED {
+        println!("Create template failed: status={:?}, body={:?}", status, body);
+    }
     assert_eq!(status, StatusCode::CREATED);
 
     let template_id = body["data"]["id"].as_str().unwrap();
@@ -856,6 +865,8 @@ async fn test_consultation_statistics() {
     assert_eq!(status, StatusCode::OK);
 
     let stats = &body["data"];
+    
+    println!("Statistics returned: {:?}", stats);
 
     assert!(stats["total_consultations"].as_i64().unwrap() >= 2);
     assert!(stats["completed_consultations"].as_i64().unwrap() >= 1);

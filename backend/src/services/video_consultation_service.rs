@@ -182,7 +182,13 @@ impl VideoConsultationService {
         let consultation = Self::get_consultation_by_room_id(db, room_id).await?;
 
         // Check if user is authorized
-        let (role, token) = if user_id == consultation.doctor_id {
+        // For doctors, we need to check if the user_id corresponds to the doctor_id
+        let mut is_doctor = false;
+        if let Ok(doctor) = crate::services::doctor_service::get_doctor_by_user_id(db, user_id).await {
+            is_doctor = doctor.id == consultation.doctor_id;
+        }
+
+        let (role, token) = if is_doctor {
             (
                 "doctor",
                 Self::generate_token(&consultation.id, &user_id, "doctor"),
@@ -223,12 +229,13 @@ impl VideoConsultationService {
         )
         .await?;
 
-        // Get ICE servers configuration
-        let ice_servers = Self::get_ice_servers(db).await?;
-
+        // Commit transaction first
         tx.commit()
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+        // Get ICE servers configuration (outside transaction)
+        let ice_servers = Self::get_ice_servers(db).await?;
 
         Ok(JoinRoomResponse {
             room_id: room_id.to_string(),
@@ -241,12 +248,17 @@ impl VideoConsultationService {
     pub async fn start_consultation(
         db: &DbPool,
         consultation_id: Uuid,
-        doctor_id: Uuid,
+        user_id: Uuid,
     ) -> Result<(), AppError> {
         let consultation = Self::get_consultation(db, consultation_id).await?;
 
-        // Verify doctor
-        if consultation.doctor_id != doctor_id {
+        // Verify doctor - check if the user_id corresponds to the doctor_id
+        let doctor = match crate::services::doctor_service::get_doctor_by_user_id(db, user_id).await {
+            Ok(doctor) => doctor,
+            Err(_) => return Err(AppError::NotFound("医生信息不存在".to_string())),
+        };
+        
+        if consultation.doctor_id != doctor.id {
             return Err(AppError::Forbidden);
         }
 
@@ -282,7 +294,7 @@ impl VideoConsultationService {
                 event_type: VideoEventType::RecordingStart,
                 event_data: None,
             },
-            doctor_id,
+            user_id,
         )
         .await?;
 
@@ -292,7 +304,7 @@ impl VideoConsultationService {
     pub async fn end_consultation(
         db: &DbPool,
         consultation_id: Uuid,
-        doctor_id: Uuid,
+        user_id: Uuid,
         complete_dto: CompleteConsultationDto,
     ) -> Result<(), AppError> {
         let mut tx = db
@@ -302,8 +314,13 @@ impl VideoConsultationService {
 
         let consultation = Self::get_consultation(db, consultation_id).await?;
 
-        // Verify doctor
-        if consultation.doctor_id != doctor_id {
+        // Verify doctor - check if the user_id corresponds to the doctor_id
+        let doctor = match crate::services::doctor_service::get_doctor_by_user_id(db, user_id).await {
+            Ok(doctor) => doctor,
+            Err(_) => return Err(AppError::NotFound("医生信息不存在".to_string())),
+        };
+        
+        if consultation.doctor_id != doctor.id {
             return Err(AppError::Forbidden);
         }
 
@@ -359,7 +376,7 @@ impl VideoConsultationService {
                 event_type: VideoEventType::RecordingEnd,
                 event_data: Some(serde_json::json!({ "duration": duration })),
             },
-            doctor_id,
+            user_id,
         )
         .await?;
 
@@ -373,13 +390,18 @@ impl VideoConsultationService {
     pub async fn update_consultation(
         db: &DbPool,
         consultation_id: Uuid,
-        doctor_id: Uuid,
+        user_id: Uuid,
         dto: UpdateConsultationDto,
     ) -> Result<(), AppError> {
         let consultation = Self::get_consultation(db, consultation_id).await?;
 
-        // Verify doctor
-        if consultation.doctor_id != doctor_id {
+        // Verify doctor - check if the user_id corresponds to the doctor_id
+        let doctor = match crate::services::doctor_service::get_doctor_by_user_id(db, user_id).await {
+            Ok(doctor) => doctor,
+            Err(_) => return Err(AppError::NotFound("医生信息不存在".to_string())),
+        };
+        
+        if consultation.doctor_id != doctor.id {
             return Err(AppError::Forbidden);
         }
 
@@ -452,12 +474,27 @@ impl VideoConsultationService {
         // Verify user is in the room
         let consultation = Self::get_consultation_by_room_id(db, &dto.room_id).await?;
 
-        if from_user_id != consultation.doctor_id && from_user_id != consultation.patient_id {
+        // Check if from_user is authorized (doctor or patient)
+        let mut is_authorized = false;
+        if from_user_id == consultation.patient_id {
+            is_authorized = true;
+        } else if let Ok(doctor) = crate::services::doctor_service::get_doctor_by_user_id(db, from_user_id).await {
+            is_authorized = doctor.id == consultation.doctor_id;
+        }
+        
+        if !is_authorized {
             return Err(AppError::Forbidden);
         }
 
-        // Verify target user is in the room
-        if dto.to_user_id != consultation.doctor_id && dto.to_user_id != consultation.patient_id {
+        // Verify target user is in the room (similar check)
+        let mut target_authorized = false;
+        if dto.to_user_id == consultation.patient_id {
+            target_authorized = true;
+        } else if let Ok(doctor) = crate::services::doctor_service::get_doctor_by_user_id(db, dto.to_user_id).await {
+            target_authorized = doctor.id == consultation.doctor_id;
+        }
+        
+        if !target_authorized {
             return Err(AppError::BadRequest("目标用户不在房间内".to_string()));
         }
 
@@ -469,12 +506,22 @@ impl VideoConsultationService {
             ) VALUES (?, ?, ?, ?, ?, ?, false, ?)
         "#;
 
+        // Convert signal_type enum to string for database
+        let signal_type_str = match dto.signal_type {
+            SignalType::Offer => "offer",
+            SignalType::Answer => "answer",
+            SignalType::IceCandidate => "ice_candidate",
+            SignalType::Join => "join",
+            SignalType::Leave => "leave",
+            SignalType::Error => "error",
+        };
+
         sqlx::query(query)
             .bind(signal_id.to_string())
             .bind(&dto.room_id)
             .bind(from_user_id.to_string())
             .bind(dto.to_user_id.to_string())
-            .bind(&dto.signal_type)
+            .bind(signal_type_str)
             .bind(&dto.payload)
             .bind(Utc::now())
             .execute(db)
@@ -492,7 +539,15 @@ impl VideoConsultationService {
         // Verify user is in the room
         let consultation = Self::get_consultation_by_room_id(db, room_id).await?;
 
-        if user_id != consultation.doctor_id && user_id != consultation.patient_id {
+        // Check if user is authorized (doctor or patient)
+        let mut is_authorized = false;
+        if user_id == consultation.patient_id {
+            is_authorized = true;
+        } else if let Ok(doctor) = crate::services::doctor_service::get_doctor_by_user_id(db, user_id).await {
+            is_authorized = doctor.id == consultation.doctor_id;
+        }
+        
+        if !is_authorized {
             return Err(AppError::Forbidden);
         }
 
@@ -653,9 +708,14 @@ impl VideoConsultationService {
     // Template Management
     pub async fn create_template(
         db: &DbPool,
-        doctor_id: Uuid,
+        user_id: Uuid,
         dto: CreateConsultationTemplateDto,
     ) -> Result<VideoConsultationTemplate, AppError> {
+        // Get doctor_id from user_id
+        let doctor = crate::services::doctor_service::get_doctor_by_user_id(db, user_id)
+            .await
+            .map_err(|_| AppError::NotFound("医生信息不存在".to_string()))?;
+        
         let template_id = Uuid::new_v4();
         let now = Utc::now();
 
@@ -668,7 +728,7 @@ impl VideoConsultationService {
 
         sqlx::query(query)
             .bind(template_id.to_string())
-            .bind(doctor_id.to_string())
+            .bind(doctor.id.to_string())
             .bind(&dto.name)
             .bind(&dto.chief_complaint)
             .bind(&dto.diagnosis)
@@ -705,8 +765,13 @@ impl VideoConsultationService {
 
     pub async fn list_doctor_templates(
         db: &DbPool,
-        doctor_id: Uuid,
+        user_id: Uuid,
     ) -> Result<Vec<VideoConsultationTemplate>, AppError> {
+        // Get doctor_id from user_id
+        let doctor = crate::services::doctor_service::get_doctor_by_user_id(db, user_id)
+            .await
+            .map_err(|_| AppError::NotFound("医生信息不存在".to_string()))?;
+        
         let query = r#"
             SELECT * FROM video_consultation_templates
             WHERE doctor_id = ?
@@ -714,7 +779,7 @@ impl VideoConsultationService {
         "#;
 
         let rows = sqlx::query(query)
-            .bind(doctor_id.to_string())
+            .bind(doctor.id.to_string())
             .fetch_all(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -727,11 +792,16 @@ impl VideoConsultationService {
     pub async fn use_template(
         db: &DbPool,
         template_id: Uuid,
-        doctor_id: Uuid,
+        user_id: Uuid,
     ) -> Result<VideoConsultationTemplate, AppError> {
+        // Get doctor_id from user_id
+        let doctor = crate::services::doctor_service::get_doctor_by_user_id(db, user_id)
+            .await
+            .map_err(|_| AppError::NotFound("医生信息不存在".to_string()))?;
+        
         let template = Self::get_template(db, template_id).await?;
 
-        if template.doctor_id != doctor_id {
+        if template.doctor_id != doctor.id {
             return Err(AppError::Forbidden);
         }
 
@@ -765,9 +835,9 @@ impl VideoConsultationService {
                     SELECT
                         COUNT(*) as total_consultations,
                         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_consultations,
-                        AVG(CASE WHEN status = 'completed' THEN duration END) as average_duration,
-                        AVG(patient_rating) as average_rating,
-                        COUNT(CASE WHEN status = 'no_show' THEN 1 END) * 100.0 / COUNT(*) as no_show_rate
+                        CAST(AVG(CASE WHEN status = 'completed' THEN duration END) AS DOUBLE) as average_duration,
+                        CAST(AVG(patient_rating) AS DOUBLE) as average_rating,
+                        CAST(COUNT(CASE WHEN status = 'no_show' THEN 1 END) * 100.0 / COUNT(*) AS DOUBLE) as no_show_rate
                     FROM video_consultations
                     WHERE doctor_id = ? AND status != 'cancelled'
                     "#
@@ -780,9 +850,9 @@ impl VideoConsultationService {
                     SELECT
                         COUNT(*) as total_consultations,
                         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_consultations,
-                        AVG(CASE WHEN status = 'completed' THEN duration END) as average_duration,
-                        AVG(patient_rating) as average_rating,
-                        COUNT(CASE WHEN status = 'no_show' THEN 1 END) * 100.0 / COUNT(*) as no_show_rate
+                        CAST(AVG(CASE WHEN status = 'completed' THEN duration END) AS DOUBLE) as average_duration,
+                        CAST(AVG(patient_rating) AS DOUBLE) as average_rating,
+                        CAST(COUNT(CASE WHEN status = 'no_show' THEN 1 END) * 100.0 / COUNT(*) AS DOUBLE) as no_show_rate
                     FROM video_consultations
                     WHERE status != 'cancelled'
                     "#
@@ -795,9 +865,9 @@ impl VideoConsultationService {
                     SELECT
                         COUNT(*) as total_consultations,
                         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_consultations,
-                        AVG(CASE WHEN status = 'completed' THEN duration END) as average_duration,
-                        AVG(patient_rating) as average_rating,
-                        COUNT(CASE WHEN status = 'no_show' THEN 1 END) * 100.0 / COUNT(*) as no_show_rate
+                        CAST(AVG(CASE WHEN status = 'completed' THEN duration END) AS DOUBLE) as average_duration,
+                        CAST(AVG(patient_rating) AS DOUBLE) as average_rating,
+                        CAST(COUNT(CASE WHEN status = 'no_show' THEN 1 END) * 100.0 / COUNT(*) AS DOUBLE) as no_show_rate
                     FROM video_consultations
                     WHERE status != 'cancelled'
                     "#
@@ -1038,11 +1108,29 @@ impl VideoConsultationService {
             ) VALUES (?, ?, ?, ?, ?, ?)
         "#;
 
+        // Convert event_type enum to string for database
+        let event_type_str = match dto.event_type {
+            VideoEventType::Joined => "joined",
+            VideoEventType::Left => "left",
+            VideoEventType::Reconnected => "reconnected",
+            VideoEventType::Disconnected => "disconnected",
+            VideoEventType::CameraOn => "camera_on",
+            VideoEventType::CameraOff => "camera_off",
+            VideoEventType::MicOn => "mic_on",
+            VideoEventType::MicOff => "mic_off",
+            VideoEventType::ScreenShareStart => "screen_share_start",
+            VideoEventType::ScreenShareEnd => "screen_share_end",
+            VideoEventType::RecordingStart => "recording_start",
+            VideoEventType::RecordingEnd => "recording_end",
+            VideoEventType::NetworkPoor => "network_poor",
+            VideoEventType::NetworkRecovered => "network_recovered",
+        };
+
         sqlx::query(query)
             .bind(event_id.to_string())
             .bind(dto.consultation_id.to_string())
             .bind(user_id.to_string())
-            .bind(&dto.event_type)
+            .bind(event_type_str)
             .bind(&dto.event_data)
             .bind(Utc::now())
             .execute(db)
@@ -1065,11 +1153,29 @@ impl VideoConsultationService {
             ) VALUES (?, ?, ?, ?, ?, ?)
         "#;
 
+        // Convert event_type enum to string for database
+        let event_type_str = match dto.event_type {
+            VideoEventType::Joined => "joined",
+            VideoEventType::Left => "left",
+            VideoEventType::Reconnected => "reconnected",
+            VideoEventType::Disconnected => "disconnected",
+            VideoEventType::CameraOn => "camera_on",
+            VideoEventType::CameraOff => "camera_off",
+            VideoEventType::MicOn => "mic_on",
+            VideoEventType::MicOff => "mic_off",
+            VideoEventType::ScreenShareStart => "screen_share_start",
+            VideoEventType::ScreenShareEnd => "screen_share_end",
+            VideoEventType::RecordingStart => "recording_start",
+            VideoEventType::RecordingEnd => "recording_end",
+            VideoEventType::NetworkPoor => "network_poor",
+            VideoEventType::NetworkRecovered => "network_recovered",
+        };
+
         sqlx::query(query)
             .bind(event_id.to_string())
             .bind(dto.consultation_id.to_string())
             .bind(user_id.to_string())
-            .bind(&dto.event_type)
+            .bind(event_type_str)
             .bind(&dto.event_data)
             .bind(Utc::now())
             .execute(&mut **tx)
@@ -1079,19 +1185,12 @@ impl VideoConsultationService {
         Ok(())
     }
 
-    async fn get_ice_servers(db: &DbPool) -> Result<serde_json::Value, AppError> {
-        let query = r#"
-            SELECT config_value FROM system_configs
-            WHERE category = 'video_call' AND config_key = 'ice_servers'
-        "#;
-
-        let ice_servers: String = sqlx::query_scalar(query)
-            .fetch_optional(db)
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?
-            .unwrap_or_else(|| r#"[{"urls": ["stun:stun.l.google.com:19302"]}]"#.to_string());
-
-        serde_json::from_str(&ice_servers)
+    async fn get_ice_servers(_db: &DbPool) -> Result<serde_json::Value, AppError> {
+        // For now, return a default ICE server configuration
+        // In production, this would be fetched from system_configs table
+        let default_ice_servers = r#"[{"urls": ["stun:stun.l.google.com:19302"]}]"#;
+        
+        serde_json::from_str(default_ice_servers)
             .map_err(|e| AppError::InternalServerError(format!("解析ICE服务器配置失败: {}", e)))
     }
 

@@ -18,6 +18,19 @@ pub async fn setup_test_db(pool: &Pool<MySql>) {
         .execute(pool)
         .await
         .unwrap();
+    // Delete from tables that reference video_consultations first
+    sqlx::query("DELETE FROM video_call_events")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM video_recordings")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM webrtc_signals")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
     sqlx::query("DELETE FROM video_consultations")
         .execute(pool)
         .await
@@ -75,6 +88,10 @@ pub async fn setup_test_db(pool: &Pool<MySql>) {
         .await
         .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
     sqlx::query("DELETE FROM patient_groups")
+        .execute(pool)
+        .await
+        .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist
+    sqlx::query("DELETE FROM video_consultation_templates")
         .execute(pool)
         .await
         .unwrap_or_else(|_| Default::default()); // Ignore error if table doesn't exist

@@ -15,10 +15,15 @@ async fn test_video_consultation_routes_exist() {
 async fn test_video_consultation_with_auth() {
     let mut app = TestApp::new().await;
 
-    // Create user and login
+    // Create a doctor user first
+    use backend::utils::test_helpers::{create_test_user, create_test_doctor};
+    let (doctor_user_id, doctor_account, doctor_password) = create_test_user(&app.pool, "doctor").await;
+    let (_doctor_id, _) = create_test_doctor(&app.pool, doctor_user_id).await;
+
+    // Login with the created user
     let login_data = json!({
-        "email": "doctor_dong@example.com",
-        "password": "doctor123"
+        "account": doctor_account,
+        "password": doctor_password
     });
 
     let (status, body) = app.post("/api/v1/auth/login", login_data).await;

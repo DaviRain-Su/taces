@@ -2,6 +2,7 @@ use crate::middleware::auth::AuthUser;
 use crate::models::video_consultation::*;
 use crate::models::ApiResponse;
 use crate::services::video_consultation_service::VideoConsultationService;
+use crate::services::doctor_service;
 use crate::utils::errors::AppError;
 use crate::AppState;
 use axum::{
@@ -12,6 +13,32 @@ use axum::{
 };
 use serde_json::json;
 use uuid::Uuid;
+
+/// Helper function to check if a user is authorized to access a consultation
+async fn is_user_authorized_for_consultation(
+    pool: &crate::config::database::DbPool,
+    auth_user: &AuthUser,
+    consultation: &VideoConsultation,
+) -> bool {
+    // Admin can access all consultations
+    if auth_user.role == "admin" {
+        return true;
+    }
+    
+    // Patient check - direct comparison
+    if auth_user.user_id == consultation.patient_id {
+        return true;
+    }
+    
+    // Doctor check - need to verify if user_id maps to doctor_id
+    if auth_user.role == "doctor" {
+        if let Ok(doctor) = doctor_service::get_doctor_by_user_id(pool, auth_user.user_id).await {
+            return doctor.id == consultation.doctor_id;
+        }
+    }
+    
+    false
+}
 
 pub async fn create_consultation(
     State(state): State<AppState>,
@@ -40,10 +67,7 @@ pub async fn get_consultation(
         VideoConsultationService::get_consultation(&state.pool, consultation_id).await?;
 
     // Check authorization
-    if auth_user.role != "admin"
-        && auth_user.user_id != consultation.doctor_id
-        && auth_user.user_id != consultation.patient_id
-    {
+    if !is_user_authorized_for_consultation(&state.pool, &auth_user, &consultation).await {
         return Err(AppError::Forbidden);
     }
 
@@ -269,10 +293,7 @@ pub async fn get_recording(
     let consultation =
         VideoConsultationService::get_consultation(&state.pool, recording.consultation_id).await?;
 
-    if auth_user.role != "admin"
-        && auth_user.user_id != consultation.doctor_id
-        && auth_user.user_id != consultation.patient_id
-    {
+    if !is_user_authorized_for_consultation(&state.pool, &auth_user, &consultation).await {
         return Err(AppError::Forbidden);
     }
 
@@ -291,10 +312,7 @@ pub async fn get_consultation_recordings(
     let consultation =
         VideoConsultationService::get_consultation(&state.pool, consultation_id).await?;
 
-    if auth_user.role != "admin"
-        && auth_user.user_id != consultation.doctor_id
-        && auth_user.user_id != consultation.patient_id
-    {
+    if !is_user_authorized_for_consultation(&state.pool, &auth_user, &consultation).await {
         return Err(AppError::Forbidden);
     }
 
@@ -334,8 +352,16 @@ pub async fn get_template(
 ) -> Result<impl IntoResponse, AppError> {
     let template = VideoConsultationService::get_template(&state.pool, template_id).await?;
 
-    // Only the owner can view the template
-    if auth_user.user_id != template.doctor_id {
+    // Only the owner can view the template - need to check if user_id maps to doctor_id
+    if auth_user.role == "doctor" {
+        if let Ok(doctor) = doctor_service::get_doctor_by_user_id(&state.pool, auth_user.user_id).await {
+            if doctor.id != template.doctor_id {
+                return Err(AppError::Forbidden);
+            }
+        } else {
+            return Err(AppError::Forbidden);
+        }
+    } else if auth_user.role != "admin" {
         return Err(AppError::Forbidden);
     }
 
@@ -389,7 +415,11 @@ pub async fn get_consultation_statistics(
     Query(params): Query<serde_json::Value>,
 ) -> Result<impl IntoResponse, AppError> {
     let doctor_id = if auth_user.role == "doctor" {
-        Some(auth_user.user_id)
+        // Convert user_id to doctor_id
+        match doctor_service::get_doctor_by_user_id(&state.pool, auth_user.user_id).await {
+            Ok(doctor) => Some(doctor.id),
+            Err(_) => return Err(AppError::NotFound("医生信息不存在".to_string())),
+        }
     } else if auth_user.role == "admin" {
         params["doctor_id"]
             .as_str()
