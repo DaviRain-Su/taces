@@ -1,9 +1,8 @@
 use crate::{
     config::database::DbPool,
-    models::notification::*,
     utils::errors::AppError,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

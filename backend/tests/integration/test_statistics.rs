@@ -27,18 +27,19 @@ async fn setup_test_data(app: &mut TestApp) {
 
     // Create appointments
     for i in 0..5 {
-        sqlx::query!(
+        sqlx::query(
             r#"
-            INSERT INTO appointments (patient_id, doctor_id, appointment_date, time_slot, 
-                                     visit_type, symptoms, has_visited_before, status)
-            VALUES (?, ?, ?, ?, 'offline', '测试症状', false, ?)
-            "#,
-            patient_user_id.to_string(),
-            doctor_id.to_string(),
-            (Local::now() - Duration::days(i)).naive_utc(),
-            "09:00-10:00",
-            if i < 3 { "completed" } else { "pending" }
+            INSERT INTO appointments (id, patient_id, doctor_id, appointment_date, time_slot, 
+                                     visit_type, symptoms, has_visited_before, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 'offline', '测试症状', false, ?, NOW(), NOW())
+            "#
         )
+        .bind(Uuid::new_v4().to_string())
+        .bind(patient_user_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind((Local::now() - Duration::days(i)).naive_utc())
+        .bind("09:00-10:00")
+        .bind(if i < 3 { "completed" } else { "pending" })
         .execute(&app.pool)
         .await
         .unwrap();
@@ -46,16 +47,17 @@ async fn setup_test_data(app: &mut TestApp) {
 
     // Create prescriptions
     for i in 0..3 {
-        sqlx::query!(
+        sqlx::query(
             r#"
-            INSERT INTO prescriptions (code, doctor_id, patient_id, patient_name, 
-                                      diagnosis, medicines, instructions)
-            VALUES (?, ?, ?, '测试患者', '测试诊断', '[]', '测试说明')
-            "#,
-            format!("RX{:08}", i + 1),
-            doctor_id.to_string(),
-            patient_user_id.to_string()
+            INSERT INTO prescriptions (id, code, doctor_id, patient_id, patient_name, 
+                                      diagnosis, medicines, instructions, prescription_date, created_at)
+            VALUES (?, ?, ?, ?, '测试患者', '测试诊断', '[]', '测试说明', NOW(), NOW())
+            "#
         )
+        .bind(Uuid::new_v4().to_string())
+        .bind(format!("RX{:08}", i + 1))
+        .bind(doctor_id.to_string())
+        .bind(patient_user_id.to_string())
         .execute(&app.pool)
         .await
         .unwrap();
@@ -104,16 +106,17 @@ async fn test_doctor_statistics() {
     // Create some appointments
     let (patient_user_id, _, _) = create_test_user(&app.pool, "patient").await;
     for i in 0..3 {
-        sqlx::query!(
+        sqlx::query(
             r#"
-            INSERT INTO appointments (patient_id, doctor_id, appointment_date, time_slot, 
-                                     visit_type, symptoms, has_visited_before, status)
-            VALUES (?, ?, NOW() + INTERVAL ? DAY, '09:00-10:00', 'offline', '测试', false, 'pending')
-            "#,
-            patient_user_id.to_string(),
-            doctor_id.to_string(),
-            i
+            INSERT INTO appointments (id, patient_id, doctor_id, appointment_date, time_slot, 
+                                     visit_type, symptoms, has_visited_before, status, created_at, updated_at)
+            VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? DAY), '09:00-10:00', 'offline', '测试', false, 'pending', NOW(), NOW())
+            "#
         )
+        .bind(Uuid::new_v4().to_string())
+        .bind(patient_user_id.to_string())
+        .bind(doctor_id.to_string())
+        .bind(i)
         .execute(&app.pool)
         .await
         .unwrap();
@@ -308,16 +311,18 @@ async fn test_user_growth_statistics() {
         let created_at = Local::now() - Duration::days(i);
         let role = if i % 2 == 0 { "patient" } else { "doctor" };
         
-        sqlx::query!(
+        sqlx::query(
             r#"
-            INSERT INTO users (id, account, name, password_hash, gender, phone, role, status, created_at)
-            VALUES (UUID(), ?, '测试用户', 'hash', 'male', ?, ?, 'active', ?)
-            "#,
-            format!("growth_test_{}", i),
-            format!("1380000000{}", i),
-            role,
-            created_at.naive_utc()
+            INSERT INTO users (id, account, name, password, gender, phone, email, role, status, created_at)
+            VALUES (?, ?, '测试用户', 'hash', '男', ?, ?, ?, 'active', ?)
+            "#
         )
+        .bind(Uuid::new_v4().to_string())
+        .bind(format!("growth_test_{}", i))
+        .bind(format!("1380000000{}", i))
+        .bind(format!("growth_test_{}@test.com", i))
+        .bind(role)
+        .bind(created_at.naive_utc())
         .execute(&app.pool)
         .await
         .unwrap();

@@ -49,11 +49,11 @@ pub async fn auth_middleware_cached(
             user_id: session.user_id,
             role: session.role,
         };
-        req.extensions_mut().insert(auth_user);
         
         // Extend session TTL
         let _ = SessionService::extend_session(&app_state.redis, token).await;
         
+        req.extensions_mut().insert(auth_user);
         return Ok(next.run(req).await);
     }
 

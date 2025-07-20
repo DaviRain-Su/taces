@@ -1,6 +1,6 @@
 use backend::{
     config::storage,
-    models::file_upload::{FileType, FilePurpose},
+    models::file_upload::FileType,
     services::file_storage_service::FileStorageService,
 };
 use std::env;

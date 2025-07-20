@@ -115,11 +115,10 @@ async fn test_websocket_notification_message() {
         title: "Appointment Reminder".to_string(),
         content: "You have an appointment tomorrow".to_string(),
         related_id: Some(Uuid::new_v4()),
-        metadata: None,
+        metadata: serde_json::json!({}),
         status: backend::models::notification::NotificationStatus::Unread,
         read_at: None,
         created_at: chrono::Utc::now(),
-        updated_at: chrono::Utc::now(),
     };
     
     ws_manager.send_notification(user_id, notification.clone()).await;

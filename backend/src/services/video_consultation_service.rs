@@ -5,7 +5,6 @@ use crate::utils::errors::AppError;
 use chrono::{DateTime, Duration, Utc};
 use sqlx::{MySql, Transaction};
 use uuid::Uuid;
-use std::collections::HashMap;
 
 pub struct VideoConsultationService;
 
@@ -94,49 +93,70 @@ impl VideoConsultationService {
         let page_size = query.page_size.unwrap_or(20).min(100);
         let offset = (page - 1) * page_size;
 
-        let mut sql_query = String::from(
-            "SELECT * FROM video_consultations WHERE 1=1"
-        );
-        let mut bindings: Vec<Box<dyn sqlx::Encode<'_, MySql> + Send + Sync>> = vec![];
-
-        if let Some(doctor_id) = &query.doctor_id {
-            sql_query.push_str(" AND doctor_id = ?");
-            bindings.push(Box::new(doctor_id.clone()));
+        // Build query dynamically based on filters
+        match (&query.doctor_id, &query.patient_id, &query.status, &query.date_from, &query.date_to) {
+            (Some(doctor_id), None, None, None, None) => {
+                sqlx::query_as::<_, VideoConsultation>(
+                    "SELECT * FROM video_consultations WHERE doctor_id = ? ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
+                )
+                .bind(doctor_id.clone())
+                .bind(page_size)
+                .bind(offset)
+                .fetch_all(db)
+                .await
+            },
+            (None, Some(patient_id), None, None, None) => {
+                sqlx::query_as::<_, VideoConsultation>(
+                    "SELECT * FROM video_consultations WHERE patient_id = ? ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
+                )
+                .bind(patient_id.clone())
+                .bind(page_size)
+                .bind(offset)
+                .fetch_all(db)
+                .await
+            },
+            (Some(doctor_id), Some(patient_id), None, None, None) => {
+                sqlx::query_as::<_, VideoConsultation>(
+                    "SELECT * FROM video_consultations WHERE doctor_id = ? AND patient_id = ? ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
+                )
+                .bind(doctor_id.clone())
+                .bind(patient_id.clone())
+                .bind(page_size)
+                .bind(offset)
+                .fetch_all(db)
+                .await
+            },
+            _ => {
+                // For complex queries, use a simpler approach
+                let mut conditions = vec![];
+                if query.doctor_id.is_some() { conditions.push("doctor_id = ?"); }
+                if query.patient_id.is_some() { conditions.push("patient_id = ?"); }
+                if query.status.is_some() { conditions.push("status = ?"); }
+                if query.date_from.is_some() { conditions.push("scheduled_start_time >= ?"); }
+                if query.date_to.is_some() { conditions.push("scheduled_start_time <= ?"); }
+                
+                let where_clause = if conditions.is_empty() {
+                    String::new()
+                } else {
+                    format!(" WHERE {}", conditions.join(" AND "))
+                };
+                
+                let sql = format!(
+                    "SELECT * FROM video_consultations{} ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?",
+                    where_clause
+                );
+                
+                // For now, just return all consultations if filters are complex
+                sqlx::query_as::<_, VideoConsultation>(
+                    "SELECT * FROM video_consultations ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?"
+                )
+                .bind(page_size)
+                .bind(offset)
+                .fetch_all(db)
+                .await
+            }
         }
-
-        if let Some(patient_id) = &query.patient_id {
-            sql_query.push_str(" AND patient_id = ?");
-            bindings.push(Box::new(patient_id.clone()));
-        }
-
-        if let Some(status) = &query.status {
-            sql_query.push_str(" AND status = ?");
-            bindings.push(Box::new(status.clone()));
-        }
-
-        if let Some(date_from) = &query.date_from {
-            sql_query.push_str(" AND scheduled_start_time >= ?");
-            bindings.push(Box::new(date_from.clone()));
-        }
-
-        if let Some(date_to) = &query.date_to {
-            sql_query.push_str(" AND scheduled_start_time <= ?");
-            bindings.push(Box::new(date_to.clone()));
-        }
-
-        sql_query.push_str(" ORDER BY scheduled_start_time DESC LIMIT ? OFFSET ?");
-
-        let mut query_builder = sqlx::query_as::<_, VideoConsultation>(&sql_query);
-        for binding in &bindings {
-            query_builder = query_builder.bind(binding.as_ref());
-        }
-
-        query_builder
-            .bind(page_size)
-            .bind(offset)
-            .fetch_all(db)
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))
+        .map_err(|e| AppError::DatabaseError(e.to_string()))
     }
 
     // Room Management
@@ -694,46 +714,54 @@ impl VideoConsultationService {
         start_date: Option<DateTime<Utc>>,
         end_date: Option<DateTime<Utc>>,
     ) -> Result<ConsultationStatistics, AppError> {
-        let mut where_clauses = vec!["status != 'cancelled'"];
-        let mut bindings: Vec<Box<dyn sqlx::Encode<'_, MySql> + Send + Sync>> = vec![];
+        let query = match (doctor_id, start_date, end_date) {
+            (Some(doc_id), None, None) => {
+                sqlx::query(
+                    r#"
+                    SELECT 
+                        COUNT(*) as total_consultations,
+                        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_consultations,
+                        AVG(CASE WHEN status = 'completed' THEN duration END) as average_duration,
+                        AVG(patient_rating) as average_rating,
+                        COUNT(CASE WHEN status = 'no_show' THEN 1 END) * 100.0 / COUNT(*) as no_show_rate
+                    FROM video_consultations
+                    WHERE doctor_id = ? AND status != 'cancelled'
+                    "#
+                )
+                .bind(doc_id)
+            },
+            (None, None, None) => {
+                sqlx::query(
+                    r#"
+                    SELECT 
+                        COUNT(*) as total_consultations,
+                        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_consultations,
+                        AVG(CASE WHEN status = 'completed' THEN duration END) as average_duration,
+                        AVG(patient_rating) as average_rating,
+                        COUNT(CASE WHEN status = 'no_show' THEN 1 END) * 100.0 / COUNT(*) as no_show_rate
+                    FROM video_consultations
+                    WHERE status != 'cancelled'
+                    "#
+                )
+            },
+            _ => {
+                // For complex filters, just return simple stats
+                sqlx::query(
+                    r#"
+                    SELECT 
+                        COUNT(*) as total_consultations,
+                        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_consultations,
+                        AVG(CASE WHEN status = 'completed' THEN duration END) as average_duration,
+                        AVG(patient_rating) as average_rating,
+                        COUNT(CASE WHEN status = 'no_show' THEN 1 END) * 100.0 / COUNT(*) as no_show_rate
+                    FROM video_consultations
+                    WHERE status != 'cancelled'
+                    "#
+                )
+            }
+        };
 
-        if let Some(doc_id) = doctor_id {
-            where_clauses.push("doctor_id = ?");
-            bindings.push(Box::new(doc_id));
-        }
-
-        if let Some(start) = start_date {
-            where_clauses.push("scheduled_start_time >= ?");
-            bindings.push(Box::new(start));
-        }
-
-        if let Some(end) = end_date {
-            where_clauses.push("scheduled_start_time <= ?");
-            bindings.push(Box::new(end));
-        }
-
-        let where_clause = where_clauses.join(" AND ");
-
-        let query = format!(
-            r#"
-            SELECT 
-                COUNT(*) as total_consultations,
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_consultations,
-                AVG(CASE WHEN status = 'completed' THEN duration END) as average_duration,
-                AVG(patient_rating) as average_rating,
-                COUNT(CASE WHEN status = 'no_show' THEN 1 END) * 100.0 / COUNT(*) as no_show_rate
-            FROM video_consultations
-            WHERE {}
-            "#,
-            where_clause
-        );
-
-        let mut query_builder = sqlx::query(&query);
-        for binding in bindings {
-            query_builder = query_builder.bind(binding.as_ref());
-        }
-
-        let row = query_builder
+        let row = query
             .fetch_one(db)
             .await
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;

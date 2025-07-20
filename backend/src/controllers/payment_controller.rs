@@ -11,15 +11,13 @@ use axum::{
     response::IntoResponse,
     Extension, Json,
 };
-use rust_decimal::Decimal;
 use serde::Deserialize;
-use std::str::FromStr;
 use uuid::Uuid;
 
 // Order endpoints
 pub async fn create_order(
     State(state): State<AppState>,
-    Extension(auth_user): Extension<AuthUser>,
+    Extension(_auth_user): Extension<AuthUser>,
     Json(dto): Json<CreateOrderDto>,
 ) -> Result<impl IntoResponse, AppError> {
     let order = PaymentService::create_order(&state.pool, dto).await?;
@@ -116,7 +114,7 @@ pub async fn payment_callback(
     // TODO: Validate callback signature based on payment method
 
     // Parse callback data based on payment method
-    let callback_data = match payment_method {
+    let callback_data = match &payment_method {
         PaymentMethod::Wechat => {
             // Parse WeChat callback
             PaymentCallbackData {
@@ -170,7 +168,7 @@ pub async fn payment_callback(
         _ => return Err(AppError::BadRequest("不支持的支付方式".to_string())),
     };
 
-    PaymentService::handle_payment_callback(&state.pool, payment_method, callback_data).await?;
+    PaymentService::handle_payment_callback(&state.pool, payment_method.clone(), callback_data).await?;
 
     // Return success response for payment gateway
     match payment_method {
@@ -246,12 +244,10 @@ pub async fn get_user_balance(
         return Err(AppError::Forbidden);
     }
 
-    let balance = PaymentService::get_user_balance(&state.pool, user_id)
-        .await
-        .or_else(|_| async {
-            PaymentService::create_user_balance(&state.pool, user_id).await
-        })
-        .await?;
+    let balance = match PaymentService::get_user_balance(&state.pool, user_id).await {
+        Ok(balance) => balance,
+        Err(_) => PaymentService::create_user_balance(&state.pool, user_id).await?,
+    };
 
     Ok(Json(ApiResponse::success("获取余额成功", balance)))
 }

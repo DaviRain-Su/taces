@@ -3,7 +3,6 @@ use crate::{
     models::notification::*,
 };
 use chrono::Utc;
-use sqlx::{query, query_as};
 use uuid::Uuid;
 
 pub struct NotificationService;

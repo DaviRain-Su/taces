@@ -92,31 +92,25 @@ impl PaymentService {
         let offset = (page - 1) * page_size;
 
         let mut where_clauses = vec![];
-        let mut bindings: Vec<Box<dyn sqlx::Encode<'_, MySql> + Send + Sync>> = vec![];
 
-        if let Some(user_id) = &query.user_id {
+        if query.user_id.is_some() {
             where_clauses.push("user_id = ?");
-            bindings.push(Box::new(user_id.clone()));
         }
 
-        if let Some(status) = &query.status {
+        if query.status.is_some() {
             where_clauses.push("status = ?");
-            bindings.push(Box::new(status.clone()));
         }
 
-        if let Some(order_type) = &query.order_type {
+        if query.order_type.is_some() {
             where_clauses.push("order_type = ?");
-            bindings.push(Box::new(order_type.clone()));
         }
 
-        if let Some(start_date) = &query.start_date {
+        if query.start_date.is_some() {
             where_clauses.push("created_at >= ?");
-            bindings.push(Box::new(start_date.clone()));
         }
 
-        if let Some(end_date) = &query.end_date {
+        if query.end_date.is_some() {
             where_clauses.push("created_at <= ?");
-            bindings.push(Box::new(end_date.clone()));
         }
 
         let where_clause = if where_clauses.is_empty() {
@@ -132,8 +126,22 @@ impl PaymentService {
         );
 
         let mut count_query_builder = sqlx::query_scalar::<_, i64>(&count_query);
-        for binding in &bindings {
-            count_query_builder = count_query_builder.bind(binding.as_ref());
+        
+        // Bind parameters in order
+        if let Some(user_id) = &query.user_id {
+            count_query_builder = count_query_builder.bind(user_id.to_string());
+        }
+        if let Some(status) = &query.status {
+            count_query_builder = count_query_builder.bind(status);
+        }
+        if let Some(order_type) = &query.order_type {
+            count_query_builder = count_query_builder.bind(order_type);
+        }
+        if let Some(start_date) = &query.start_date {
+            count_query_builder = count_query_builder.bind(start_date);
+        }
+        if let Some(end_date) = &query.end_date {
+            count_query_builder = count_query_builder.bind(end_date);
         }
 
         let total = count_query_builder
@@ -148,8 +156,22 @@ impl PaymentService {
         );
 
         let mut orders_query_builder = sqlx::query_as::<_, PaymentOrder>(&orders_query);
-        for binding in &bindings {
-            orders_query_builder = orders_query_builder.bind(binding.as_ref());
+        
+        // Bind parameters in the same order
+        if let Some(user_id) = &query.user_id {
+            orders_query_builder = orders_query_builder.bind(user_id.to_string());
+        }
+        if let Some(status) = &query.status {
+            orders_query_builder = orders_query_builder.bind(status);
+        }
+        if let Some(order_type) = &query.order_type {
+            orders_query_builder = orders_query_builder.bind(order_type);
+        }
+        if let Some(start_date) = &query.start_date {
+            orders_query_builder = orders_query_builder.bind(start_date);
+        }
+        if let Some(end_date) = &query.end_date {
+            orders_query_builder = orders_query_builder.bind(end_date);
         }
 
         let orders = orders_query_builder

@@ -1,6 +1,7 @@
-use backend::{config::database, routes, AppState, Config};
+use backend::{config::database, routes, AppState, Config, services::websocket_service::WebSocketManager};
 
 use axum::Router;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
@@ -9,7 +10,13 @@ async fn main() {
     let pool = database::create_pool().await.unwrap();
     let config = Config::from_env().unwrap();
 
-    let state = AppState { config, pool };
+    let state = AppState { 
+        config, 
+        pool,
+        redis: None,
+        s3_client: None,
+        ws_manager: Arc::new(WebSocketManager::new()),
+    };
 
     let app: Router<AppState> = Router::new()
         .nest("/api/v1", routes::create_routes())

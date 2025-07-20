@@ -10,7 +10,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use chrono::{Duration, Local, NaiveDate};
+use chrono::{Duration, Local};
 use serde_json::json;
 use uuid::Uuid;
 

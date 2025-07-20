@@ -96,7 +96,7 @@ impl TemplateService {
         let total: i64 = count_query_builder
             .fetch_one(pool)
             .await?
-            .get(0)?;
+            .get::<i64, _>(0);
 
         // 获取列表
         let mut list_query_builder = sqlx::query(&list_query);
@@ -298,7 +298,7 @@ impl TemplateService {
         let total: i64 = count_query_builder
             .fetch_one(pool)
             .await?
-            .get(0)?;
+            .get::<i64, _>(0);
 
         // 获取列表
         let mut list_query_builder = sqlx::query(&list_query);

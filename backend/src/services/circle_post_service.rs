@@ -391,7 +391,7 @@ impl CirclePostService {
         .bind(post_id.to_string())
         .fetch_one(pool)
         .await?
-        .get(0)?;
+        .get::<i64, _>(0);
 
         // Get comments
         let rows = sqlx::query(

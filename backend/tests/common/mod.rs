@@ -38,6 +38,9 @@ impl TestApp {
         let state = AppState {
             config: config.clone(),
             pool: pool.clone(),
+            redis: None,
+            ws_manager: std::sync::Arc::new(backend::services::websocket_service::WebSocketManager::new()),
+            s3_client: None,
         };
 
         let app = Router::new()

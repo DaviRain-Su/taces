@@ -1,7 +1,7 @@
-use crate::config::database::DbPool;
+use crate::AppState;
 use crate::middleware::auth::AuthUser;
 use crate::models::video_consultation::*;
-use crate::models::{ApiResponse, UserRole};
+use crate::models::ApiResponse;
 use crate::services::video_consultation_service::VideoConsultationService;
 use crate::utils::errors::AppError;
 use axum::{
@@ -14,7 +14,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 pub async fn create_consultation(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(dto): Json<CreateVideoConsultationDto>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -23,7 +23,7 @@ pub async fn create_consultation(
         return Err(AppError::Forbidden);
     }
 
-    let consultation = VideoConsultationService::create_consultation(&db, dto).await?;
+    let consultation = VideoConsultationService::create_consultation(&state.pool, dto).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -32,11 +32,11 @@ pub async fn create_consultation(
 }
 
 pub async fn get_consultation(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(consultation_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let consultation = VideoConsultationService::get_consultation(&db, consultation_id).await?;
+    let consultation = VideoConsultationService::get_consultation(&state.pool, consultation_id).await?;
 
     // Check authorization
     if auth_user.role != "admin" 
@@ -52,7 +52,7 @@ pub async fn get_consultation(
 }
 
 pub async fn list_consultations(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(query): Query<ConsultationListQuery>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -62,7 +62,7 @@ pub async fn list_consultations(
         query_params.patient_id = Some(auth_user.user_id);
     }
 
-    let consultations = VideoConsultationService::list_consultations(&db, query_params).await?;
+    let consultations = VideoConsultationService::list_consultations(&state.pool, query_params).await?;
 
     Ok((
         StatusCode::OK,
@@ -71,11 +71,11 @@ pub async fn list_consultations(
 }
 
 pub async fn join_room(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(room_id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let response = VideoConsultationService::join_room(&db, &room_id, auth_user.user_id).await?;
+    let response = VideoConsultationService::join_room(&state.pool, &room_id, auth_user.user_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -84,7 +84,7 @@ pub async fn join_room(
 }
 
 pub async fn start_consultation(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(consultation_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -93,7 +93,7 @@ pub async fn start_consultation(
         return Err(AppError::Forbidden);
     }
 
-    VideoConsultationService::start_consultation(&db, consultation_id, auth_user.user_id).await?;
+    VideoConsultationService::start_consultation(&state.pool, consultation_id, auth_user.user_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -102,7 +102,7 @@ pub async fn start_consultation(
 }
 
 pub async fn end_consultation(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(consultation_id): Path<Uuid>,
     Json(dto): Json<CompleteConsultationDto>,
@@ -112,7 +112,7 @@ pub async fn end_consultation(
         return Err(AppError::Forbidden);
     }
 
-    VideoConsultationService::end_consultation(&db, consultation_id, auth_user.user_id, dto).await?;
+    VideoConsultationService::end_consultation(&state.pool, consultation_id, auth_user.user_id, dto).await?;
 
     Ok((
         StatusCode::OK,
@@ -121,7 +121,7 @@ pub async fn end_consultation(
 }
 
 pub async fn update_consultation(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(consultation_id): Path<Uuid>,
     Json(dto): Json<UpdateConsultationDto>,
@@ -131,7 +131,7 @@ pub async fn update_consultation(
         return Err(AppError::Forbidden);
     }
 
-    VideoConsultationService::update_consultation(&db, consultation_id, auth_user.user_id, dto).await?;
+    VideoConsultationService::update_consultation(&state.pool, consultation_id, auth_user.user_id, dto).await?;
 
     Ok((
         StatusCode::OK,
@@ -140,7 +140,7 @@ pub async fn update_consultation(
 }
 
 pub async fn rate_consultation(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(consultation_id): Path<Uuid>,
     Json(dto): Json<RateConsultationDto>,
@@ -150,7 +150,7 @@ pub async fn rate_consultation(
         return Err(AppError::Forbidden);
     }
 
-    VideoConsultationService::rate_consultation(&db, consultation_id, auth_user.user_id, dto).await?;
+    VideoConsultationService::rate_consultation(&state.pool, consultation_id, auth_user.user_id, dto).await?;
 
     Ok((
         StatusCode::OK,
@@ -160,11 +160,11 @@ pub async fn rate_consultation(
 
 // WebRTC Signaling
 pub async fn send_signal(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(dto): Json<SendSignalDto>,
 ) -> Result<impl IntoResponse, AppError> {
-    VideoConsultationService::send_signal(&db, auth_user.user_id, dto).await?;
+    VideoConsultationService::send_signal(&state.pool, auth_user.user_id, dto).await?;
 
     Ok((
         StatusCode::OK,
@@ -173,11 +173,11 @@ pub async fn send_signal(
 }
 
 pub async fn receive_signals(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(room_id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let signals = VideoConsultationService::receive_signals(&db, &room_id, auth_user.user_id).await?;
+    let signals = VideoConsultationService::receive_signals(&state.pool, &room_id, auth_user.user_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -187,7 +187,7 @@ pub async fn receive_signals(
 
 // Recording Management
 pub async fn start_recording(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(consultation_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -196,7 +196,7 @@ pub async fn start_recording(
         return Err(AppError::Forbidden);
     }
 
-    let recording = VideoConsultationService::start_recording(&db, consultation_id).await?;
+    let recording = VideoConsultationService::start_recording(&state.pool, consultation_id).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -205,7 +205,7 @@ pub async fn start_recording(
 }
 
 pub async fn complete_recording(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(recording_id): Path<Uuid>,
     Json(dto): Json<serde_json::Value>,
@@ -219,7 +219,7 @@ pub async fn complete_recording(
     let file_size = dto["file_size"].as_i64().unwrap_or(0);
     let duration = dto["duration"].as_i64().unwrap_or(0) as i32;
 
-    VideoConsultationService::complete_recording(&db, recording_id, recording_url, file_size, duration).await?;
+    VideoConsultationService::complete_recording(&state.pool, recording_id, recording_url, file_size, duration).await?;
 
     Ok((
         StatusCode::OK,
@@ -228,14 +228,14 @@ pub async fn complete_recording(
 }
 
 pub async fn get_recording(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(recording_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let recording = VideoConsultationService::get_recording(&db, recording_id).await?;
+    let recording = VideoConsultationService::get_recording(&state.pool, recording_id).await?;
 
     // Get consultation to check authorization
-    let consultation = VideoConsultationService::get_consultation(&db, recording.consultation_id).await?;
+    let consultation = VideoConsultationService::get_consultation(&state.pool, recording.consultation_id).await?;
     
     if auth_user.role != "admin" 
         && auth_user.user_id != consultation.doctor_id 
@@ -250,12 +250,12 @@ pub async fn get_recording(
 }
 
 pub async fn get_consultation_recordings(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(consultation_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     // Check authorization
-    let consultation = VideoConsultationService::get_consultation(&db, consultation_id).await?;
+    let consultation = VideoConsultationService::get_consultation(&state.pool, consultation_id).await?;
     
     if auth_user.role != "admin" 
         && auth_user.user_id != consultation.doctor_id 
@@ -263,7 +263,7 @@ pub async fn get_consultation_recordings(
         return Err(AppError::Forbidden);
     }
 
-    let recordings = VideoConsultationService::get_consultation_recordings(&db, consultation_id).await?;
+    let recordings = VideoConsultationService::get_consultation_recordings(&state.pool, consultation_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -273,7 +273,7 @@ pub async fn get_consultation_recordings(
 
 // Template Management
 pub async fn create_template(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(dto): Json<CreateConsultationTemplateDto>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -282,7 +282,7 @@ pub async fn create_template(
         return Err(AppError::Forbidden);
     }
 
-    let template = VideoConsultationService::create_template(&db, auth_user.user_id, dto).await?;
+    let template = VideoConsultationService::create_template(&state.pool, auth_user.user_id, dto).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -291,11 +291,11 @@ pub async fn create_template(
 }
 
 pub async fn get_template(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(template_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let template = VideoConsultationService::get_template(&db, template_id).await?;
+    let template = VideoConsultationService::get_template(&state.pool, template_id).await?;
 
     // Only the owner can view the template
     if auth_user.user_id != template.doctor_id {
@@ -309,7 +309,7 @@ pub async fn get_template(
 }
 
 pub async fn list_doctor_templates(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Result<impl IntoResponse, AppError> {
     // Only doctors can view their templates
@@ -317,7 +317,7 @@ pub async fn list_doctor_templates(
         return Err(AppError::Forbidden);
     }
 
-    let templates = VideoConsultationService::list_doctor_templates(&db, auth_user.user_id).await?;
+    let templates = VideoConsultationService::list_doctor_templates(&state.pool, auth_user.user_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -326,7 +326,7 @@ pub async fn list_doctor_templates(
 }
 
 pub async fn use_template(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(template_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -335,7 +335,7 @@ pub async fn use_template(
         return Err(AppError::Forbidden);
     }
 
-    let template = VideoConsultationService::use_template(&db, template_id, auth_user.user_id).await?;
+    let template = VideoConsultationService::use_template(&state.pool, template_id, auth_user.user_id).await?;
 
     Ok((
         StatusCode::OK,
@@ -345,7 +345,7 @@ pub async fn use_template(
 
 // Statistics
 pub async fn get_consultation_statistics(
-    State(db): State<DbPool>,
+    State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(params): Query<serde_json::Value>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -365,7 +365,7 @@ pub async fn get_consultation_statistics(
         .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&chrono::Utc));
 
-    let stats = VideoConsultationService::get_consultation_statistics(&db, doctor_id, start_date, end_date).await?;
+    let stats = VideoConsultationService::get_consultation_statistics(&state.pool, doctor_id, start_date, end_date).await?;
 
     Ok((
         StatusCode::OK,

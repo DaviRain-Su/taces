@@ -2,8 +2,7 @@ use crate::{
     config::database::DbPool,
     models::statistics::*,
 };
-use chrono::{Datelike, Duration, Local, NaiveDate, Utc};
-use sqlx::query;
+use chrono::NaiveDate;
 use uuid::Uuid;
 
 pub struct StatisticsService;

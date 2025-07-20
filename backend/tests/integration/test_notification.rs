@@ -40,15 +40,16 @@ async fn test_notification_lifecycle() {
 
     // Note: We need a way to create notifications internally
     // For now, let's create it directly in the database
-    sqlx::query!(
+    sqlx::query(
         r#"
-        INSERT INTO notifications (user_id, type, title, content, status)
-        VALUES ($1, 'appointment_reminder', $2, $3, 'unread')
-        "#,
-        user_id,
-        "预约提醒",
-        "您明天上午9点有预约"
+        INSERT INTO notifications (id, user_id, type, title, content, status, created_at)
+        VALUES (?, ?, 'appointment_reminder', ?, ?, 'unread', NOW())
+        "#
     )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(user_id.to_string())
+    .bind("预约提醒")
+    .bind("您明天上午9点有预约")
     .execute(&app.pool)
     .await
     .unwrap();
@@ -116,16 +117,17 @@ async fn test_notification_stats() {
 
     // Create multiple notifications
     for i in 0..5 {
-        sqlx::query!(
+        sqlx::query(
             r#"
-            INSERT INTO notifications (user_id, type, title, content, status)
-            VALUES ($1, 'system_announcement', $2, $3, $4)
-            "#,
-            user_id,
-            format!("通知{}", i + 1),
-            format!("这是第{}条通知", i + 1),
-            if i < 3 { "unread" } else { "read" }
+            INSERT INTO notifications (id, user_id, type, title, content, status, created_at)
+            VALUES (?, ?, 'system_announcement', ?, ?, ?, NOW())
+            "#
         )
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(user_id.to_string())
+        .bind(format!("通知{}", i + 1))
+        .bind(format!("这是第{}条通知", i + 1))
+        .bind(if i < 3 { "unread" } else { "read" })
         .execute(&app.pool)
         .await
         .unwrap();
@@ -151,15 +153,16 @@ async fn test_mark_all_as_read() {
 
     // Create multiple unread notifications
     for i in 0..3 {
-        sqlx::query!(
+        sqlx::query(
             r#"
-            INSERT INTO notifications (user_id, type, title, content, status)
-            VALUES ($1, 'system_announcement', $2, $3, 'unread')
-            "#,
-            user_id,
-            format!("通知{}", i + 1),
-            format!("这是第{}条通知", i + 1)
+            INSERT INTO notifications (id, user_id, type, title, content, status, created_at)
+            VALUES (?, ?, 'system_announcement', ?, ?, 'unread', NOW())
+            "#
         )
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(user_id.to_string())
+        .bind(format!("通知{}", i + 1))
+        .bind(format!("这是第{}条通知", i + 1))
         .execute(&app.pool)
         .await
         .unwrap();
@@ -292,15 +295,16 @@ async fn test_notification_pagination() {
 
     // Create 25 notifications
     for i in 0..25 {
-        sqlx::query!(
+        sqlx::query(
             r#"
-            INSERT INTO notifications (user_id, type, title, content, status)
-            VALUES ($1, 'system_announcement', $2, $3, 'unread')
-            "#,
-            user_id,
-            format!("通知{}", i + 1),
-            format!("这是第{}条通知", i + 1)
+            INSERT INTO notifications (id, user_id, type, title, content, status, created_at)
+            VALUES (?, ?, 'system_announcement', ?, ?, 'unread', NOW())
+            "#
         )
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(user_id.to_string())
+        .bind(format!("通知{}", i + 1))
+        .bind(format!("这是第{}条通知", i + 1))
         .execute(&app.pool)
         .await
         .unwrap();
@@ -345,15 +349,16 @@ async fn test_notification_authorization() {
     let token2 = get_auth_token(&mut app, &account2, &password2).await;
 
     // Create notification for user1
-    let notification_id = sqlx::query_scalar!(
+    let notification_id = uuid::Uuid::new_v4();
+    sqlx::query(
         r#"
-        INSERT INTO notifications (user_id, type, title, content, status)
-        VALUES ($1, 'appointment_reminder', '预约提醒', '您有新的预约', 'unread')
-        RETURNING id
-        "#,
-        user1_id
+        INSERT INTO notifications (id, user_id, type, title, content, status, created_at)
+        VALUES (?, ?, 'appointment_reminder', '预约提醒', '您有新的预约', 'unread', NOW())
+        "#
     )
-    .fetch_one(&app.pool)
+    .bind(notification_id.to_string())
+    .bind(user1_id.to_string())
+    .execute(&app.pool)
     .await
     .unwrap();
 

@@ -148,6 +148,10 @@ impl CacheKeys {
         format!("user:{}", user_id)
     }
 
+    pub fn user_email(email: &str) -> String {
+        format!("user:email:{}", email)
+    }
+
     pub fn doctor(doctor_id: &str) -> String {
         format!("doctor:{}", doctor_id)
     }

@@ -2,10 +2,7 @@ use crate::{
     config::{database::DbPool, redis::RedisPool, Config},
     models::user::*,
     services::{auth_service, session_service::SessionService, user_service_cached},
-    utils::{
-        jwt::create_token,
-        password::verify_password,
-    },
+    utils::jwt,
 };
 use anyhow::{anyhow, Result};
 

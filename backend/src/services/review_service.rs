@@ -387,7 +387,7 @@ impl ReviewService {
         .fetch_one(pool)
         .await?;
         
-        let user_id: String = doctor_check.get("user_id")?;
+        let user_id: String = doctor_check.get::<String, _>("user_id");
         if user_id != doctor_user_id.to_string() {
             return Err(anyhow!("You can only reply to reviews for yourself"));
         }

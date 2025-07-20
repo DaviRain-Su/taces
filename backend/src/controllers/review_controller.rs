@@ -26,25 +26,25 @@ pub async fn create_review(
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Only patients can create reviews")),
-        ).into_response();
+        );
     }
 
     if let Err(e) = dto.validate() {
         return (
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::<serde_json::Value>::error(&format!("Validation error: {}", e))),
-        ).into_response();
+        );
     }
 
     match ReviewService::create_review(&state.pool, user.id, dto).await {
         Ok(review) => (
             StatusCode::CREATED,
             Json(ApiResponse::success("Review created successfully", serde_json::to_value(review).unwrap())),
-        ).into_response(),
+        ),
         Err(e) => (
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::<serde_json::Value>::error(&e.to_string())),
-        ).into_response(),
+        ),
     }
 }
 
@@ -117,14 +117,14 @@ pub async fn update_review(
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Only patients can update reviews")),
-        ).into_response();
+        );
     }
 
     if let Err(e) = dto.validate() {
         return (
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::<serde_json::Value>::error(&format!("Validation error: {}", e))),
-        ).into_response();
+        );
     }
 
     match ReviewService::update_review(&state.pool, id, user.id, dto).await {
@@ -150,14 +150,14 @@ pub async fn reply_to_review(
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Only doctors can reply to reviews")),
-        ).into_response();
+        );
     }
 
     if let Err(e) = dto.validate() {
         return (
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::<serde_json::Value>::error(&format!("Validation error: {}", e))),
-        ).into_response();
+        );
     }
 
     match ReviewService::reply_to_review(&state.pool, id, user.id, dto).await {
@@ -183,7 +183,7 @@ pub async fn update_review_visibility(
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Only admins can manage review visibility")),
-        ).into_response();
+        );
     }
 
     match ReviewService::update_review_visibility(&state.pool, id, dto).await {
@@ -210,14 +210,14 @@ pub async fn create_tag(
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Only admins can create tags")),
-        ).into_response();
+        );
     }
 
     if let Err(e) = dto.validate() {
         return (
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::<serde_json::Value>::error(&format!("Validation error: {}", e))),
-        ).into_response();
+        );
     }
 
     match ReviewService::create_tag(&state.pool, dto).await {
@@ -282,7 +282,7 @@ pub async fn get_patient_reviews(
     Query(query): Query<ReviewQuery>,
 ) -> impl IntoResponse {
     // 只能查看自己的评价或者管理员可以查看所有
-    if user.role != "admin" && user.id != patient_id {
+    if user.role != UserRole::Admin && user.id != patient_id {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::<serde_json::Value>::error("Cannot view other patient's reviews")),
@@ -324,7 +324,7 @@ pub async fn get_patient_reviews(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::<serde_json::Value>::error(&e.to_string())),
         ),
-    }
+    }.into_response()
 }
 
 // 获取医生的评价列表

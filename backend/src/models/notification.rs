@@ -27,7 +27,7 @@ pub enum NotificationStatus {
     Deleted,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
 pub struct Notification {
     pub id: Uuid,
     pub user_id: Uuid,

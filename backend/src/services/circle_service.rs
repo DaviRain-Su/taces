@@ -554,7 +554,7 @@ impl CircleService {
         .bind(user_id.to_string())
         .fetch_one(pool)
         .await?
-        .get::<i64, _>(0)?;
+        .get::<i64, _>(0);
 
         // Get circles
         let rows = sqlx::query(
